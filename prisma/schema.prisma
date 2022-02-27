@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider             = "postgresql"
+  url                  = env("DATABASE_URL")
+  referentialIntegrity = "prisma"
+}
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["referentialIntegrity", "interactiveTransactions"]
+}
+
+generator typegraphql {
+  provider        = "typegraphql-prisma"
+  simpleResolvers = true
+}
+
+// data model
+
+model Account {
+  id      String @id @db.VarChar(255)
+  address String @db.VarChar(80)
+}
+
+model TakerApproval {
+  id          String @id @db.VarChar(255)
+  mangroveId  String @db.VarChar(255)
+  offerListId String @db.VarChar(255)
+  ownerId     String @db.VarChar(255)
+  spenderId   String @db.VarChar(255)
+  value       String @db.VarChar(80)
+}
+
+model MakerBalance {
+  id         String @id @db.VarChar(255)
+  mangroveId String @db.VarChar(100)
+  accountId  String @db.VarChar(255)
+  balance    String @db.VarChar(80)
+}
+
+model Mangrove {
+  id         String   @id @db.VarChar(255)
+  governance String?
+  monitor    String?
+  vault      String?
+  useOracle  Boolean?
+  notify     Boolean?
+  gasmax     Int?
+  gasprice   Int?
+  dead       Boolean?
+}
+
+model OfferList {
+  id            String   @id @db.VarChar(255)
+  mangroveId    String   @db.VarChar(255)
+  inboundToken  String   @db.VarChar(42)
+  outboundToken String   @db.VarChar(42)
+  active        Boolean?
+  fee           String?  @db.VarChar(80)
+  gasbase       Int?
+  density       String?  @db.VarChar(80)
+}
+
+model Offer {
+  id            String  @id @db.VarChar(255)
+  mangroveId    String  @db.VarChar(255)
+  makerId       String  @db.VarChar(255)
+  prevOfferId   String?
+  wants         String  @db.VarChar(80)
+  gives         String  @db.VarChar(80)
+  gasprice      Int
+  gasreq        Int
+  live          Boolean
+  deprovisioned Boolean
+}
+
+model Order {
+  id          String @id @db.VarChar(255)
+  mangroveId  String @db.VarChar(255)
+  offerListId String @db.VarChar(255)
+  takerId     String @db.VarChar(255)
+  takerGot    String
+  takerGave   String
+  penalty     String
+
+  takenOffers TakenOffer[]
+}
+
+model TakenOffer {
+  id             String  @id @db.VarChar(255)
+  orderId        String  @db.VarChar(255)
+  takerWants     String  @db.VarChar(80)
+  takerGives     String  @db.VarChar(80)
+  posthookFailed Boolean
+  failReason     String?
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// store consumed streams state
+model Streams {
+  id    String @id @db.VarChar(50)
+  state String @db.VarChar(255)
+}
