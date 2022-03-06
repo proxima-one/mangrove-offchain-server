@@ -9,7 +9,7 @@ const streamClient = new StreamClient("streams.proxima.one:443");
 
 let stopped = false;
 let subscription: Subscription;
-const dbWriteBatchSize = parseInt(process.env["BATCH_SIZE"] ?? "500");
+const dbWriteBatchSize = parseInt(process.env["BATCH_SIZE"] ?? "50");
 
 async function main() {
   const buffer: DomainEvent[] = [];
