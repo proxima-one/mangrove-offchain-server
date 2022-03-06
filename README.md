@@ -1,45 +1,38 @@
-# Mangrove Streaming Apps
+# Mangrove Offchain Server
 
-> **WARNING**: Contains private dependencies, can be used as a code sample 
+Creates offchain index of [mangrove.exchange](https://mangrove.exchange/) and provides GraphQL endpoint.
 
-Contains proxima streaming apps to work with [mangrove.exchange](https://mangrove.exchange/) events.
-
-Check out proxima streaming app cli to get started (TODO: add link)
-
-## Apps
-
+It uses [Prisma](https://www.prisma.io/) ORM framework to work with Postgresql. [Apollo](https://www.apollographql.com/) is used as GraphQL server.
+GraphQL schema and resolvers are generated with [TypeGraphQL](https://typegraphql.com/) and its [Prisma Integration](https://typegraphql.com/docs/prisma.html)
 
 ## Development
 
 ### Requirements
 
-- node.js v14 
+- node.js v16
 - yarn 
+- postgresql instance (can be started with docker-compose)
 
-### Code Structure
+### Start postgresql
 
-- `./src` - typescript source code
-- `./src/**/*.spec.ts` - test files
-- `./src/index.ts` - entrypoint to proxima-app-runtime cli
+`yarn docker:env`
 
-### Setup environment
+### Prisma Schema
 
-First you need to have local config file with all services needed for development and testing. 
-Config sample can be found [here](https://github.com/proxima-one/dev-configs/blob/master/streaming-app-dev.yml)
+Prisma schema is located at `prisma/schema.prisma`. 
 
-To use the config make sure to set environment variable `PROXIMA_APP_CONFIG_PATH`:
-```
-export PROXIMA_APP_CONFIG_PATH="<local path to your config file>"
-```
+#### Change Schema
+
+Manually adjust schema file and run `prisma migrate dev --name {migrationname}` create SQL migration and generate client code.
+
+#### Deploy Schema
+
+Run `prisma migrate deploy` to apply all migrations to selected database (connection string is taken from `DATABASE_URL` env var).
+
+(!) Check out `.env` file
 
 ### Useful commands
-- `yarn build` to build source
+- `yarn start:consumer` to start event stream consumer
+- `yarn start:server` to start graphql server
 - `yarn test` to run all tests
 - `yarn lint` to run linter
-- `yarn start` to run proxima-app-runtime cli
-- `yarn start:app <app> <args>` to start apps
-
-Start `parse-blocks` (replace `--id` and `--namespace` arguments to run app in isolated environment) :
-```
-yarn start:app parse-blocks --id ivandev-mangrove-parse-blocks --source-db kafka-main-prod --source-streams polygon-mumbai-block-index --target-db kafka-dev --app-args '{"addresses": {"mangrove": "0x6f531931A7EaefB95307CcD93a348e4C27F62DCF"},"blockIndexer": "remote-polygon-mumbai","network": "polygon-mumbai","startBlock": "23600562","outputStream": "mangrove-events.v1", "initialOffset": "24258823"}'
-```
