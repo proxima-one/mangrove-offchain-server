@@ -51,12 +51,6 @@ jobs:
           echo "::set-output name=IMAGE_NAME::$IMAGE"
       - run: npm install
         working-directory: ./deploy
-      - name: Set Kubernetes Context
-        uses: azure/k8s-set-context@v1
-        with:
-          method: kubeconfig
-          kubeconfig: ${{ secrets.STAGE_KUBECONFIG }}
-          context: deployer
 #      - name: Deploy Stage
 #        uses: pulumi/actions@v3
 #        with:
