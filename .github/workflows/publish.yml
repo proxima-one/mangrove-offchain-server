@@ -1,0 +1,70 @@
+name: publish
+
+on:
+  push:
+    branches:
+      - master
+env:
+  REPO_NAME: proxima.one/services
+  TAG_PREFIX: mangrove-
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '16'
+          #cache: 'yarn'
+
+      - name: "Setup npm" # Add our registry to npm config
+        run: |
+          npm set @proxima-one:registry=https://npm.pkg.github.com
+          npm set "//npm.pkg.github.com/:_authToken=${{ secrets.CI_NPM_TOKEN }}"
+
+      - name: Build image
+        run: |
+          VERSION=$(cat ./VERSION)
+          DOCKER_BUILDKIT=1 docker build . --build-arg BUILD_VERSION=$VERSION --tag image --file ./Dockerfile --target prod --progress=plain --secret id=npmrc,src=$HOME/.npmrc
+
+      - name: Log into registry
+        run: docker login -u="${{ secrets.DOCKER_USERNAME }}" -p="${{ secrets.DOCKER_PASSWORD }}" ${{ secrets.DOCKER_REGISTRY_URL }}
+
+      - name: Push image
+        id: push-image
+        run: |
+          VERSION=$(cat ./VERSION)
+
+          IMAGE_TAG=$TAG_PREFIX$VERSION.${GITHUB_SHA::7}
+          IMAGE_ID=${{ secrets.DOCKER_REGISTRY_URL }}/$REPO_NAME
+          IMAGE=$IMAGE_ID:$IMAGE_TAG
+
+          echo VERSION=$VERSION
+          echo IMAGE_ID=$IMAGE_ID
+          echo IMAGE_TAG=$IMAGE_TAG
+
+          docker tag image $IMAGE
+          docker push $IMAGE
+
+          echo "::set-output name=IMAGE_NAME::$IMAGE"
+      - run: npm install
+        working-directory: ./deploy
+      - name: Set Kubernetes Context
+        uses: azure/k8s-set-context@v1
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.STAGE_KUBECONFIG }}
+          context: deployer
+#      - name: Deploy Stage
+#        uses: pulumi/actions@v3
+#        with:
+#          work-dir: ./deploy
+#          command: up
+#          stack-name: proxima-one/web-services
+#          github-token: ${{ secrets.GITHUB_TOKEN }}
+#        env:
+#          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+#          IMAGE_NAME: ${{steps.push-image.outputs.IMAGE_NAME}}
+
