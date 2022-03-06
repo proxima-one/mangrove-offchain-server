@@ -1,4 +1,19 @@
 -- CreateTable
+CREATE TABLE "Mangrove" (
+    "id" VARCHAR(255) NOT NULL,
+    "governance" TEXT,
+    "monitor" TEXT,
+    "vault" TEXT,
+    "useOracle" BOOLEAN,
+    "notify" BOOLEAN,
+    "gasmax" INTEGER,
+    "gasprice" INTEGER,
+    "dead" BOOLEAN,
+
+    CONSTRAINT "Mangrove_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Account" (
     "id" VARCHAR(255) NOT NULL,
     "address" VARCHAR(80) NOT NULL,
@@ -22,25 +37,10 @@ CREATE TABLE "TakerApproval" (
 CREATE TABLE "MakerBalance" (
     "id" VARCHAR(255) NOT NULL,
     "mangroveId" VARCHAR(100) NOT NULL,
-    "accountId" VARCHAR(255) NOT NULL,
+    "makerId" VARCHAR(255) NOT NULL,
     "balance" VARCHAR(80) NOT NULL,
 
     CONSTRAINT "MakerBalance_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Mangrove" (
-    "id" VARCHAR(255) NOT NULL,
-    "governance" TEXT,
-    "monitor" TEXT,
-    "vault" TEXT,
-    "useOracle" BOOLEAN,
-    "notify" BOOLEAN,
-    "gasmax" INTEGER,
-    "gasprice" INTEGER,
-    "dead" BOOLEAN,
-
-    CONSTRAINT "Mangrove_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -60,6 +60,7 @@ CREATE TABLE "OfferList" (
 -- CreateTable
 CREATE TABLE "Offer" (
     "id" VARCHAR(255) NOT NULL,
+    "offerListId" VARCHAR(255) NOT NULL,
     "mangroveId" VARCHAR(255) NOT NULL,
     "makerId" VARCHAR(255) NOT NULL,
     "prevOfferId" TEXT,

@@ -52,6 +52,15 @@ async function main() {
       graphql.FindUniqueOfferResolver,
       graphql.FindUniqueOrderResolver,
       graphql.FindUniqueTakerApprovalResolver,
+
+
+      graphql.AccountRelationsResolver,
+      graphql.MakerBalanceRelationsResolver,
+      graphql.MangroveRelationsResolver,
+      graphql.OfferListRelationsResolver,
+      graphql.OfferRelationsResolver,
+      graphql.OrderRelationsResolver,
+      graphql.TakerApprovalRelationsResolver,
     ],
     validate: false,
   });

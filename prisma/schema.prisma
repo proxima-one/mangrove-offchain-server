@@ -19,27 +19,6 @@ generator typegraphql {
 
 // data model
 
-model Account {
-  id      String @id @db.VarChar(255)
-  address String @db.VarChar(80)
-}
-
-model TakerApproval {
-  id          String @id @db.VarChar(255)
-  mangroveId  String @db.VarChar(255)
-  offerListId String @db.VarChar(255)
-  ownerId     String @db.VarChar(255)
-  spenderId   String @db.VarChar(255)
-  value       String @db.VarChar(80)
-}
-
-model MakerBalance {
-  id         String @id @db.VarChar(255)
-  mangroveId String @db.VarChar(100)
-  accountId  String @db.VarChar(255)
-  balance    String @db.VarChar(80)
-}
-
 model Mangrove {
   id         String   @id @db.VarChar(255)
   governance String?
@@ -50,6 +29,47 @@ model Mangrove {
   gasmax     Int?
   gasprice   Int?
   dead       Boolean?
+
+  offerLists     OfferList[]
+  offers         Offer[]
+  orders         Order[]
+  makerBalances  MakerBalance[]
+  takerApprovals TakerApproval[]
+}
+
+model Account {
+  id      String @id @db.VarChar(255)
+  address String @db.VarChar(80)
+
+  ownedTakerApprovals   TakerApproval[] @relation("OwnerApprovals")
+  spenderTakerApprovals TakerApproval[] @relation("SpenderApprovals")
+  offers                Offer[]
+  orders                Order[]
+  makerBalances         MakerBalance[]
+}
+
+model TakerApproval {
+  id          String @id @db.VarChar(255)
+  mangroveId  String @db.VarChar(255)
+  offerListId String @db.VarChar(255)
+  ownerId     String @db.VarChar(255)
+  spenderId   String @db.VarChar(255)
+  value       String @db.VarChar(80)
+
+  mangrove  Mangrove  @relation(fields: [mangroveId], references: [id])
+  offerList OfferList @relation(fields: [offerListId], references: [id])
+  owner     Account   @relation("OwnerApprovals", fields: [ownerId], references: [id])
+  spender   Account   @relation("SpenderApprovals", fields: [spenderId], references: [id])
+}
+
+model MakerBalance {
+  id         String @id @db.VarChar(255)
+  mangroveId String @db.VarChar(100)
+  makerId    String @db.VarChar(255)
+  balance    String @db.VarChar(80)
+
+  mangrove Mangrove @relation(fields: [mangroveId], references: [id])
+  maker    Account  @relation(fields: [makerId], references: [id])
 }
 
 model OfferList {
@@ -61,10 +81,15 @@ model OfferList {
   fee           String?  @db.VarChar(80)
   gasbase       Int?
   density       String?  @db.VarChar(80)
+
+  mangrove       Mangrove        @relation(fields: [mangroveId], references: [id])
+  offers         Offer[]
+  takerApprovals TakerApproval[]
 }
 
 model Offer {
   id            String  @id @db.VarChar(255)
+  offerListId   String  @db.VarChar(255)
   mangroveId    String  @db.VarChar(255)
   makerId       String  @db.VarChar(255)
   prevOfferId   String?
@@ -74,6 +99,10 @@ model Offer {
   gasreq        Int
   live          Boolean
   deprovisioned Boolean
+
+  mangrove  Mangrove  @relation(fields: [mangroveId], references: [id])
+  offerList OfferList @relation(fields: [offerListId], references: [id])
+  maker     Account   @relation(fields: [makerId], references: [id])
 }
 
 model Order {
@@ -86,6 +115,8 @@ model Order {
   penalty     String
 
   takenOffers TakenOffer[]
+  mangrove    Mangrove     @relation(fields: [mangroveId], references: [id])
+  taker       Account      @relation(fields: [takerId], references: [id])
 }
 
 model TakenOffer {

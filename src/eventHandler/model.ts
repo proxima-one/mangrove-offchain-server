@@ -14,9 +14,10 @@ export class AccountId extends Id {
 export class OfferId extends Id {
   public constructor(
     public readonly mangroveId: string,
+    public readonly offerListKey: OfferListKey,
     public readonly offerNumber: number
   ) {
-    super(`${mangroveId}-${offerNumber}`);
+    super(`${mangroveId}-${offerListKeyShortStr(offerListKey)}-${offerNumber}`);
   }
 }
 
@@ -25,9 +26,7 @@ export class OfferListId extends Id {
     public readonly mangroveId: string,
     public readonly offerListKey: OfferListKey
   ) {
-    super(
-      `${mangroveId}-${offerListKey.inboundToken}-${offerListKey.outboundToken}`
-    );
+    super(`${mangroveId}-${offerListKeyShortStr(offerListKey)}`);
   }
 }
 
@@ -48,7 +47,9 @@ export class TakerApprovalId extends Id {
     public readonly spenderAddress: string
   ) {
     super(
-      `${mangroveId}-${offerListKey.inboundToken}-${offerListKey.outboundToken}-${ownerAddress}-${spenderAddress}`
+      `${mangroveId}-${offerListKeyShortStr(
+        offerListKey
+      )}-${ownerAddress}-${spenderAddress}`
     );
   }
 }
@@ -59,9 +60,7 @@ export class OrderId extends Id {
     public readonly offerListKey: OfferListKey,
     public readonly order: string
   ) {
-    super(
-      `${mangroveId}-${offerListKey.inboundToken}-${offerListKey.outboundToken}-${order}`
-    );
+    super(`${mangroveId}-${offerListKeyShortStr(offerListKey)}-${order}`);
   }
 }
 
@@ -72,6 +71,13 @@ export class TakenOfferId extends Id {
   ) {
     super(`${orderId.value}-${offerNumber}`);
   }
+}
+
+function offerListKeyShortStr({
+  inboundToken,
+  outboundToken,
+}: OfferListKey): string {
+  return `${inboundToken.substring(0, 6)}x${outboundToken.substring(0, 6)}`;
 }
 
 export interface OfferListKey {

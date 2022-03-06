@@ -5,7 +5,7 @@ import { DomainEvent, EventHandler, events } from "../eventHandler";
 import { barrier } from "../utils/barrier";
 
 const prisma = new PrismaClient();
-const streamClient = new StreamClient("streamdb.cluster.prod.proxima.one:443");
+const streamClient = new StreamClient("streams.proxima.one:443");
 
 let stopped = false;
 let subscription: Subscription;
@@ -20,9 +20,12 @@ async function main() {
   const streamState = await domainEventStreamConsumer.getStreamState();
   console.log(`Consuming stream from ${streamState ?? "the beginning"}`);
 
-  const eventStream = streamClient.streamMessages("mangrove-domain-events", {
-    latest: streamState,
-  });
+  const eventStream = streamClient.streamMessages(
+    "domain-events.mangrove.streams.proxima.one",
+    {
+      latest: streamState,
+    }
+  );
 
   stoppedConsuming = false;
 
