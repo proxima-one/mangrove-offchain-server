@@ -50,17 +50,17 @@ jobs:
 
           echo "::set-output name=IMAGE_NAME::$IMAGE"
 
-      - run: npm install
-        working-directory: ./deploy
-
-      - name: Deploy Stage
-        uses: pulumi/actions@v3
-        with:
-          work-dir: ./deploy
-          command: up
-          stack-name: proxima-one/web-services
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          IMAGE_NAME: ${{steps.push-image.outputs.IMAGE_NAME}}
+#      - run: npm install
+#        working-directory: ./deploy
+#
+#      - name: Deploy Stage
+#        uses: pulumi/actions@v3
+#        with:
+#          work-dir: ./deploy
+#          command: up
+#          stack-name: proxima-one/web-services
+#          github-token: ${{ secrets.GITHUB_TOKEN }}
+#        env:
+#          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+#          IMAGE_NAME: ${{steps.push-image.outputs.IMAGE_NAME}}
 
