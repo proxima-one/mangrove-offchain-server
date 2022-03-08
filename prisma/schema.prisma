@@ -19,8 +19,17 @@ generator typegraphql {
 
 // data model
 
+model Chain {
+  id   Int     @id
+  name String
+
+  mangroves Mangrove[]
+}
+
 model Mangrove {
   id         String   @id @db.VarChar(255)
+  chainId    Int      @default(-1)
+  address    String   @db.VarChar(80) @default("")
   governance String?
   monitor    String?
   vault      String?
@@ -30,6 +39,7 @@ model Mangrove {
   gasprice   Int?
   dead       Boolean?
 
+  chain          Chain     @relation(fields: [chainId], references: [id])
   offerLists     OfferList[]
   offers         Offer[]
   orders         Order[]
@@ -89,6 +99,8 @@ model OfferList {
 
 model Offer {
   id            String  @id @db.VarChar(255)
+  blockNumber   Int     @default(-1)
+  time          DateTime @default(now())
   offerListId   String  @db.VarChar(255)
   mangroveId    String  @db.VarChar(255)
   makerId       String  @db.VarChar(255)
@@ -106,10 +118,12 @@ model Offer {
 }
 
 model Order {
-  id          String @id @db.VarChar(255)
-  mangroveId  String @db.VarChar(255)
-  offerListId String @db.VarChar(255)
-  takerId     String @db.VarChar(255)
+  id          String   @id @db.VarChar(255)
+  blockNumber Int      @default(-1)
+  time        DateTime @default(now())
+  mangroveId  String   @db.VarChar(255)
+  offerListId String   @db.VarChar(255)
+  takerId     String   @db.VarChar(255)
   takerGot    String
   takerGave   String
   penalty     String
