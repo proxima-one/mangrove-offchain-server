@@ -1,0 +1,7 @@
+-- AlterTable
+ALTER TABLE "Offer" ALTER COLUMN "blockNumber" DROP DEFAULT,
+ALTER COLUMN "time" DROP DEFAULT;
+
+-- AlterTable
+ALTER TABLE "Order" ALTER COLUMN "blockNumber" DROP DEFAULT,
+ALTER COLUMN "time" DROP DEFAULT;

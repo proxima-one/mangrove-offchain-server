@@ -78,6 +78,7 @@ export type MangroveEvent = (
   | MakerBalanceUpdated
   | OfferListParamsUpdated
   | MangroveParamsUpdated
+  | MangroveCreated
   | OfferWritten
   | OfferRetracted
   | OrderCompleted
@@ -99,6 +100,17 @@ export interface MakerBalanceUpdated {
 
   maker: MakerId;
   amountChange: Int;
+}
+
+export interface MangroveCreated {
+  type: "MangroveCreated";
+
+  id: string;
+  chain: {
+    name: string;
+    chainlistId: number;
+  };
+  address: string;
 }
 
 export interface OfferListParamsUpdated {
@@ -138,6 +150,6 @@ export interface OrderCompleted {
 }
 
 export type MangroveStreamEventPayload = MangroveEvent & {
-  tx: TransactionRef;
-  mangroveId: MangroveId; //support multiple instances in the same event stream
+  tx?: TransactionRef;
+  mangroveId?: MangroveId; //support multiple instances in the same event stream
 };

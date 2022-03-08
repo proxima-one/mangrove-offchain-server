@@ -21,7 +21,7 @@ async function main() {
   console.log(`Consuming stream from ${streamState ?? "the beginning"}`);
 
   const eventStream = streamClient.streamMessages(
-    "domain-events.mangrove.streams.proxima.one",
+    "domain-events.polygon-mumbai.mangrove.streams.proxima.one",
     {
       latest: streamState,
     }
@@ -37,7 +37,9 @@ async function main() {
     buffer.push({
       payload,
       undo: msg.header?.undo == true,
-      timestamp: new Date(msg.timestamp.seconds + msg.timestamp.nanos / 1e6),
+      timestamp: new Date(
+        msg.timestamp.seconds * 1e3 + msg.timestamp.nanos / 1e3
+      ),
       state: msg.id,
     });
 

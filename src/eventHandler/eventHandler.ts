@@ -2,6 +2,7 @@ import * as prisma from "@prisma/client";
 import * as _ from "lodash";
 import {
   AccountId,
+  ChainId,
   DomainEvent,
   eventMatcher,
   MakerBalanceId,
@@ -11,6 +12,7 @@ import {
   TakenOfferId,
   TakerApprovalId,
 } from "./model";
+import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
 
 export class EventHandler {
@@ -33,14 +35,25 @@ export class EventHandler {
       async (tx) => {
         const db = new DbOperations(tx);
         for (const { payload, undo, timestamp, state } of events) {
-          const mangroveId = payload.mangroveId;
+          const mangroveId = payload.mangroveId!;
+          const txRef = payload.tx;
+
           await eventMatcher({
+            MangroveCreated: async (e) => {
+              const chainId = new ChainId(e.chain.chainlistId);
+              await db.ensureChain(chainId, e.chain.name);
+              await db.ensureMangrove(e.id, chainId, e.address);
+
+              // todo: handle undo?
+            },
             OfferRetracted: async (e) => {
               await db.deleteOffer(
                 new OfferId(mangroveId, e.offerList, e.offerId)
               );
+              // todo: handle undo
             },
             OfferWritten: async ({ offer, maker, offerList }) => {
+              assert(txRef);
               const accountId = new AccountId(maker);
               await db.ensureAccount(accountId);
 
@@ -53,6 +66,8 @@ export class EventHandler {
               await db.updateOffer({
                 id: offerId.value,
                 offerListId: new OfferListId(mangroveId, offerList).value,
+                blockNumber: txRef.blockNumber,
+                time: timestamp,
                 mangroveId: mangroveId,
                 gasprice: offer.gasprice,
                 gives: offer.gives,
@@ -63,17 +78,20 @@ export class EventHandler {
                 prevOfferId: prevOfferId ? prevOfferId.value : null,
                 makerId: maker,
               });
+              // todo: handle undo
             },
             OfferListParamsUpdated: async ({ offerList, params }) => {
               const id = new OfferListId(mangroveId, offerList);
               await db.updateOfferList(id, (model) => {
                 _.merge(model, params);
               });
+              // todo: handle undo
             },
             MangroveParamsUpdated: async ({ params }) => {
               await db.updateMangrove(mangroveId, (model) => {
                 _.merge(model, params);
               });
+              // todo: handle undo
             },
             MakerBalanceUpdated: async ({ maker, amountChange }) => {
               let amount = new BigNumber(amountChange);
@@ -105,8 +123,10 @@ export class EventHandler {
               await db.updateTakerApproval(takerApprovalId, (model) => {
                 model.value = amount;
               });
+              // todo: handle undo
             },
             OrderCompleted: async ({ id, order, offerList }) => {
+              assert(txRef);
               // create order and taken offers
               const orderId = new OrderId(mangroveId, offerList, id);
               // taken offer is not an aggregate
@@ -116,6 +136,8 @@ export class EventHandler {
               await tx.order.create({
                 data: {
                   id: orderId.value,
+                  time: timestamp,
+                  blockNumber: txRef.blockNumber,
                   offerListId: new OfferListId(mangroveId, offerList).value,
                   mangroveId: mangroveId,
                   takerId: takerAccountId.value,
@@ -135,6 +157,7 @@ export class EventHandler {
                   },
                 },
               });
+              // todo: handle undo
             },
           })(payload);
         }
@@ -164,6 +187,20 @@ class DbOperations {
       await this.tx.account.create({ data: account });
     }
     return account;
+  }
+
+  public async ensureChain(id: ChainId, name: string): Promise<prisma.Chain> {
+    let chain = await this.tx.chain.findUnique({
+      where: { id: id.chainlistId },
+    });
+    if (chain == undefined) {
+      chain = {
+        id: id.value,
+        name: name,
+      };
+      await this.tx.chain.create({ data: chain });
+    }
+    return chain;
   }
 
   public async deleteOffer(id: OfferId) {
@@ -197,24 +234,38 @@ class DbOperations {
     return offerList;
   }
 
+  public async ensureMangrove(id: string, chainId: ChainId, address: string) {
+    const mangrove = await this.tx.mangrove.findUnique({
+      where: { id: id },
+    });
+
+    if (!mangrove) {
+      await this.tx.mangrove.create({
+        data: {
+          id: id,
+          chainId: chainId.value,
+          address: address,
+          gasprice: null,
+          gasmax: null,
+          dead: null,
+          monitor: null,
+          notify: null,
+          useOracle: null,
+          vault: null,
+        },
+      });
+    }
+  }
+
   public async updateMangrove(
     id: string,
     updateFunc: (model: prisma.Mangrove) => void
   ) {
-    const mangrove = (await this.tx.mangrove.findUnique({
+    const mangrove = await this.tx.mangrove.findUnique({
       where: { id: id },
-    })) ?? {
-      id: id,
-      gasprice: null,
-      gasmax: null,
-      governance: null,
-      dead: null,
-      monitor: null,
-      notify: null,
-      useOracle: null,
-      vault: null,
-    };
+    });
 
+    assert(mangrove);
     updateFunc(mangrove);
 
     await this.tx.mangrove.upsert(toUpsert(mangrove));

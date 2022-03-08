@@ -1,17 +1,23 @@
 import { MangroveStreamEventPayload } from "./events";
 import { createPatternMatcher } from "../utils/discriminatedUnion";
 
-export class Id {
-  public constructor(public readonly value: string) {}
+export class Id<T extends string | number> {
+  public constructor(public readonly value: T) {}
 }
 
-export class AccountId extends Id {
+export class AccountId extends Id<string> {
   public constructor(public readonly address: string) {
     super(address);
   }
 }
 
-export class OfferId extends Id {
+export class ChainId extends Id<number> {
+  public constructor(public readonly chainlistId: number) {
+    super(chainlistId);
+  }
+}
+
+export class OfferId extends Id<string> {
   public constructor(
     public readonly mangroveId: string,
     public readonly offerListKey: OfferListKey,
@@ -21,7 +27,7 @@ export class OfferId extends Id {
   }
 }
 
-export class OfferListId extends Id {
+export class OfferListId extends Id<string> {
   public constructor(
     public readonly mangroveId: string,
     public readonly offerListKey: OfferListKey
@@ -30,7 +36,7 @@ export class OfferListId extends Id {
   }
 }
 
-export class MakerBalanceId extends Id {
+export class MakerBalanceId extends Id<string> {
   public constructor(
     public readonly mangroveId: string,
     public readonly address: string
@@ -39,7 +45,7 @@ export class MakerBalanceId extends Id {
   }
 }
 
-export class TakerApprovalId extends Id {
+export class TakerApprovalId extends Id<string> {
   public constructor(
     public readonly mangroveId: string,
     public readonly offerListKey: OfferListKey,
@@ -54,7 +60,7 @@ export class TakerApprovalId extends Id {
   }
 }
 
-export class OrderId extends Id {
+export class OrderId extends Id<string> {
   public constructor(
     public readonly mangroveId: string,
     public readonly offerListKey: OfferListKey,
@@ -64,7 +70,7 @@ export class OrderId extends Id {
   }
 }
 
-export class TakenOfferId extends Id {
+export class TakenOfferId extends Id<string> {
   public constructor(
     public readonly orderId: OrderId,
     public readonly offerNumber: number
