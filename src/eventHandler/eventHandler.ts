@@ -1,7 +1,8 @@
 import * as prisma from "@prisma/client";
 import * as _ from "lodash";
 import {
-  AccountId, ChainId,
+  AccountId,
+  ChainId,
   DomainEvent,
   eventMatcher,
   MakerBalanceId,
@@ -189,7 +190,9 @@ class DbOperations {
   }
 
   public async ensureChain(id: ChainId, name: string): Promise<prisma.Chain> {
-    let chain = await this.tx.chain.findUnique({ where: { id: id.chainlistId } });
+    let chain = await this.tx.chain.findUnique({
+      where: { id: id.chainlistId },
+    });
     if (chain == undefined) {
       chain = {
         id: id.value,
@@ -249,7 +252,7 @@ class DbOperations {
           notify: null,
           useOracle: null,
           vault: null,
-        }
+        },
       });
     }
   }
@@ -258,9 +261,9 @@ class DbOperations {
     id: string,
     updateFunc: (model: prisma.Mangrove) => void
   ) {
-    const mangrove = (await this.tx.mangrove.findUnique({
+    const mangrove = await this.tx.mangrove.findUnique({
       where: { id: id },
-    }));
+    });
 
     assert(mangrove);
     updateFunc(mangrove);

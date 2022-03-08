@@ -12,9 +12,7 @@ export class AccountId extends Id<string> {
 }
 
 export class ChainId extends Id<number> {
-  public constructor(
-    public readonly chainlistId: number
-  ) {
+  public constructor(public readonly chainlistId: number) {
     super(chainlistId);
   }
 }

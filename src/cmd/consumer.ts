@@ -37,7 +37,9 @@ async function main() {
     buffer.push({
       payload,
       undo: msg.header?.undo == true,
-      timestamp: new Date(msg.timestamp.seconds * 1e3 + msg.timestamp.nanos / 1e3),
+      timestamp: new Date(
+        msg.timestamp.seconds * 1e3 + msg.timestamp.nanos / 1e3
+      ),
       state: msg.id,
     });
 
