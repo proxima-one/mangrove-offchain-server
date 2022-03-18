@@ -21,6 +21,7 @@ async function main() {
       graphql.FindManyOrderResolver,
       graphql.FindManyTakerApprovalResolver,
       graphql.FindManyChainResolver,
+      graphql.FindManyTokenResolver,
 
       graphql.AggregateAccountResolver,
       graphql.AggregateMakerBalanceResolver,
@@ -30,6 +31,7 @@ async function main() {
       graphql.AggregateOrderResolver,
       graphql.AggregateTakerApprovalResolver,
       graphql.AggregateChainResolver,
+      graphql.AggregateTokenResolver,
 
       graphql.GroupByAccountResolver,
       graphql.GroupByMakerBalanceResolver,
@@ -39,6 +41,7 @@ async function main() {
       graphql.GroupByOrderResolver,
       graphql.GroupByTakerApprovalResolver,
       graphql.GroupByChainResolver,
+      graphql.GroupByTokenResolver,
 
       graphql.FindUniqueAccountResolver,
       graphql.FindUniqueMakerBalanceResolver,
@@ -48,6 +51,7 @@ async function main() {
       graphql.FindUniqueOrderResolver,
       graphql.FindUniqueTakerApprovalResolver,
       graphql.FindUniqueChainResolver,
+      graphql.FindUniqueTokenResolver,
 
       graphql.AccountRelationsResolver,
       graphql.MakerBalanceRelationsResolver,
@@ -57,6 +61,7 @@ async function main() {
       graphql.OrderRelationsResolver,
       graphql.TakerApprovalRelationsResolver,
       graphql.ChainRelationsResolver,
+      graphql.TokenRelationsResolver,
     ],
     validate: false,
   });

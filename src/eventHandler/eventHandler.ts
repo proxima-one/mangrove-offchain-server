@@ -11,9 +11,29 @@ import {
   OrderId,
   TakenOfferId,
   TakerApprovalId,
+  TokenId,
 } from "./model";
 import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
+
+// FIXME: Since we don't get token events for Mumbai we need to get token information from a different source.
+//        But as we expect a token event stream to eventually be available, we'll hardcode the token information for now.
+class TokenData {
+  public constructor(
+    public readonly symbol: string,
+    public readonly name: string,
+    public readonly decimals: number,
+    public readonly address: string,
+  ) {}
+}
+const mumbaiTokens = [
+  new TokenData("WETH", "Wrapped Ether", 18, "0x3c68ce8504087f89c640d02d133646d98e64ddd9"),
+  new TokenData("DAI", "Dai Stablecoin", 18, "0x001b3b4d0f3714ca98ba10f6042daebf0b1b7b6f"),
+  new TokenData("USDC", "USD Coin", 6, "0x2058a9d7613eee744279e3856ef0eada5fcbaa7e"),
+  new TokenData("amWETH", "Wrapped Ether", 18, "0x7ae20397ca327721f013bb9e140c707f82871b56"),
+  new TokenData("amDAI", "Dai Stablecoin", 18, "0x639cb7b21ee2161df9c882483c9d55c90c20ca3e"),
+  new TokenData("amUSDC", "USD Coin", 6, "0x2271e3fef9e15046d09e1d78a8ff038c691e9cf9"),
+];
 
 export class EventHandler {
   public constructor(
@@ -42,6 +62,12 @@ export class EventHandler {
             MangroveCreated: async (e) => {
               const chainId = new ChainId(e.chain.chainlistId);
               await db.ensureChain(chainId, e.chain.name);
+              // FIXME: This is a temporary solution that only works for select, hard-coded tokens on Mumbai
+              const tokenPromises: Promise<prisma.Token>[] = [];
+              for (const token of mumbaiTokens) {
+                tokenPromises.push(db.ensureToken(new TokenId(chainId, token.address), token));
+              }
+              await Promise.all(tokenPromises);
               await db.ensureMangrove(e.id, chainId, e.address);
 
               // todo: handle undo?
@@ -203,6 +229,23 @@ class DbOperations {
     return chain;
   }
 
+  public async ensureToken(id: TokenId, tokenData: TokenData): Promise<prisma.Token> {
+    let token = await this.tx.token.findUnique({
+      where: { id: id.value },
+    });
+    if (token == undefined) {
+      token = {
+        id: id.value,
+        chainId: id.chainId.chainlistId,
+        symbol: tokenData.symbol,
+        name: tokenData.name,
+        decimals: tokenData.decimals,
+      };
+      await this.tx.token.create({ data: token });
+    }
+    return token;
+  }
+
   public async deleteOffer(id: OfferId) {
     await this.tx.offer.deleteMany({ where: { id: id.value } });
   }
@@ -215,13 +258,19 @@ class DbOperations {
     id: OfferListId,
     updateFunc: (model: prisma.OfferList) => void
   ) {
+    const mangrove = await this.tx.mangrove.findUnique({
+      where: { id: id.mangroveId },
+    });
+    const chainId = new ChainId(mangrove!.chainId);
+    const inboundTokenId = new TokenId(chainId, id.offerListKey.inboundToken);
+    const outboundTokenId = new TokenId(chainId, id.offerListKey.outboundToken);
     const offerList = (await this.tx.offerList.findUnique({
       where: { id: id.value },
     })) ?? {
       id: id.value,
       mangroveId: id.mangroveId,
-      inboundToken: id.offerListKey.inboundToken,
-      outboundToken: id.offerListKey.outboundToken,
+      inboundTokenId: inboundTokenId.value,
+      outboundTokenId: outboundTokenId.value,
       active: null,
       density: null,
       gasbase: null,

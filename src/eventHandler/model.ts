@@ -17,6 +17,15 @@ export class ChainId extends Id<number> {
   }
 }
 
+export class TokenId extends Id<string> {
+  public constructor(
+    public readonly chainId: ChainId,
+    public readonly tokenAddress: string
+  ) {
+    super(`${chainId.chainlistId}-${tokenAddress}`);
+  }
+}
+
 export class OfferId extends Id<string> {
   public constructor(
     public readonly mangroveId: string,
