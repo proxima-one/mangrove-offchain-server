@@ -31,15 +31,6 @@ async function main() {
       graphql.AggregateTakerApprovalResolver,
       graphql.AggregateChainResolver,
 
-      graphql.AggregateAccountResolver,
-      graphql.AggregateMakerBalanceResolver,
-      graphql.AggregateMangroveResolver,
-      graphql.AggregateOfferListResolver,
-      graphql.AggregateOfferResolver,
-      graphql.AggregateOrderResolver,
-      graphql.AggregateTakerApprovalResolver,
-      graphql.AggregateChainResolver,
-
       graphql.GroupByAccountResolver,
       graphql.GroupByMakerBalanceResolver,
       graphql.GroupByMangroveResolver,
