@@ -5,7 +5,7 @@ import * as graphql from "@generated/type-graphql";
 import { buildSchema } from "type-graphql";
 import { ApolloServer } from "apollo-server";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
-import { CustomOfferFieldsResolver, CustomOrderFieldsResolver, CustomTakenOfferFieldsResolver } from "resolvers/customFieldResolvers";
+import { CustomOfferFieldsResolver, CustomOrderFieldsResolver, CustomTakenOfferFieldsResolver, CustomTokenFieldsResolver } from "resolvers/customFieldResolvers";
 
 const prisma = new PrismaClient();
 
@@ -64,9 +64,10 @@ async function main() {
       graphql.ChainRelationsResolver,
       graphql.TokenRelationsResolver,
 
+      CustomTokenFieldsResolver,
       CustomOfferFieldsResolver,
       CustomOrderFieldsResolver,
-      CustomTakenOfferFieldsResolver
+      CustomTakenOfferFieldsResolver,
     ],
     validate: false,
   });

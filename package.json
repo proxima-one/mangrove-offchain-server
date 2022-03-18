@@ -35,6 +35,7 @@
     "graphql-fields": "^2.0.3",
     "graphql-scalars": "^1.14.1",
     "lodash": "^4.17.21",
+    "node-fetch-cache": "^3.0.5",
     "prisma": "~3.10.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.5.4",
