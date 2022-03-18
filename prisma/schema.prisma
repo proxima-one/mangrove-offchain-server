@@ -110,6 +110,7 @@ model OfferList {
   outboundToken  Token           @relation(name: "OfferListsByOutboundToken", fields: [outboundTokenId], references: [id])
   offers         Offer[]
   takerApprovals TakerApproval[]
+  orders         Order[]
 }
 
 model Offer {
@@ -145,6 +146,7 @@ model Order {
 
   takenOffers TakenOffer[]
   mangrove    Mangrove     @relation(fields: [mangroveId], references: [id])
+  offerList   OfferList    @relation(fields: [offerListId], references: [id])
   taker       Account      @relation(fields: [takerId], references: [id])
 }
 
