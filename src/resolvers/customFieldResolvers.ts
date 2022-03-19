@@ -1,7 +1,6 @@
 import { Ctx, FieldResolver, Resolver, Root } from "type-graphql";
 import { Offer, Order, TakenOffer, Token } from "@generated/type-graphql"
 import { PrismaClient } from "@prisma/client";
-import BigNumber from "bignumber.js";
 
 // At most re-fetch once per 1000 ms for each token
 import { fetchBuilder, MemoryCache } from "node-fetch-cache";
@@ -31,33 +30,15 @@ export class CustomTokenFieldsResolver {
 @Resolver(of => Offer)
 export class CustomOfferFieldsResolver {
   @FieldResolver(type => Number, { nullable: true })
-  async givesAsNumber(
-    @Root() offer: Offer,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const outboundToken = await findOutboundTokenFromOfferOrFail(offer, prisma);
-    return new BigNumber(offer.gives).shiftedBy(-outboundToken.decimals).toNumber();
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
   async givesInUsd(
     @Root() offer: Offer,
     @Ctx() ctx: Context,
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       offer,
-      this.givesAsNumber.bind(this),
+      offer.givesNumber,
       findOutboundTokenFromOfferOrFail,
       ctx);
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
-  async wantsAsNumber(
-    @Root() offer: Offer,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const inboundToken = await findInboundTokenFromOfferOrFail(offer, prisma);
-    return new BigNumber(offer.wants).shiftedBy(-inboundToken.decimals).toNumber();
   }
 
   @FieldResolver(type => Number, { nullable: true })
@@ -67,20 +48,9 @@ export class CustomOfferFieldsResolver {
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       offer,
-      this.wantsAsNumber.bind(this),
+      offer.wantsNumber,
       findInboundTokenFromOfferOrFail,
       ctx);
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
-  async takerPaysPrice(
-    @Root() offer: Offer,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const givesAsNumber = await this.givesAsNumber(offer, { prisma });
-    const wantsAsNumber = await this.wantsAsNumber(offer, { prisma });
-    if (!givesAsNumber || !wantsAsNumber) return undefined;
-    return wantsAsNumber/givesAsNumber;
   }
 
   @FieldResolver(type => Number, { nullable: true })
@@ -90,20 +60,9 @@ export class CustomOfferFieldsResolver {
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       offer,
-      this.takerPaysPrice.bind(this),
+      offer.takerPaysPrice,
       findInboundTokenFromOfferOrFail,
       ctx);
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
-  async makerPaysPrice(
-    @Root() offer: Offer,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const givesAsNumber = await this.givesAsNumber(offer, { prisma });
-    const wantsAsNumber = await this.wantsAsNumber(offer, { prisma });
-    if (!givesAsNumber || !wantsAsNumber) return undefined;
-    return givesAsNumber/wantsAsNumber;
   }
 
   @FieldResolver(type => Number, { nullable: true })
@@ -113,7 +72,7 @@ export class CustomOfferFieldsResolver {
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       offer,
-      this.makerPaysPrice.bind(this),
+      offer.makerPaysPrice,
       findOutboundTokenFromOfferOrFail,
       ctx);
   }
@@ -122,33 +81,15 @@ export class CustomOfferFieldsResolver {
 @Resolver(of => Order)
 export class CustomOrderFieldsResolver {
   @FieldResolver(type => Number, { nullable: true })
-  async takerGotAsNumber(
-    @Root() order: Order,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const outboundToken = await findOutboundTokenFromOrderOrFail(order, prisma);
-    return new BigNumber(order.takerGot).shiftedBy(-outboundToken.decimals).toNumber();
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
   async takerGotInUsd(
     @Root() order: Order,
     @Ctx() ctx: Context,
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       order,
-      this.takerGotAsNumber.bind(this),
+      order.takerGotNumber,
       findOutboundTokenFromOrderOrFail,
       ctx);
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
-  async takerGaveAsNumber(
-    @Root() order: Order,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const inboundToken = await findInboundTokenFromOrderOrFail(order, prisma);
-    return new BigNumber(order.takerGave).shiftedBy(-inboundToken.decimals).toNumber();
   }
 
   @FieldResolver(type => Number, { nullable: true })
@@ -158,20 +99,9 @@ export class CustomOrderFieldsResolver {
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       order,
-      this.takerGaveAsNumber.bind(this),
+      order.takerGaveNumber,
       findInboundTokenFromOrderOrFail,
       ctx);
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
-  async takerPaysPrice(
-    @Root() order: Order,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const takerGotAsNumber = await this.takerGotAsNumber(order, { prisma });
-    const takerGaveAsNumber = await this.takerGaveAsNumber(order, { prisma });
-    if (!takerGotAsNumber || !takerGaveAsNumber) return undefined;
-    return takerGaveAsNumber/takerGotAsNumber;
   }
 
   @FieldResolver(type => Number, { nullable: true })
@@ -181,20 +111,9 @@ export class CustomOrderFieldsResolver {
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       order,
-      this.takerPaysPrice.bind(this),
+      order.takerPaidPrice,
       findInboundTokenFromOrderOrFail,
       ctx);
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
-  async makerPaysPrice(
-    @Root() order: Order,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const takerGotAsNumber = await this.takerGotAsNumber(order, { prisma });
-    const takerGaveAsNumber = await this.takerGaveAsNumber(order, { prisma });
-    if (!takerGotAsNumber || !takerGaveAsNumber) return undefined;
-    return takerGotAsNumber/takerGaveAsNumber;
   }
 
   @FieldResolver(type => Number, { nullable: true })
@@ -204,7 +123,7 @@ export class CustomOrderFieldsResolver {
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       order,
-      this.makerPaysPrice.bind(this),
+      order.makerPaidPrice,
       findOutboundTokenFromOrderOrFail,
       ctx);
   }
@@ -213,33 +132,15 @@ export class CustomOrderFieldsResolver {
 @Resolver(of => TakenOffer)
 export class CustomTakenOfferFieldsResolver {
   @FieldResolver(type => Number, { nullable: true })
-  async takerWantsAsNumber(
-    @Root() takenOffer: TakenOffer,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const outboundToken = await findOutboundTokenFromTakenOfferOrFail(takenOffer, prisma);
-    return new BigNumber(takenOffer.takerWants).shiftedBy(-outboundToken.decimals).toNumber();
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
   async takerWantsInUsd(
     @Root() takenOffer: TakenOffer,
     @Ctx() ctx: Context,
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       takenOffer,
-      this.takerWantsAsNumber.bind(this),
+      takenOffer.takerWantsNumber,
       findOutboundTokenFromTakenOfferOrFail,
       ctx);
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
-  async takerGivesAsNumber(
-    @Root() takenOffer: TakenOffer,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const inboundToken = await findInboundTokenFromTakenOfferOrFail(takenOffer, prisma);
-    return new BigNumber(takenOffer.takerGives).shiftedBy(-inboundToken.decimals).toNumber();
   }
 
   @FieldResolver(type => Number, { nullable: true })
@@ -249,20 +150,9 @@ export class CustomTakenOfferFieldsResolver {
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       takenOffer,
-      this.takerGivesAsNumber.bind(this),
+      takenOffer.takerGivesNumber,
       findInboundTokenFromTakenOfferOrFail,
       ctx);
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
-  async takerPaysPrice(
-    @Root() takenOffer: TakenOffer,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const takerGivesAsNumber = await this.takerGivesAsNumber(takenOffer, { prisma });
-    const takerWantsAsNumber = await this.takerWantsAsNumber(takenOffer, { prisma });
-    if (!takerGivesAsNumber || !takerWantsAsNumber) return undefined;
-    return takerGivesAsNumber/takerWantsAsNumber;
   }
 
   @FieldResolver(type => Number, { nullable: true })
@@ -272,20 +162,9 @@ export class CustomTakenOfferFieldsResolver {
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       takenOffer,
-      this.takerPaysPrice.bind(this),
+      takenOffer.takerPaysPrice,
       findInboundTokenFromTakenOfferOrFail,
       ctx);
-  }
-
-  @FieldResolver(type => Number, { nullable: true })
-  async makerPaysPrice(
-    @Root() takenOffer: TakenOffer,
-    @Ctx() { prisma }: Context,
-  ): Promise<number | undefined> {
-    const takerGivesAsNumber = await this.takerGivesAsNumber(takenOffer, { prisma });
-    const takerWantsAsNumber = await this.takerWantsAsNumber(takenOffer, { prisma });
-    if (!takerGivesAsNumber || !takerWantsAsNumber) return undefined;
-    return takerWantsAsNumber/takerGivesAsNumber;
   }
 
   @FieldResolver(type => Number, { nullable: true })
@@ -295,7 +174,7 @@ export class CustomTakenOfferFieldsResolver {
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       takenOffer,
-      this.makerPaysPrice.bind(this),
+      takenOffer.makerPaysPrice,
       findOutboundTokenFromTakenOfferOrFail,
       ctx);
   }
@@ -303,14 +182,14 @@ export class CustomTakenOfferFieldsResolver {
 
 async function amountFieldToUsd<Entity>(
   entity: Entity,
-  amountGetter: (e: Entity, ctx: Context) => Promise<number | undefined>,
+  amount: number | null | undefined,
   tokenGetter: (e: Entity, prisma: PrismaClient) => Promise<Token>,
   ctx: Context
 ): Promise<number | undefined> {
+  if (!amount) return undefined;
   const token = await tokenGetter(entity, ctx.prisma);
   const tokenPriceInUsd = await fetchTokenPriceInUsd(token);
-  const amount = await amountGetter(entity, ctx);
-  if (!amount || !tokenPriceInUsd) return undefined;
+  if (!tokenPriceInUsd) return undefined;
   return amount * tokenPriceInUsd;
 }
 

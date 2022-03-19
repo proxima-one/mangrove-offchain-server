@@ -114,19 +114,23 @@ model OfferList {
 }
 
 model Offer {
-  id            String   @id @db.VarChar(255)
-  blockNumber   Int
-  time          DateTime @db.Timestamp
-  offerListId   String   @db.VarChar(255)
-  mangroveId    String   @db.VarChar(255)
-  makerId       String   @db.VarChar(255)
-  prevOfferId   String?
-  wants         String   @db.VarChar(80)
-  gives         String   @db.VarChar(80)
-  gasprice      Int
-  gasreq        Int
-  live          Boolean
-  deprovisioned Boolean
+  id             String   @id @db.VarChar(255)
+  blockNumber    Int
+  time           DateTime @db.Timestamp
+  offerListId    String   @db.VarChar(255)
+  mangroveId     String   @db.VarChar(255)
+  makerId        String   @db.VarChar(255)
+  prevOfferId    String?
+  wants          String   @db.VarChar(80)
+  wantsNumber    Float
+  gives          String   @db.VarChar(80)
+  givesNumber    Float
+  takerPaysPrice Float?
+  makerPaysPrice Float?
+  gasprice       Int
+  gasreq         Int
+  live           Boolean
+  deprovisioned  Boolean
 
   mangrove  Mangrove  @relation(fields: [mangroveId], references: [id])
   offerList OfferList @relation(fields: [offerListId], references: [id])
@@ -134,15 +138,19 @@ model Offer {
 }
 
 model Order {
-  id          String   @id @db.VarChar(255)
-  blockNumber Int
-  time        DateTime @db.Timestamp
-  mangroveId  String   @db.VarChar(255)
-  offerListId String   @db.VarChar(255)
-  takerId     String   @db.VarChar(255)
-  takerGot    String
-  takerGave   String
-  penalty     String
+  id              String   @id @db.VarChar(255)
+  blockNumber     Int
+  time            DateTime @db.Timestamp
+  mangroveId      String   @db.VarChar(255)
+  offerListId     String   @db.VarChar(255)
+  takerId         String   @db.VarChar(255)
+  takerGot        String
+  takerGotNumber  Float
+  takerGave       String
+  takerGaveNumber Float
+  takerPaidPrice  Float?
+  makerPaidPrice  Float?
+  penalty         String
 
   takenOffers TakenOffer[]
   mangrove    Mangrove     @relation(fields: [mangroveId], references: [id])
@@ -151,12 +159,16 @@ model Order {
 }
 
 model TakenOffer {
-  id             String  @id @db.VarChar(255)
-  orderId        String  @db.VarChar(255)
-  takerWants     String  @db.VarChar(80)
-  takerGives     String  @db.VarChar(80)
-  posthookFailed Boolean
-  failReason     String?
+  id               String  @id @db.VarChar(255)
+  orderId          String  @db.VarChar(255)
+  takerWants       String  @db.VarChar(80)
+  takerWantsNumber Float
+  takerGives       String  @db.VarChar(80)
+  takerGivesNumber Float
+  takerPaysPrice   Float?
+  makerPaysPrice   Float?
+  posthookFailed   Boolean
+  failReason       String?
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 }

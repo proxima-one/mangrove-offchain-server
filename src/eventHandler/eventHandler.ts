@@ -80,8 +80,12 @@ export class EventHandler {
             },
             OfferWritten: async ({ offer, maker, offerList }) => {
               assert(txRef);
+
               const accountId = new AccountId(maker);
-              await db.ensureAccount(accountId);
+              const accountPromise = db.ensureAccount(accountId);
+
+              const offerListId = new OfferListId(mangroveId, offerList);
+              const offerListTokensPromise = db.getOfferListTokens(offerListId);
 
               const offerId = new OfferId(mangroveId, offerList, offer.id);
               const prevOfferId =
@@ -89,15 +93,25 @@ export class EventHandler {
                   ? null
                   : new OfferId(mangroveId, offerList, offer.prev);
 
+              const { outboundToken, inboundToken } = await offerListTokensPromise;
+              const givesBigNumber = new BigNumber(offer.gives).shiftedBy(-outboundToken.decimals);
+              const wantsBigNumber = new BigNumber(offer.wants).shiftedBy(-inboundToken.decimals);
+
+              await accountPromise;
+
               await db.updateOffer({
                 id: offerId.value,
-                offerListId: new OfferListId(mangroveId, offerList).value,
+                offerListId: offerListId.value,
                 blockNumber: txRef.blockNumber,
                 time: timestamp,
                 mangroveId: mangroveId,
                 gasprice: offer.gasprice,
                 gives: offer.gives,
+                givesNumber: givesBigNumber.toNumber(),
                 wants: offer.wants,
+                wantsNumber: wantsBigNumber.toNumber(),
+                takerPaysPrice: givesBigNumber.gt(0) ? wantsBigNumber.div(givesBigNumber).toNumber() : null,
+                makerPaysPrice: wantsBigNumber.gt(0) ? givesBigNumber.div(wantsBigNumber).toNumber() : null,
                 gasreq: offer.gasreq,
                 live: new BigNumber(offer.gives).isPositive(),
                 deprovisioned: offer.gasprice == 0,
@@ -153,6 +167,12 @@ export class EventHandler {
             },
             OrderCompleted: async ({ id, order, offerList }) => {
               assert(txRef);
+              const offerListId = new OfferListId(mangroveId, offerList);
+
+              const { outboundToken, inboundToken } = await db.getOfferListTokens(offerListId);
+              const takerGotBigNumber = new BigNumber(order.takerGot).shiftedBy(-outboundToken.decimals);
+              const takerGaveBigNumber = new BigNumber(order.takerGave).shiftedBy(-inboundToken.decimals);
+
               // create order and taken offers
               const orderId = new OrderId(mangroveId, offerList, id);
               // taken offer is not an aggregate
@@ -164,18 +184,28 @@ export class EventHandler {
                   id: orderId.value,
                   time: timestamp,
                   blockNumber: txRef.blockNumber,
-                  offerListId: new OfferListId(mangroveId, offerList).value,
+                  offerListId: offerListId.value,
                   mangroveId: mangroveId,
                   takerId: takerAccountId.value,
                   takerGot: order.takerGot,
+                  takerGotNumber: takerGotBigNumber.toNumber(),
                   takerGave: order.takerGave,
+                  takerGaveNumber: takerGaveBigNumber.toNumber(),
+                  takerPaidPrice: takerGotBigNumber.gt(0) ? takerGaveBigNumber.div(takerGotBigNumber).toNumber() : undefined,
+                  makerPaidPrice: takerGaveBigNumber.gt(0) ? takerGotBigNumber.div(takerGaveBigNumber).toNumber() : undefined,
                   penalty: order.penalty,
                   takenOffers: {
                     create: order.takenOffers.map((o) => {
+                      const takerWantsBigNumber = new BigNumber(o.takerWants).shiftedBy(-outboundToken.decimals);
+                      const takerGivesBigNumber = new BigNumber(o.takerGives).shiftedBy(-inboundToken.decimals);
                       return {
                         id: new TakenOfferId(orderId, o.id).value,
                         takerWants: o.takerWants,
+                        takerWantsNumber: takerWantsBigNumber.toNumber(),
                         takerGives: o.takerGives,
+                        takerGivesNumber: takerGivesBigNumber.toNumber(),
+                        takerPaysPrice: takerWantsBigNumber.gt(0) ? takerGivesBigNumber.div(takerWantsBigNumber).toNumber() : undefined,
+                        makerPaysPrice: takerGivesBigNumber.gt(0) ? takerWantsBigNumber.div(takerGivesBigNumber).toNumber() : undefined,
                         failReason: o.failReason,
                         posthookFailed: o.posthookFailed == true,
                       };
@@ -244,6 +274,20 @@ class DbOperations {
       await this.tx.token.create({ data: token });
     }
     return token;
+  }
+
+  public async getOfferListTokens(id: OfferListId): Promise<{outboundToken: prisma.Token, inboundToken: prisma.Token}> {
+    const offerList = await this.tx.offerList.findUnique({
+      where: { id: id.value },
+      include: {
+        outboundToken: true,
+        inboundToken: true,
+      }
+    });
+    return {
+      outboundToken: offerList!.outboundToken,
+      inboundToken: offerList!.inboundToken,
+    }
   }
 
   public async deleteOffer(id: OfferId) {
