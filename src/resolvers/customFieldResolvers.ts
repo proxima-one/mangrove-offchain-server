@@ -1,5 +1,5 @@
 import { Ctx, FieldResolver, Resolver, Root } from "type-graphql";
-import { Offer, OfferList, Order, TakenOffer, Token } from "@generated/type-graphql"
+import { Offer, Order, TakenOffer, Token } from "@generated/type-graphql"
 import { PrismaClient } from "@prisma/client";
 import BigNumber from "bignumber.js";
 
@@ -315,66 +315,49 @@ async function amountFieldToUsd<Entity>(
 }
 
 async function findOutboundTokenFromOfferOrFail(offer: Offer, prisma: PrismaClient): Promise<Token> {
-  const offerList = await findOfferListFromOfferOrFail(offer, prisma);
-  return findOutboundTokenFromOfferListOrFail(offerList, prisma);
-}
-
-async function findInboundTokenFromOfferOrFail(offer: Offer, prisma: PrismaClient): Promise<Token> {
-  const offerList = await findOfferListFromOfferOrFail(offer, prisma);
-  return findInboundTokenFromOfferListOrFail(offerList, prisma);
-}
-
-async function findOutboundTokenFromOrderOrFail(order: Order, prisma: PrismaClient): Promise<Token> {
-  const offerList = await findOfferListFromOrderOrFail(order, prisma);
-  return findOutboundTokenFromOfferListOrFail(offerList, prisma);
-}
-
-async function findInboundTokenFromOrderOrFail(order: Order, prisma: PrismaClient): Promise<Token> {
-  const offerList = await findOfferListFromOrderOrFail(order, prisma);
-  return findInboundTokenFromOfferListOrFail(offerList, prisma);
-}
-
-async function findOutboundTokenFromTakenOfferOrFail(takenOffer: TakenOffer, prisma: PrismaClient): Promise<Token> {
-  const offerList = await findOfferListFromTakenOfferOrFail(takenOffer, prisma);
-  return findOutboundTokenFromOfferListOrFail(offerList, prisma);
-}
-
-async function findInboundTokenFromTakenOfferOrFail(takenOffer: TakenOffer, prisma: PrismaClient): Promise<Token> {
-  const offerList = await findOfferListFromTakenOfferOrFail(takenOffer, prisma);
-  return findInboundTokenFromOfferListOrFail(offerList, prisma);
-}
-
-async function findOutboundTokenFromOfferListOrFail(offerList: OfferList, prisma: PrismaClient) {
-  const outboundToken = await prisma.token.findUnique( { where: { id: offerList.outboundTokenId } } );
-  if (!outboundToken) throw Error(`Cannot find outbound token '${offerList.outboundTokenId}' from offerList '${offerList.id}'`);
+  const outboundToken = await prisma.offer.findUnique({
+    where: { id: offer.id }
+  }).offerList().outboundToken();
+  if (!outboundToken) throw Error(`Cannot find outbound token from offer '${offer.id}'`);
   return outboundToken;
 }
 
-async function findInboundTokenFromOfferListOrFail(offerList: OfferList, prisma: PrismaClient) {
-  const inboundToken = await prisma.token.findUnique( { where: { id: offerList.inboundTokenId } } );
-  if (!inboundToken) throw Error(`Cannot find inbound token '${offerList.inboundTokenId}' from offerList '${offerList.id}'`);
+async function findInboundTokenFromOfferOrFail(offer: Offer, prisma: PrismaClient): Promise<Token> {
+  const inboundToken = await prisma.offer.findUnique({
+    where: { id: offer.id }
+  }).offerList().inboundToken();
+  if (!inboundToken) throw Error(`Cannot find inbound token from offer '${offer.id}'`);
   return inboundToken;
 }
 
-async function findOfferListFromOfferOrFail(offer: Offer, prisma: PrismaClient): Promise<OfferList> {
-  const offerList = await prisma.offerList.findUnique( { where: { id: offer.offerListId } } );
-  if (!offerList) throw Error(`Cannot find offerList '${offer.offerListId}' from offer '${offer.id}'`);
-  return offerList;
+async function findOutboundTokenFromOrderOrFail(order: Order, prisma: PrismaClient): Promise<Token> {
+  const outboundToken = await prisma.order.findUnique({
+    where: { id: order.id }
+  }).offerList().outboundToken();
+  if (!outboundToken) throw Error(`Cannot find outbound token from order '${order.id}'`);
+  return outboundToken;
 }
 
-async function findOfferListFromOrderOrFail(order: Order, prisma: PrismaClient): Promise<OfferList> {
-  const offerList = await prisma.offerList.findUnique( { where: { id: order.offerListId } } );
-  if (!offerList) throw Error(`Cannot find offerList '${order.offerListId}' from order '${order.id}'`);
-  return offerList;
+async function findInboundTokenFromOrderOrFail(order: Order, prisma: PrismaClient): Promise<Token> {
+  const inboundToken = await prisma.order.findUnique({
+    where: { id: order.id }
+  }).offerList().inboundToken();
+  if (!inboundToken) throw Error(`Cannot find inbound token from order '${order.id}'`);
+  return inboundToken;
 }
 
-async function findOfferListFromTakenOfferOrFail(takenOffer: TakenOffer, prisma: PrismaClient): Promise<OfferList> {
-  const order = await findOrderFromTakenOfferOrFail(takenOffer, prisma);
-  return findOfferListFromOrderOrFail(order, prisma);
+async function findOutboundTokenFromTakenOfferOrFail(takenOffer: TakenOffer, prisma: PrismaClient): Promise<Token> {
+  const outboundToken = await prisma.takenOffer.findUnique({
+    where: { id: takenOffer.id }
+  }).order().offerList().outboundToken();
+  if (!outboundToken) throw Error(`Cannot find outbound token from takenOffer '${takenOffer.id}'`);
+  return outboundToken;
 }
 
-async function findOrderFromTakenOfferOrFail(takenOffer: TakenOffer, prisma: PrismaClient): Promise<Order> {
-  const order = await prisma.order.findUnique( { where: { id: takenOffer.orderId } } );
-  if (!order) throw Error(`Cannot find order '${takenOffer.orderId}' from takenOffer '${takenOffer.id}'`);
-  return order;
+async function findInboundTokenFromTakenOfferOrFail(takenOffer: TakenOffer, prisma: PrismaClient): Promise<Token> {
+  const inboundToken = await prisma.takenOffer.findUnique({
+    where: { id: takenOffer.id }
+  }).order().offerList().inboundToken();
+  if (!inboundToken) throw Error(`Cannot find inbound token from takenOffer '${takenOffer.id}'`);
+  return inboundToken;
 }
