@@ -19,7 +19,7 @@ type Context = {
 @Resolver(of => Token)
 export class CustomTokenFieldsResolver {
   @FieldResolver(type => Number, { nullable: true })
-  async takerPaysPriceInUsd(
+  async priceInUsd(
     @Root() token: Token,
     @Ctx() { prisma }: Context,
   ): Promise<number | undefined> {
