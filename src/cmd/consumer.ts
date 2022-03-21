@@ -21,7 +21,7 @@ async function main() {
   console.log(`Consuming stream from ${streamState ?? "the beginning"}`);
 
   const eventStream = streamClient.streamMessages(
-    "domain-events.polygon-mumbai.mangrove.streams.proxima.one",
+    "v2.domain-events.polygon-mumbai.mangrove.streams.proxima.one",
     {
       latest: streamState,
     }
