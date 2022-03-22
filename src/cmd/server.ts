@@ -5,7 +5,7 @@ import * as graphql from "@generated/type-graphql";
 import { buildSchema } from "type-graphql";
 import { ApolloServer } from "apollo-server";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
-import { CustomOfferFieldsResolver, CustomOrderFieldsResolver, CustomTakenOfferFieldsResolver, CustomTokenFieldsResolver } from "resolvers/customFieldResolvers";
+import { CustomOfferFieldsResolver, CustomOrderFieldsResolver, CustomTakenOfferFieldsResolver, CustomTokenFieldsResolver } from "../resolvers/customFieldResolvers";
 
 const prisma = new PrismaClient();
 

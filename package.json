@@ -18,8 +18,10 @@
     "build": "tsc --project tsconfig.build.json --pretty",
     "test": "jest --passWithNoTests",
     "coverage": "jest --coverage",
-    "start:server": "ts-node -r tsconfig-paths/register src/cmd/server.ts",
-    "start:consumer": "ts-node -r tsconfig-paths/register src/cmd/consumer.ts",
+    "start:server": "node -r tsconfig-paths/register src/cmd/server.ts",
+    "start:consumer": "node -r tsconfig-paths/register src/cmd/consumer.ts",
+    "start:dist:server": "node dist/cmd/server.js",
+    "start:dist:consumer": "node dist/cmd/consumer.js",
     "watch": "yarn build -- --watch",
     "watch:test": "jest --watch",
     "docker:env": "docker-compose -f deploy/docker-compose.env.yml up"
