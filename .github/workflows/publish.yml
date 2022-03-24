@@ -101,7 +101,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          IMAGE_NAME: ${{steps.push-image.outputs.IMAGE_NAME}}
+          IMAGE_NAME: ${{needs.build.outputs.releasedVersion}}
 
       - name: Pulumi apply changes
         if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
