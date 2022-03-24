@@ -56,10 +56,12 @@ jobs:
           fi
 
           IMAGE_ID=${{ secrets.DOCKER_REGISTRY_URL }}/$REPO_NAME
+          IMAGE_FULL_NAME=$IMAGE_ID:$IMAGE_TAG
           echo VERSION=$VERSION
           echo IMAGE_ID=$IMAGE_ID
           echo IMAGE_TAG=$IMAGE_TAG
-          echo IMAGE_FULL_NAME=$IMAGE_ID:$IMAGE_TAG
+          echo IMAGE_FULL_NAME=$IMAGE_FULL_NAME
+
           docker tag image $IMAGE_FULL_NAME
           docker push $IMAGE_FULL_NAME
           echo "::set-output name=RELEASED_VERSION::$VERSION"
