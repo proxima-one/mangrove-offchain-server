@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       releasedVersion: ${{ steps.push-image.outputs.RELEASED_VERSION }}
-      releasedImage: ${{ steps.push-image.outputs.RELEASED_IMAGE }}
+      releasedImageTag: ${{ steps.push-image.outputs.RELEASED_IMAGE_TAG }}
     steps:
       - uses: actions/checkout@v2
 
@@ -65,7 +65,7 @@ jobs:
           docker tag image $IMAGE_FULL_NAME
           docker push $IMAGE_FULL_NAME
           echo "::set-output name=RELEASED_VERSION::$VERSION"
-          echo "::set-output name=RELEASED_IMAGE::$IMAGE_FULL_NAME"
+          echo "::set-output name=RELEASED_IMAGE_TAG::$IMAGE_TAG"
 
       - name: Push tags
         if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
@@ -106,7 +106,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          IMAGE_NAME: ${{needs.build.outputs.releasedImage}}
+          IMAGE_NAME: ${{ secrets.DOCKER_REGISTRY_URL }}/${{ env.REPO_NAME}}:${{needs.build.outputs.releasedImageTag}}
 
       - name: Pulumi apply changes
         if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
@@ -117,4 +117,4 @@ jobs:
           stack-name: proxima-one/web-services
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          IMAGE_NAME: ${{needs.build.outputs.releasedImage}}
+          IMAGE_NAME: ${{ secrets.DOCKER_REGISTRY_URL }}/${{ env.REPO_NAME}}:${{needs.build.outputs.releasedImageTag}}
