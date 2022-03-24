@@ -23,16 +23,46 @@ class TokenData {
     public readonly symbol: string,
     public readonly name: string,
     public readonly decimals: number,
-    public readonly address: string,
+    public readonly address: string
   ) {}
 }
 const mumbaiTokens = [
-  new TokenData("WETH", "Wrapped Ether", 18, "0x3c68ce8504087f89c640d02d133646d98e64ddd9"),
-  new TokenData("DAI", "Dai Stablecoin", 18, "0x001b3b4d0f3714ca98ba10f6042daebf0b1b7b6f"),
-  new TokenData("USDC", "USD Coin", 6, "0x2058a9d7613eee744279e3856ef0eada5fcbaa7e"),
-  new TokenData("amWETH", "Wrapped Ether", 18, "0x7ae20397ca327721f013bb9e140c707f82871b56"),
-  new TokenData("amDAI", "Dai Stablecoin", 18, "0x639cb7b21ee2161df9c882483c9d55c90c20ca3e"),
-  new TokenData("amUSDC", "USD Coin", 6, "0x2271e3fef9e15046d09e1d78a8ff038c691e9cf9"),
+  new TokenData(
+    "WETH",
+    "Wrapped Ether",
+    18,
+    "0x3c68ce8504087f89c640d02d133646d98e64ddd9"
+  ),
+  new TokenData(
+    "DAI",
+    "Dai Stablecoin",
+    18,
+    "0x001b3b4d0f3714ca98ba10f6042daebf0b1b7b6f"
+  ),
+  new TokenData(
+    "USDC",
+    "USD Coin",
+    6,
+    "0x2058a9d7613eee744279e3856ef0eada5fcbaa7e"
+  ),
+  new TokenData(
+    "amWETH",
+    "Wrapped Ether",
+    18,
+    "0x7ae20397ca327721f013bb9e140c707f82871b56"
+  ),
+  new TokenData(
+    "amDAI",
+    "Dai Stablecoin",
+    18,
+    "0x639cb7b21ee2161df9c882483c9d55c90c20ca3e"
+  ),
+  new TokenData(
+    "amUSDC",
+    "USD Coin",
+    6,
+    "0x2271e3fef9e15046d09e1d78a8ff038c691e9cf9"
+  ),
 ];
 
 export class EventHandler {
@@ -65,7 +95,9 @@ export class EventHandler {
               // FIXME: This is a temporary solution that only works for select, hard-coded tokens on Mumbai
               const tokenPromises: Promise<prisma.Token>[] = [];
               for (const token of mumbaiTokens) {
-                tokenPromises.push(db.ensureToken(new TokenId(chainId, token.address), token));
+                tokenPromises.push(
+                  db.ensureToken(new TokenId(chainId, token.address), token)
+                );
               }
               await Promise.all(tokenPromises);
               await db.ensureMangrove(e.id, chainId, e.address);
@@ -93,9 +125,14 @@ export class EventHandler {
                   ? null
                   : new OfferId(mangroveId, offerList, offer.prev);
 
-              const { outboundToken, inboundToken } = await offerListTokensPromise;
-              const givesBigNumber = new BigNumber(offer.gives).shiftedBy(-outboundToken.decimals);
-              const wantsBigNumber = new BigNumber(offer.wants).shiftedBy(-inboundToken.decimals);
+              const { outboundToken, inboundToken } =
+                await offerListTokensPromise;
+              const givesBigNumber = new BigNumber(offer.gives).shiftedBy(
+                -outboundToken.decimals
+              );
+              const wantsBigNumber = new BigNumber(offer.wants).shiftedBy(
+                -inboundToken.decimals
+              );
 
               await accountPromise;
 
@@ -110,8 +147,12 @@ export class EventHandler {
                 givesNumber: givesBigNumber.toNumber(),
                 wants: offer.wants,
                 wantsNumber: wantsBigNumber.toNumber(),
-                takerPaysPrice: givesBigNumber.gt(0) ? wantsBigNumber.div(givesBigNumber).toNumber() : null,
-                makerPaysPrice: wantsBigNumber.gt(0) ? givesBigNumber.div(wantsBigNumber).toNumber() : null,
+                takerPaysPrice: givesBigNumber.gt(0)
+                  ? wantsBigNumber.div(givesBigNumber).toNumber()
+                  : null,
+                makerPaysPrice: wantsBigNumber.gt(0)
+                  ? givesBigNumber.div(wantsBigNumber).toNumber()
+                  : null,
                 gasreq: offer.gasreq,
                 live: new BigNumber(offer.gives).isPositive(),
                 deprovisioned: offer.gasprice == 0,
@@ -169,9 +210,14 @@ export class EventHandler {
               assert(txRef);
               const offerListId = new OfferListId(mangroveId, offerList);
 
-              const { outboundToken, inboundToken } = await db.getOfferListTokens(offerListId);
-              const takerGotBigNumber = new BigNumber(order.takerGot).shiftedBy(-outboundToken.decimals);
-              const takerGaveBigNumber = new BigNumber(order.takerGave).shiftedBy(-inboundToken.decimals);
+              const { outboundToken, inboundToken } =
+                await db.getOfferListTokens(offerListId);
+              const takerGotBigNumber = new BigNumber(order.takerGot).shiftedBy(
+                -outboundToken.decimals
+              );
+              const takerGaveBigNumber = new BigNumber(
+                order.takerGave
+              ).shiftedBy(-inboundToken.decimals);
 
               // create order and taken offers
               const orderId = new OrderId(mangroveId, offerList, id);
@@ -191,21 +237,37 @@ export class EventHandler {
                   takerGotNumber: takerGotBigNumber.toNumber(),
                   takerGave: order.takerGave,
                   takerGaveNumber: takerGaveBigNumber.toNumber(),
-                  takerPaidPrice: takerGotBigNumber.gt(0) ? takerGaveBigNumber.div(takerGotBigNumber).toNumber() : undefined,
-                  makerPaidPrice: takerGaveBigNumber.gt(0) ? takerGotBigNumber.div(takerGaveBigNumber).toNumber() : undefined,
+                  takerPaidPrice: takerGotBigNumber.gt(0)
+                    ? takerGaveBigNumber.div(takerGotBigNumber).toNumber()
+                    : undefined,
+                  makerPaidPrice: takerGaveBigNumber.gt(0)
+                    ? takerGotBigNumber.div(takerGaveBigNumber).toNumber()
+                    : undefined,
                   penalty: order.penalty,
                   takenOffers: {
                     create: order.takenOffers.map((o) => {
-                      const takerWantsBigNumber = new BigNumber(o.takerWants).shiftedBy(-outboundToken.decimals);
-                      const takerGivesBigNumber = new BigNumber(o.takerGives).shiftedBy(-inboundToken.decimals);
+                      const takerWantsBigNumber = new BigNumber(
+                        o.takerWants
+                      ).shiftedBy(-outboundToken.decimals);
+                      const takerGivesBigNumber = new BigNumber(
+                        o.takerGives
+                      ).shiftedBy(-inboundToken.decimals);
                       return {
                         id: new TakenOfferId(orderId, o.id).value,
                         takerWants: o.takerWants,
                         takerWantsNumber: takerWantsBigNumber.toNumber(),
                         takerGives: o.takerGives,
                         takerGivesNumber: takerGivesBigNumber.toNumber(),
-                        takerPaysPrice: takerWantsBigNumber.gt(0) ? takerGivesBigNumber.div(takerWantsBigNumber).toNumber() : undefined,
-                        makerPaysPrice: takerGivesBigNumber.gt(0) ? takerWantsBigNumber.div(takerGivesBigNumber).toNumber() : undefined,
+                        takerPaysPrice: takerWantsBigNumber.gt(0)
+                          ? takerGivesBigNumber
+                              .div(takerWantsBigNumber)
+                              .toNumber()
+                          : undefined,
+                        makerPaysPrice: takerGivesBigNumber.gt(0)
+                          ? takerWantsBigNumber
+                              .div(takerGivesBigNumber)
+                              .toNumber()
+                          : undefined,
                         failReason: o.failReason,
                         posthookFailed: o.posthookFailed == true,
                       };
@@ -259,7 +321,10 @@ class DbOperations {
     return chain;
   }
 
-  public async ensureToken(id: TokenId, tokenData: TokenData): Promise<prisma.Token> {
+  public async ensureToken(
+    id: TokenId,
+    tokenData: TokenData
+  ): Promise<prisma.Token> {
     let token = await this.tx.token.findUnique({
       where: { id: id.value },
     });
@@ -276,18 +341,20 @@ class DbOperations {
     return token;
   }
 
-  public async getOfferListTokens(id: OfferListId): Promise<{outboundToken: prisma.Token, inboundToken: prisma.Token}> {
+  public async getOfferListTokens(
+    id: OfferListId
+  ): Promise<{ outboundToken: prisma.Token; inboundToken: prisma.Token }> {
     const offerList = await this.tx.offerList.findUnique({
       where: { id: id.value },
       include: {
         outboundToken: true,
         inboundToken: true,
-      }
+      },
     });
     return {
       outboundToken: offerList!.outboundToken,
       inboundToken: offerList!.inboundToken,
-    }
+    };
   }
 
   public async deleteOffer(id: OfferId) {

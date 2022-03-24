@@ -1,1 +1,1 @@
-declare module 'node-fetch-cache';
+declare module "node-fetch-cache";
