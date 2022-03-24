@@ -20,10 +20,14 @@ ENV NODE_ENV production
 RUN --mount=type=secret,id=npmrc,dst=/root/.npmrc \
   yarn install --production --ignore-optional
 
+COPY ./prisma ./prisma
 COPY --from=build /app/dist .
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/node_modules/@generated ./node_modules/@generated
 
 ENV NODE_PATH /app
 ENV VERSION $BUILD_VERSION
-ENTRYPOINT ["dumb-init", "node", "index.js"]
+
+COPY ./scripts/entrypoint.sh /scripts/
+RUN ["chmod", "+x", "/scripts/entrypoint.sh"]
+ENTRYPOINT ["/scripts/entrypoint.sh"]

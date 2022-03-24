@@ -12,7 +12,7 @@ const k8sProvider = new k8s.Provider("infra-k8s", {
   kubeconfig: kubeconfig,
 });
 
-const dbSchema = "mangrove4";
+const dbSchema = "mangrove5";
 export const publicHost = `mangrove-api.cluster.${proximaNode}.proxima.one`;
 
 const servicesStack = new pulumi.StackReference(`proxima-one/${proximaNode}-services/default`, {});
@@ -116,6 +116,10 @@ const deploymentConsumer = new k8s.apps.v1.Deployment("mangrove-consumer", {
               name: "BATCH_SIZE",
               value: "50"
             },
+            {
+              name: "MIGRATE_DB",
+              value: "1"
+            }
           ],
           resources: {
             requests: {
