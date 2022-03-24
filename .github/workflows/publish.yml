@@ -72,7 +72,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
     steps:
       - name: Checkout latest changes
         uses: actions/checkout@v2
@@ -105,7 +104,7 @@ jobs:
           IMAGE_NAME: ${{steps.push-image.outputs.IMAGE_NAME}}
 
       - name: Pulumi apply changes
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
         uses: pulumi/actions@v3
         with:
           work-dir: ./deploy
@@ -114,15 +113,3 @@ jobs:
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           IMAGE_NAME: ${{needs.build.outputs.releasedVersion}}
-
-      - name: Deploy Stage
-        uses: pulumi/actions@v3
-        with:
-          work-dir: ./deploy
-          command: up
-          stack-name: proxima-one/web-services
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-        env:
-          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-          IMAGE_NAME: ${{needs.build.outputs.releasedVersion}}
-
