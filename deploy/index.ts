@@ -116,6 +116,10 @@ const deploymentConsumer = new k8s.apps.v1.Deployment("mangrove-consumer", {
               name: "BATCH_SIZE",
               value: "50"
             },
+            {
+              name: "MIGRATE_DB",
+              value: "1"
+            }
           ],
           resources: {
             requests: {
