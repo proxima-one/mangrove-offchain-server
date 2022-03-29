@@ -26,7 +26,9 @@ class TokenData {
     public readonly address: string
   ) {}
 }
+// NB: The addresses must be lower-case, ie _not_ EIP-55 mix-case checksum encoded.
 const mumbaiTokens = [
+  // Aave v2 tokens
   new TokenData(
     "WETH",
     "Wrapped Ether",
@@ -62,6 +64,43 @@ const mumbaiTokens = [
     "USD Coin",
     6,
     "0x2271e3fef9e15046d09e1d78a8ff038c691e9cf9"
+  ),
+  // Aave v3 tokens
+  new TokenData(
+    "WETH",
+    "Wrapped Ether",
+    18,
+    "0xd575d4047f8c667e064a4ad433d04e25187f40bb"
+  ),
+  new TokenData(
+    "DAI",
+    "Dai Stablecoin",
+    18,
+    "0x9a753f0f7886c9fbf63cf59d0d4423c5eface95b"
+  ),
+  new TokenData(
+    "USDC",
+    "USD Coin",
+    6,
+    "0x9aa7fec87ca69695dd1f879567ccf49f3ba417e2"
+  ),
+  new TokenData(
+    "amWETH",
+    "Wrapped Ether",
+    18,
+    "0x685bf4eab23993e94b4cfb9383599c926b66cf57"
+  ),
+  new TokenData(
+    "amDAI",
+    "Dai Stablecoin",
+    18,
+    "0xdd4f3ee61466c4158d394d57f3d4c397e91fbc51"
+  ),
+  new TokenData(
+    "amUSDC",
+    "USD Coin",
+    6,
+    "0xcdc2854e97798afdc74bc420bd5060e022d14607"
   ),
 ];
 
