@@ -12,7 +12,7 @@ const k8sProvider = new k8s.Provider("infra-k8s", {
   kubeconfig: kubeconfig,
 });
 
-const dbSchema = "mangrove6";
+const dbSchema = "mangrove7";
 export const publicHost = `mangrove-api.cluster.${proximaNode}.proxima.one`;
 
 const servicesStack = new pulumi.StackReference(`proxima-one/${proximaNode}-services/default`, {});
