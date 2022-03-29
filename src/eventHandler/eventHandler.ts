@@ -102,6 +102,25 @@ const mumbaiTokens = [
     6,
     "0xcdc2854e97798afdc74bc420bd5060e022d14607"
   ),
+  // Maker tokens
+  new TokenData(
+    "WETH",
+    "Wrapped Ether",
+    18,
+    "0x63e537a69b3f5b03f4f46c5765c82861bd874b6e"
+  ),
+  new TokenData(
+    "DAI",
+    "Dai Stablecoin",
+    18,
+    "0xc87385b5e62099f92d490750fcd6c901a524bbca"
+  ),
+  new TokenData(
+    "USDC",
+    "USD Coin",
+    6,
+    "0xf61cffd6071a8db7cd5e8df1d3a5450d9903cf1c"
+  ),
 ];
 
 export class EventHandler {
