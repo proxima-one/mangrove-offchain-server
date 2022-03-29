@@ -30,6 +30,7 @@ model Chain {
 model Token {
   id        String   @id @db.VarChar(255)
   chainId   Int
+  address   String   @default("") @db.VarChar(80)
   symbol    String
   name      String
   decimals  Int

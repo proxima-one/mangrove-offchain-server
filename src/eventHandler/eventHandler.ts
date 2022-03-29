@@ -371,6 +371,7 @@ class DbOperations {
       token = {
         id: id.value,
         chainId: id.chainId.chainlistId,
+        address: tokenData.address,
         symbol: tokenData.symbol,
         name: tokenData.name,
         decimals: tokenData.decimals,
