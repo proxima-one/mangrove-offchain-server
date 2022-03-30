@@ -122,6 +122,22 @@ const mumbaiTokens = [
     "0xf61cffd6071a8db7cd5e8df1d3a5450d9903cf1c"
   ),
 ];
+const mumbaiTokensByAddress = new Map<string, TokenData>(
+  mumbaiTokens.map((t) => [t.address, t])
+);
+function getMumbaiTokenDataOrFail(address: string): TokenData {
+  const tokenData = mumbaiTokensByAddress.get(address);
+  if (tokenData) {
+    return tokenData;
+  }
+  throw new Error(`Unknown Mumbai token: ${address}`);
+}
+// FIXME: In order to fail early on unknown tokens (due to the issue described above),
+//        we need the ability to determine whether a token is know when an offer list
+//        is first encountered.
+//        However, `OfferListParamsUpdated` event does not include sufficient information,
+//        so we hard-code it here for now.
+const mumbaiChainId = new ChainId(80001);
 
 export class EventHandler {
   public constructor(
@@ -154,7 +170,10 @@ export class EventHandler {
               const tokenPromises: Promise<prisma.Token>[] = [];
               for (const token of mumbaiTokens) {
                 tokenPromises.push(
-                  db.ensureToken(new TokenId(chainId, token.address), token)
+                  db.ensureToken(
+                    new TokenId(chainId, token.address),
+                    () => token
+                  )
                 );
               }
               await Promise.all(tokenPromises);
@@ -220,6 +239,27 @@ export class EventHandler {
               // todo: handle undo
             },
             OfferListParamsUpdated: async ({ offerList, params }) => {
+              // FIXME: Workarounds:
+              //        - event doesn't have chain ID, so cannot create token ID here. Using hard-coded ID for now
+              //        - tokens might not exist as there is not token data stream. We want to fail as early as
+              //          possible to avoid writing garbage data
+              //        - tokens might be added to the hard-coded list _after_ the `MangroveCreated` event has
+              //          been processed, so we might have to create them here.
+              const inboundTokenId = new TokenId(
+                mumbaiChainId,
+                offerList.inboundToken
+              );
+              db.ensureToken(inboundTokenId, () =>
+                getMumbaiTokenDataOrFail(offerList.inboundToken)
+              );
+              const outboundTokenId = new TokenId(
+                mumbaiChainId,
+                offerList.outboundToken
+              );
+              db.ensureToken(outboundTokenId, () =>
+                getMumbaiTokenDataOrFail(offerList.outboundToken)
+              );
+
               const id = new OfferListId(mangroveId, offerList);
               await db.updateOfferList(id, (model) => {
                 _.merge(model, params);
@@ -381,12 +421,13 @@ class DbOperations {
 
   public async ensureToken(
     id: TokenId,
-    tokenData: TokenData
+    tokenDataProducer: () => TokenData
   ): Promise<prisma.Token> {
     let token = await this.tx.token.findUnique({
       where: { id: id.value },
     });
     if (token == undefined) {
+      const tokenData = tokenDataProducer();
       token = {
         id: id.value,
         chainId: id.chainId.chainlistId,
