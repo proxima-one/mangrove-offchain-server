@@ -15,6 +15,7 @@ import {
 } from "./model";
 import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
+import { Mangrove } from "@prisma/client";
 
 // FIXME: Since we don't get token events for Mumbai we need to get token information from a different source.
 //        But as we expect a token event stream to eventually be available, we'll hardcode the token information for now.
@@ -132,12 +133,6 @@ function getMumbaiTokenDataOrFail(address: string): TokenData {
   }
   throw new Error(`Unknown Mumbai token: ${address}`);
 }
-// FIXME: In order to fail early on unknown tokens (due to the issue described above),
-//        we need the ability to determine whether a token is know when an offer list
-//        is first encountered.
-//        However, `OfferListParamsUpdated` event does not include sufficient information,
-//        so we hard-code it here for now.
-const mumbaiChainId = new ChainId(80001);
 
 export class EventHandler {
   public constructor(
@@ -240,20 +235,21 @@ export class EventHandler {
             },
             OfferListParamsUpdated: async ({ offerList, params }) => {
               // FIXME: Workarounds:
-              //        - event doesn't have chain ID, so cannot create token ID here. Using hard-coded ID for now
               //        - tokens might not exist as there is not token data stream. We want to fail as early as
               //          possible to avoid writing garbage data
               //        - tokens might be added to the hard-coded list _after_ the `MangroveCreated` event has
               //          been processed, so we might have to create them here.
+              const mangrove = await db.getMangrove(mangroveId);
+              const chainId = new ChainId(mangrove!.chainId);
               const inboundTokenId = new TokenId(
-                mumbaiChainId,
+                chainId,
                 offerList.inboundToken
               );
               db.ensureToken(inboundTokenId, () =>
                 getMumbaiTokenDataOrFail(offerList.inboundToken)
               );
               const outboundTokenId = new TokenId(
-                mumbaiChainId,
+                chainId,
                 offerList.outboundToken
               );
               db.ensureToken(outboundTokenId, () =>
@@ -515,6 +511,12 @@ class DbOperations {
         },
       });
     }
+  }
+
+  public async getMangrove(id: string): Promise<Mangrove | null> {
+    return this.tx.mangrove.findUnique({
+      where: { id: id },
+    });
   }
 
   public async updateMangrove(
