@@ -15,6 +15,7 @@ import {
 } from "./model";
 import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
+import { Mangrove } from "@prisma/client";
 
 // FIXME: Since we don't get token events for Mumbai we need to get token information from a different source.
 //        But as we expect a token event stream to eventually be available, we'll hardcode the token information for now.
@@ -102,7 +103,36 @@ const mumbaiTokens = [
     6,
     "0xcdc2854e97798afdc74bc420bd5060e022d14607"
   ),
+  // Maker tokens
+  new TokenData(
+    "WETH",
+    "Wrapped Ether",
+    18,
+    "0x63e537a69b3f5b03f4f46c5765c82861bd874b6e"
+  ),
+  new TokenData(
+    "DAI",
+    "Dai Stablecoin",
+    18,
+    "0xc87385b5e62099f92d490750fcd6c901a524bbca"
+  ),
+  new TokenData(
+    "USDC",
+    "USD Coin",
+    6,
+    "0xf61cffd6071a8db7cd5e8df1d3a5450d9903cf1c"
+  ),
 ];
+const mumbaiTokensByAddress = new Map<string, TokenData>(
+  mumbaiTokens.map((t) => [t.address, t])
+);
+function getMumbaiTokenDataOrFail(address: string): TokenData {
+  const tokenData = mumbaiTokensByAddress.get(address);
+  if (tokenData) {
+    return tokenData;
+  }
+  throw new Error(`Unknown Mumbai token: ${address}`);
+}
 
 export class EventHandler {
   public constructor(
@@ -135,7 +165,10 @@ export class EventHandler {
               const tokenPromises: Promise<prisma.Token>[] = [];
               for (const token of mumbaiTokens) {
                 tokenPromises.push(
-                  db.ensureToken(new TokenId(chainId, token.address), token)
+                  db.ensureToken(
+                    new TokenId(chainId, token.address),
+                    () => token
+                  )
                 );
               }
               await Promise.all(tokenPromises);
@@ -201,6 +234,28 @@ export class EventHandler {
               // todo: handle undo
             },
             OfferListParamsUpdated: async ({ offerList, params }) => {
+              // FIXME: Workarounds:
+              //        - tokens might not exist as there is not token data stream. We want to fail as early as
+              //          possible to avoid writing garbage data
+              //        - tokens might be added to the hard-coded list _after_ the `MangroveCreated` event has
+              //          been processed, so we might have to create them here.
+              const mangrove = await db.getMangrove(mangroveId);
+              const chainId = new ChainId(mangrove!.chainId);
+              const inboundTokenId = new TokenId(
+                chainId,
+                offerList.inboundToken
+              );
+              db.ensureToken(inboundTokenId, () =>
+                getMumbaiTokenDataOrFail(offerList.inboundToken)
+              );
+              const outboundTokenId = new TokenId(
+                chainId,
+                offerList.outboundToken
+              );
+              db.ensureToken(outboundTokenId, () =>
+                getMumbaiTokenDataOrFail(offerList.outboundToken)
+              );
+
               const id = new OfferListId(mangroveId, offerList);
               await db.updateOfferList(id, (model) => {
                 _.merge(model, params);
@@ -362,12 +417,13 @@ class DbOperations {
 
   public async ensureToken(
     id: TokenId,
-    tokenData: TokenData
+    tokenDataProducer: () => TokenData
   ): Promise<prisma.Token> {
     let token = await this.tx.token.findUnique({
       where: { id: id.value },
     });
     if (token == undefined) {
+      const tokenData = tokenDataProducer();
       token = {
         id: id.value,
         chainId: id.chainId.chainlistId,
@@ -455,6 +511,12 @@ class DbOperations {
         },
       });
     }
+  }
+
+  public async getMangrove(id: string): Promise<Mangrove | null> {
+    return this.tx.mangrove.findUnique({
+      where: { id: id },
+    });
   }
 
   public async updateMangrove(
