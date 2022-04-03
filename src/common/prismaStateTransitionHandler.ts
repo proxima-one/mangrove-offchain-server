@@ -30,25 +30,28 @@ export class PrismaStateTransitionHandler<TEventPayload>
   public async handleTransitions(transitions: Transition[]): Promise<void> {
     if (transitions.length == 0) return;
 
-    await this.prisma.$transaction(async (tx) => {
-      await this.handleEvents(
-        transitions.map((x) => {
-          return {
-            undo: x.event.undo,
-            timestamp: x.event.timestamp,
-            payload: this.deserialize(x.event.payload),
-          };
-        }),
-        tx
-      );
+    await this.prisma.$transaction(
+      async (tx) => {
+        await this.handleEvents(
+          transitions.map((x) => {
+            return {
+              undo: x.event.undo,
+              timestamp: x.event.timestamp,
+              payload: this.deserialize(x.event.payload),
+            };
+          }),
+          tx
+        );
 
-      const state = transitions[transitions.length - 1].newState;
-      await tx.streams.upsert({
-        where: { id: this.stream },
-        create: { id: this.stream, state: state.id },
-        update: { state: state.id },
-      });
-    }, {timeout: 2 * 60 * 1000, maxWait: 1 * 60 * 1000});
+        const state = transitions[transitions.length - 1].newState;
+        await tx.streams.upsert({
+          where: { id: this.stream },
+          create: { id: this.stream, state: state.id },
+          update: { state: state.id },
+        });
+      },
+      { timeout: 2 * 60 * 1000, maxWait: 1 * 60 * 1000 }
+    );
   }
 
   protected deserialize(payload: Buffer): TEventPayload {
