@@ -17,7 +17,9 @@ export class TokenEventHandler extends PrismaStateTransitionHandler<ft.streams.N
     const commands: prisma.PrismaPromise<any>[] = [];
 
     // load
-    const affectedTokensIds = _.uniq(events.map((x) => this.getTokenId(x.payload).value));
+    const affectedTokensIds = _.uniq(
+      events.map((x) => this.getTokenId(x.payload).value)
+    );
     const tokens = await tx.token.findMany({
       where: { id: { in: affectedTokensIds } },
     });
