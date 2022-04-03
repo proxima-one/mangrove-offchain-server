@@ -1,83 +1,74 @@
 import { PrismaClient } from "@prisma/client";
-import { StreamClient } from "@proximaone/stream-client-js";
+import {
+  ProximaStreamsClient,
+  StreamReader,
+} from "@proximaone/stream-client-js";
 import { Subscription } from "rxjs";
-import { DomainEvent, EventHandler, events } from "../eventHandler";
-import { barrier } from "../utils/barrier";
+import retry from "async-retry";
+import { StateTransitionHandler } from "../common";
+import { MangroveEventHandler, TokenEventHandler } from "../state";
+
+const retries = parseInt(process.env["CONSUMER_RETRIES"] ?? "100");
+const retryFactor = parseFloat(process.env["CONSUMER_RETRY_FACTOR"] ?? "1.2");
+const batchSize = parseInt(process.env["BATCH_SIZE"] ?? "500");
 
 const prisma = new PrismaClient();
-const streamClient = new StreamClient("streams.proxima.one:443");
+const streamClient = new ProximaStreamsClient("streams.proxima.one:443");
+const timeout = 10 * 60 * 1000;
 
 let stopped = false;
 let subscription: Subscription;
-const dbWriteBatchSize = parseInt(process.env["BATCH_SIZE"] ?? "50");
 
 async function main() {
-  const buffer: DomainEvent[] = [];
-  let bufferWait = barrier(1);
-  let stoppedConsuming = false;
-  const domainEventStreamConsumer = new EventHandler(prisma, "domain-events");
-
-  const streamState = await domainEventStreamConsumer.getStreamState();
-  console.log(`Consuming stream from ${streamState ?? "the beginning"}`);
-
-  const eventStream = streamClient.streamMessages(
-    "v4.domain-events.polygon-mumbai.mangrove.streams.proxima.one",
-    {
-      latest: streamState,
-    }
-  );
-
-  stoppedConsuming = false;
-
-  subscription = eventStream.subscribe((msg) => {
-    const payload = decodeJson(
-      msg.payload
-    ) as events.MangroveStreamEventPayload;
-
-    buffer.push({
-      payload,
-      undo: msg.header?.undo == true,
-      timestamp: new Date(
-        msg.timestamp.seconds * 1e3 + msg.timestamp.nanos / 1e3
+  const streamConsumers = [
+    () =>
+      consumeStream(
+        new MangroveEventHandler(
+          prisma,
+          "v4.domain-events.polygon-mumbai.mangrove.streams.proxima.one"
+        )
       ),
-      state: msg.id,
-    });
+    () =>
+      consumeStream(
+        new TokenEventHandler(
+          prisma,
+          "new-tokens.polygon-mumbai.fungible-token.streams.proxima.one"
+        )
+      ),
+  ];
 
-    bufferWait.unlock();
-  });
+  await Promise.all(
+    streamConsumers.map((consumerFunc) => retry(consumerFunc), {
+      retries: retries,
+      factor: retryFactor,
+    })
+  );
+}
 
-  await sink();
+async function consumeStream<T>(handler: StateTransitionHandler) {
+  const currentStateRef = await handler.getCurrentStreamState();
+  const stream = currentStateRef.stream;
 
-  async function sink() {
-    while (!stopped) {
-      if (buffer.length == 0) {
-        if (stoppedConsuming)
-          // buffer was too big, so process stopped
-          break;
-        await bufferWait.lock;
-        bufferWait = barrier(1);
-      }
+  console.log(`consuming stream ${stream} from state ${currentStateRef.state}`);
+  const reader = new StreamReader(streamClient, stream, currentStateRef.state);
 
-      const toHandle = buffer.splice(0, dbWriteBatchSize);
+  while (!stopped) {
+    const transitions = await reader.tryRead(batchSize, timeout);
+    if (transitions.length == 0) return;
 
-      console.log(
-        `handling ${toHandle.length} input events. remaining buffer: ${buffer.length}`
-      );
-      await domainEventStreamConsumer.handle(toHandle);
+    try {
+      await handler.handleTransitions(transitions);
+    } catch (err) {
+      console.error("error handling transitions", err);
+      throw err;
     }
+
+    console.log(
+      `handled ${stream}: ${transitions[
+        transitions.length - 1
+      ].newState.toString()}`
+    );
   }
-}
-
-function isValidString(s: string): boolean {
-  return !/.*[\x00\r\n].*/.test(s);
-}
-
-function decodeJson(binary: Uint8Array | string): any {
-  const buffer =
-    typeof binary == "string"
-      ? Buffer.from(binary, "base64")
-      : Buffer.from(binary);
-  return JSON.parse(buffer.toString("utf8"));
 }
 
 main()
