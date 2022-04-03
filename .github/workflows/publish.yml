@@ -107,6 +107,7 @@ jobs:
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           IMAGE_NAME: ${{ secrets.DOCKER_REGISTRY_URL }}/${{ env.REPO_NAME}}:${{needs.build.outputs.releasedImageTag}}
+          VERSION: ${{ secrets.DOCKER_REGISTRY_URL }}/${{ env.REPO_NAME}}:${{needs.build.outputs.releasedVersion}}
 
       - name: Pulumi apply changes
         if: ${{ github.event_name == 'push' && github.ref_name == 'master' }}
@@ -118,3 +119,4 @@ jobs:
         env:
           PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
           IMAGE_NAME: ${{ secrets.DOCKER_REGISTRY_URL }}/${{ env.REPO_NAME}}:${{needs.build.outputs.releasedImageTag}}
+          VERSION: ${{ secrets.DOCKER_REGISTRY_URL }}/${{ env.REPO_NAME}}:${{needs.build.outputs.releasedVersion}}

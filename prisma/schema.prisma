@@ -176,6 +176,6 @@ model TakenOffer {
 
 // store consumed streams state
 model Streams {
-  id    String @id @db.VarChar(50)
+  id    String @id @db.VarChar(255)
   state String @db.VarChar(255)
 }

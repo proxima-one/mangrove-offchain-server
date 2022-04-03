@@ -1,6 +1,3 @@
-import { MangroveStreamEventPayload } from "./events";
-import { createPatternMatcher } from "../utils/discriminatedUnion";
-
 export class Id<T extends string | number> {
   public constructor(public readonly value: T) {}
 }
@@ -99,12 +96,3 @@ export interface OfferListKey {
   inboundToken: string;
   outboundToken: string;
 }
-
-export interface DomainEvent {
-  payload: MangroveStreamEventPayload;
-  timestamp: Date;
-  undo: boolean;
-  state: string;
-}
-
-export const eventMatcher = createPatternMatcher<MangroveStreamEventPayload>();
