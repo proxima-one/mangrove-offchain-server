@@ -54,7 +54,7 @@ async function consumeStream<T>(handler: StateTransitionHandler) {
 
   while (!stopped) {
     const transitions = await reader.tryRead(batchSize, timeout);
-    if (transitions.length == 0) return;
+    if (transitions.length == 0) continue;
 
     try {
       await handler.handleTransitions(transitions);
