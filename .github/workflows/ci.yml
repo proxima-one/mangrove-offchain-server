@@ -2,6 +2,7 @@ name: ci
 on:
   push:
     branches:
+      - master
       - deploy/amur # deployment branch
 
   pull_request:
