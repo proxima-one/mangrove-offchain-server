@@ -29,24 +29,41 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
     tx: PrismaTransaction
   ): Promise<void> {
     const db = new DbOperations(tx);
-    for (const { payload, undo, timestamp } of events) {
+    for (const event of events) {
+      const { payload, undo, timestamp } = event;
       const mangroveId = payload.mangroveId!;
       const txRef = payload.tx;
 
       await eventMatcher({
         MangroveCreated: async (e) => {
           const chainId = new ChainId(e.chain.chainlistId);
+          if (undo) {
+            // TODO: Handle undo
+            // Do not not continue on unhandled undo as the state of the DB might be broken
+            this.#reportUnhandledUndoAndExit(event);
+          }
+
           await db.ensureChain(chainId, e.chain.name);
           await db.ensureMangrove(e.id, chainId, e.address);
-
-          // todo: handle undo?
         },
         OfferRetracted: async (e) => {
+          if (undo) {
+            // TODO: Handle undo
+            //       The event does not have enough data to restore the data, so we need some way to restore it.
+            //       Maybe introduce a `isDeleted` to the Offer entity?
+            // Do not not continue on unhandled undo as the state of the DB might be broken
+            this.#reportUnhandledUndoAndExit(event);
+          }
           await db.deleteOffer(new OfferId(mangroveId, e.offerList, e.offerId));
-          // todo: handle undo
         },
         OfferWritten: async ({ offer, maker, offerList }) => {
           assert(txRef);
+          const offerId = new OfferId(mangroveId, offerList, offer.id);
+
+          if (undo) {
+            await db.deleteOffer(offerId);
+            return;
+          }
 
           const accountId = new AccountId(maker);
           const accountPromise = db.ensureAccount(accountId);
@@ -54,7 +71,6 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           const offerListId = new OfferListId(mangroveId, offerList);
           const offerListTokensPromise = db.getOfferListTokens(offerListId);
 
-          const offerId = new OfferId(mangroveId, offerList, offer.id);
           const prevOfferId =
             offer.prev == 0
               ? null
@@ -93,9 +109,13 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
             prevOfferId: prevOfferId ? prevOfferId.value : null,
             makerId: maker,
           });
-          // todo: handle undo
         },
         OfferListParamsUpdated: async ({ offerList, params }) => {
+          if (undo) {
+            // TODO: Handle undo
+            // Do not not continue on unhandled undo as the state of the DB might be broken
+            this.#reportUnhandledUndoAndExit(event);
+          }
           const mangrove = await db.getMangrove(mangroveId);
           const chainId = new ChainId(mangrove!.chainId);
           const inboundTokenId = new TokenId(chainId, offerList.inboundToken);
@@ -107,13 +127,16 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           await db.updateOfferList(id, (model) => {
             _.merge(model, params);
           });
-          // todo: handle undo
         },
         MangroveParamsUpdated: async ({ params }) => {
+          if (undo) {
+            // TODO: Handle undo
+            // Do not not continue on unhandled undo as the state of the DB might be broken
+            this.#reportUnhandledUndoAndExit(event);
+          }
           await db.updateMangrove(mangroveId, (model) => {
             _.merge(model, params);
           });
-          // todo: handle undo
         },
         MakerBalanceUpdated: async ({ maker, amountChange }) => {
           let amount = new BigNumber(amountChange);
@@ -126,6 +149,11 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           });
         },
         TakerApprovalUpdated: async ({ offerList, amount, spender, owner }) => {
+          if (undo) {
+            // TODO: Handle undo
+            // Do not not continue on unhandled undo as the state of the DB might be broken
+            this.#reportUnhandledUndoAndExit(event);
+          }
           const takerApprovalId = new TakerApprovalId(
             mangroveId,
             offerList,
@@ -138,10 +166,16 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           await db.updateTakerApproval(takerApprovalId, (model) => {
             model.value = amount;
           });
-          // todo: handle undo
         },
         OrderCompleted: async ({ id, order, offerList }) => {
           assert(txRef);
+          const orderId = new OrderId(mangroveId, offerList, id);
+
+          if (undo) {
+            await db.deleteOrder(orderId);
+            return;
+          }
+
           const offerListId = new OfferListId(mangroveId, offerList);
 
           const { outboundToken, inboundToken } = await db.getOfferListTokens(
@@ -155,7 +189,6 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           );
 
           // create order and taken offers
-          const orderId = new OrderId(mangroveId, offerList, id);
           // taken offer is not an aggregate
 
           const takerAccountId = new AccountId(order.taker);
@@ -215,6 +248,15 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
     payload: Buffer
   ): mangroveSchema.streams.MangroveStreamEvent {
     return mangroveSchema.streams.mangrove.serdes.deserialize(payload);
+  }
+
+  #reportUnhandledUndoAndExit(
+    event: TypedEvent<mangroveSchema.streams.MangroveStreamEvent>
+  ) {
+    console.error(
+      `Undo unhandled for event ${event.payload.type} - exiting to avoid data corruption`
+    );
+    process.exit(1);
   }
 }
 
@@ -307,6 +349,10 @@ export class DbOperations {
 
     await this.tx.offerList.upsert(toUpsert(offerList));
     return offerList;
+  }
+
+  public async deleteOrder(id: OrderId) {
+    await this.tx.order.deleteMany({ where: { id: id.value } });
   }
 
   public async ensureMangrove(id: string, chainId: ChainId, address: string) {
