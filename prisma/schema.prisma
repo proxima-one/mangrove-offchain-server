@@ -28,16 +28,16 @@ model Chain {
 }
 
 model Token {
-  id        String   @id @db.VarChar(255)
-  chainId   Int
-  address   String   @default("") @db.VarChar(80)
-  symbol    String
-  name      String
-  decimals  Int
+  id       String @id @db.VarChar(255)
+  chainId  Int
+  address  String @default("") @db.VarChar(80)
+  symbol   String
+  name     String
+  decimals Int
 
-  chain                    Chain        @relation(fields: [chainId], references: [id])
-  offerListsWhereInbound   OfferList[]  @relation("OfferListsByInboundToken")
-  offerListsWhereOutbound  OfferList[]  @relation("OfferListsByOutboundToken")
+  chain                   Chain       @relation(fields: [chainId], references: [id])
+  offerListsWhereInbound  OfferList[] @relation("OfferListsByInboundToken")
+  offerListsWhereOutbound OfferList[] @relation("OfferListsByOutboundToken")
 }
 
 model Mangrove {
@@ -115,12 +115,26 @@ model OfferList {
 }
 
 model Offer {
+  id               String  @id @db.VarChar(255)
+  mangroveId       String  @db.VarChar(255)
+  offerListId      String  @db.VarChar(255)
+  makerId          String  @db.VarChar(255)
+  // Events are not allowed to overwrite/delete data, as it might have to be restored on undo.
+  // Instead, we create new versions or mark the offer as deleted, which makes undo easy.
+  currentVersionId String  @db.VarChar(255)
+  deleted          Boolean @default(false) // The offer has been deleted
+
+  mangrove      Mangrove       @relation(fields: [mangroveId], references: [id])
+  offerList     OfferList      @relation(fields: [offerListId], references: [id])
+  maker         Account        @relation(fields: [makerId], references: [id])
+  offerVersions OfferVersion[]
+}
+
+model OfferVersion {
   id             String   @id @db.VarChar(255)
+  offerId        String   @db.VarChar(255)
   blockNumber    Int
   time           DateTime @db.Timestamp
-  offerListId    String   @db.VarChar(255)
-  mangroveId     String   @db.VarChar(255)
-  makerId        String   @db.VarChar(255)
   prevOfferId    String?
   wants          String   @db.VarChar(80)
   wantsNumber    Float
@@ -133,9 +147,11 @@ model Offer {
   live           Boolean
   deprovisioned  Boolean
 
-  mangrove  Mangrove  @relation(fields: [mangroveId], references: [id])
-  offerList OfferList @relation(fields: [offerListId], references: [id])
-  maker     Account   @relation(fields: [makerId], references: [id])
+  // The following fields are bookkeeping to support undo of events.
+  versionNumber Int
+  prevVersionId String? // This points to the older version that this version replaces, if any
+
+  offer Offer @relation(fields: [offerId], references: [id])
 }
 
 model Order {

@@ -1,5 +1,11 @@
 import { Ctx, FieldResolver, Resolver, Root } from "type-graphql";
-import { Offer, Order, TakenOffer, Token } from "@generated/type-graphql";
+import {
+  Offer,
+  OfferVersion,
+  Order,
+  TakenOffer,
+  Token,
+} from "@generated/type-graphql";
 import { PrismaClient } from "@prisma/client";
 
 // At most re-fetch once per 1000 ms for each token
@@ -31,54 +37,67 @@ export class CustomTokenFieldsResolver {
 
 @Resolver((of) => Offer)
 export class CustomOfferFieldsResolver {
+  @FieldResolver((type) => OfferVersion, { nullable: true })
+  async currentVersion(
+    @Root() offer: Offer,
+    @Ctx() ctx: Context
+  ): Promise<OfferVersion | null> {
+    return await ctx.prisma.offerVersion.findUnique({
+      where: { id: offer.currentVersionId },
+    });
+  }
+}
+
+@Resolver((of) => OfferVersion)
+export class CustomOfferVersionFieldsResolver {
   @FieldResolver((type) => Number, { nullable: true })
   async givesInUsd(
-    @Root() offer: Offer,
+    @Root() offerVersion: OfferVersion,
     @Ctx() ctx: Context
   ): Promise<number | undefined> {
     return amountFieldToUsd(
-      offer,
-      offer.givesNumber,
-      findOutboundTokenFromOfferOrFail,
+      offerVersion,
+      offerVersion.givesNumber,
+      findOutboundTokenFromOfferVersionOrFail,
       ctx
     );
   }
 
   @FieldResolver((type) => Number, { nullable: true })
   async wantsInUsd(
-    @Root() offer: Offer,
+    @Root() offerVersion: OfferVersion,
     @Ctx() ctx: Context
   ): Promise<number | undefined> {
     return amountFieldToUsd(
-      offer,
-      offer.wantsNumber,
-      findInboundTokenFromOfferOrFail,
+      offerVersion,
+      offerVersion.wantsNumber,
+      findInboundTokenFromOfferVersionOrFail,
       ctx
     );
   }
 
   @FieldResolver((type) => Number, { nullable: true })
   async takerPaysPriceInUsd(
-    @Root() offer: Offer,
+    @Root() offerVersion: OfferVersion,
     @Ctx() ctx: Context
   ): Promise<number | undefined> {
     return amountFieldToUsd(
-      offer,
-      offer.takerPaysPrice,
-      findInboundTokenFromOfferOrFail,
+      offerVersion,
+      offerVersion.takerPaysPrice,
+      findInboundTokenFromOfferVersionOrFail,
       ctx
     );
   }
 
   @FieldResolver((type) => Number, { nullable: true })
   async makerPaysPriceInUsd(
-    @Root() offer: Offer,
+    @Root() offerVersion: OfferVersion,
     @Ctx() ctx: Context
   ): Promise<number | undefined> {
     return amountFieldToUsd(
-      offer,
-      offer.makerPaysPrice,
-      findOutboundTokenFromOfferOrFail,
+      offerVersion,
+      offerVersion.makerPaysPrice,
+      findOutboundTokenFromOfferVersionOrFail,
       ctx
     );
   }
@@ -207,33 +226,33 @@ async function amountFieldToUsd<Entity>(
   return amount * tokenPriceInUsd;
 }
 
-async function findOutboundTokenFromOfferOrFail(
-  offer: Offer,
+async function findOutboundTokenFromOfferVersionOrFail(
+  offerVersion: OfferVersion,
   prisma: PrismaClient
 ): Promise<Token> {
   const outboundToken = await prisma.offer
     .findUnique({
-      where: { id: offer.id },
+      where: { id: offerVersion.offerId },
     })
     .offerList()
     .outboundToken();
   if (!outboundToken)
-    throw Error(`Cannot find outbound token from offer '${offer.id}'`);
+    throw Error(`Cannot find outbound token from offer '${offerVersion.id}'`);
   return outboundToken;
 }
 
-async function findInboundTokenFromOfferOrFail(
-  offer: Offer,
+async function findInboundTokenFromOfferVersionOrFail(
+  offerVersion: OfferVersion,
   prisma: PrismaClient
 ): Promise<Token> {
   const inboundToken = await prisma.offer
     .findUnique({
-      where: { id: offer.id },
+      where: { id: offerVersion.offerId },
     })
     .offerList()
     .inboundToken();
   if (!inboundToken)
-    throw Error(`Cannot find inbound token from offer '${offer.id}'`);
+    throw Error(`Cannot find inbound token from offer '${offerVersion.id}'`);
   return inboundToken;
 }
 

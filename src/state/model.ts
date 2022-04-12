@@ -33,6 +33,15 @@ export class OfferId extends Id<string> {
   }
 }
 
+export class OfferVersionId extends Id<string> {
+  public constructor(
+    public readonly offerId: OfferId,
+    public readonly offerVersionNumber: number
+  ) {
+    super(`${offerId.value}-${offerVersionNumber}`);
+  }
+}
+
 export class OfferListId extends Id<string> {
   public constructor(
     public readonly mangroveId: string,
