@@ -37,13 +37,12 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
 
       await eventMatcher({
         MangroveCreated: async (e) => {
-          const chainId = new ChainId(e.chain.chainlistId);
           if (undo) {
-            // TODO: Handle undo
-            // Do not not continue on unhandled undo as the state of the DB might be broken
-            this.#reportUnhandledUndoAndExit(event);
+            await db.deleteMangrove(e.id);
+            return;
           }
 
+          const chainId = new ChainId(e.chain.chainlistId);
           await db.ensureChain(chainId, e.chain.name);
           await db.ensureMangrove(e.id, chainId, e.address);
         },
@@ -478,6 +477,10 @@ export class DbOperations {
 
     await this.tx.mangrove.upsert(toUpsert(mangrove));
     return mangrove;
+  }
+
+  public async deleteMangrove(id: string) {
+    await this.tx.mangrove.deleteMany({ where: { id: id } });
   }
 
   public async updateMakerBalance(
