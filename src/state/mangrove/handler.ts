@@ -8,6 +8,7 @@ import {
   MakerBalanceId,
   OfferId,
   OfferListId,
+  OfferVersionId,
   OrderId,
   TakenOfferId,
   TakerApprovalId,
@@ -15,7 +16,7 @@ import {
 } from "../model";
 import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
-import { Mangrove } from "@prisma/client";
+import { Mangrove, OfferVersion } from "@prisma/client";
 import {
   PrismaStateTransitionHandler,
   PrismaTransaction,
@@ -36,32 +37,29 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
 
       await eventMatcher({
         MangroveCreated: async (e) => {
-          const chainId = new ChainId(e.chain.chainlistId);
           if (undo) {
-            // TODO: Handle undo
-            // Do not not continue on unhandled undo as the state of the DB might be broken
-            this.#reportUnhandledUndoAndExit(event);
+            await db.deleteMangrove(e.id);
+            return;
           }
 
+          const chainId = new ChainId(e.chain.chainlistId);
           await db.ensureChain(chainId, e.chain.name);
           await db.ensureMangrove(e.id, chainId, e.address);
         },
         OfferRetracted: async (e) => {
+          const offerId = new OfferId(mangroveId, e.offerList, e.offerId);
           if (undo) {
-            // TODO: Handle undo
-            //       The event does not have enough data to restore the data, so we need some way to restore it.
-            //       Maybe introduce a `isDeleted` to the Offer entity?
-            // Do not not continue on unhandled undo as the state of the DB might be broken
-            this.#reportUnhandledUndoAndExit(event);
+            await db.markOfferAsUndeleted(offerId);
+            return;
           }
-          await db.deleteOffer(new OfferId(mangroveId, e.offerList, e.offerId));
+          await db.markOfferAsDeleted(offerId);
         },
         OfferWritten: async ({ offer, maker, offerList }) => {
           assert(txRef);
           const offerId = new OfferId(mangroveId, offerList, offer.id);
 
           if (undo) {
-            await db.deleteOffer(offerId);
+            await db.deleteLatestOfferVersion(offerId);
             return;
           }
 
@@ -86,29 +84,37 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
 
           await accountPromise;
 
-          await db.updateOffer({
-            id: offerId.value,
-            offerListId: offerListId.value,
-            blockNumber: txRef.blockNumber,
-            time: timestamp.date,
-            mangroveId: mangroveId,
-            gasprice: offer.gasprice,
-            gives: offer.gives,
-            givesNumber: givesBigNumber.toNumber(),
-            wants: offer.wants,
-            wantsNumber: wantsBigNumber.toNumber(),
-            takerPaysPrice: givesBigNumber.gt(0)
-              ? wantsBigNumber.div(givesBigNumber).toNumber()
-              : null,
-            makerPaysPrice: wantsBigNumber.gt(0)
-              ? givesBigNumber.div(wantsBigNumber).toNumber()
-              : null,
-            gasreq: offer.gasreq,
-            live: new BigNumber(offer.gives).isPositive(),
-            deprovisioned: offer.gasprice == 0,
-            prevOfferId: prevOfferId ? prevOfferId.value : null,
-            makerId: maker,
-          });
+          const offerInDb = await db.getOffer(offerId);
+
+          await db.addVersionedOffer(
+            offerId,
+            offerInDb?.currentVersionId,
+            {
+              id: offerId.value,
+              mangroveId: mangroveId,
+              offerListId: offerListId.value,
+              makerId: maker,
+            },
+            {
+              blockNumber: txRef.blockNumber,
+              time: timestamp.date,
+              gasprice: offer.gasprice,
+              gives: offer.gives,
+              givesNumber: givesBigNumber.toNumber(),
+              wants: offer.wants,
+              wantsNumber: wantsBigNumber.toNumber(),
+              takerPaysPrice: givesBigNumber.gt(0)
+                ? wantsBigNumber.div(givesBigNumber).toNumber()
+                : null,
+              makerPaysPrice: wantsBigNumber.gt(0)
+                ? givesBigNumber.div(wantsBigNumber).toNumber()
+                : null,
+              gasreq: offer.gasreq,
+              live: new BigNumber(offer.gives).isPositive(),
+              deprovisioned: offer.gasprice == 0,
+              prevOfferId: prevOfferId ? prevOfferId.value : null,
+            }
+          );
         },
         OfferListParamsUpdated: async ({ offerList, params }) => {
           if (undo) {
@@ -314,12 +320,86 @@ export class DbOperations {
     };
   }
 
-  public async deleteOffer(id: OfferId) {
-    await this.tx.offer.deleteMany({ where: { id: id.value } });
+  public async getOffer(id: OfferId): Promise<prisma.Offer | null> {
+    return await this.tx.offer.findUnique({ where: { id: id.value } });
   }
 
-  public async updateOffer(offer: prisma.Offer) {
-    await this.tx.offer.upsert(toUpsert(offer));
+  public async markOfferAsDeleted(id: OfferId) {
+    await this.tx.offer.update({
+      where: { id: id.value },
+      data: { deleted: true },
+    });
+  }
+
+  public async markOfferAsUndeleted(id: OfferId) {
+    await this.tx.offer.update({
+      where: { id: id.value },
+      data: { deleted: false },
+    });
+  }
+
+  // Add a new OfferVersion to a (possibly new) Offer
+  public async addVersionedOffer(
+    offerId: OfferId,
+    oldOfferVersionId: string | undefined,
+    offer: Omit<prisma.Offer, "deleted" | "currentVersionId">,
+    offerVersion: Omit<
+      prisma.OfferVersion,
+      "id" | "offerId" | "versionNumber" | "prevVersionId"
+    >
+  ) {
+    let oldOfferVersion: prisma.OfferVersion | null = null;
+    if (oldOfferVersionId !== undefined) {
+      oldOfferVersion = await this.tx.offerVersion.findUnique({
+        where: { id: oldOfferVersionId },
+      });
+      if (oldOfferVersion === null)
+        throw new Error(`Old OfferVersion not found, id: ${oldOfferVersion}`);
+    }
+
+    const newOfferVersionNumber =
+      oldOfferVersion === null ? 0 : oldOfferVersion.versionNumber + 1;
+    const newOfferVersionId = new OfferVersionId(
+      offerId,
+      newOfferVersionNumber
+    );
+
+    await this.tx.offer.upsert(
+      toUpsert({
+        ...offer,
+        currentVersionId: newOfferVersionId.value,
+        deleted: false,
+      })
+    );
+
+    await this.tx.offerVersion.create({
+      data: {
+        ...offerVersion,
+        id: newOfferVersionId.value,
+        offerId: offer.id,
+        versionNumber: newOfferVersionNumber,
+        prevVersionId: oldOfferVersionId,
+      },
+    });
+  }
+
+  public async deleteLatestOfferVersion(id: OfferId) {
+    const offer = await this.tx.offer.findUnique({ where: { id: id.value } });
+    if (offer === null) throw Error(`Offer not found - id: ${id.value}`);
+
+    const offerVersion = await this.tx.offerVersion.findUnique({
+      where: { id: offer.currentVersionId },
+    });
+    await this.tx.offerVersion.delete({
+      where: { id: offer.currentVersionId },
+    });
+
+    if (offerVersion!.prevVersionId === null) {
+      await this.tx.offer.delete({ where: { id: id.value } });
+    } else {
+      offer.currentVersionId = offerVersion!.prevVersionId;
+      await this.tx.offer.update({ where: { id: id.value }, data: offer });
+    }
   }
 
   public async updateOfferList(
@@ -397,6 +477,10 @@ export class DbOperations {
 
     await this.tx.mangrove.upsert(toUpsert(mangrove));
     return mangrove;
+  }
+
+  public async deleteMangrove(id: string) {
+    await this.tx.mangrove.deleteMany({ where: { id: id } });
   }
 
   public async updateMakerBalance(
