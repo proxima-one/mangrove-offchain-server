@@ -98,7 +98,7 @@ function offerListKeyShortStr({
   inboundToken,
   outboundToken,
 }: OfferListKey): string {
-  return `${inboundToken.substring(0, 6)}x${outboundToken.substring(0, 6)}`;
+  return `${outboundToken.substring(0, 6)}x${inboundToken.substring(0, 6)}`;
 }
 
 export interface OfferListKey {
