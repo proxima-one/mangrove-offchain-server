@@ -50,7 +50,7 @@ export class PrismaStateTransitionHandler<TEventPayload>
           update: { state: state.id },
         });
       },
-      { timeout: 2 * 60 * 1000, maxWait: 1 * 60 * 1000 }
+      { timeout: 5 * 60 * 1000, maxWait: 1 * 60 * 1000 }
     );
   }
 
