@@ -176,6 +176,13 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
 
           if (undo) {
             await db.deleteOrder(orderId);
+            for (const takenOffer of order.takenOffers) {
+              db.markOfferAsUndeleted(new OfferId(
+                mangroveId,
+                offerList,
+                takenOffer.id
+              ));
+            }
             return;
           }
 
@@ -190,6 +197,17 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           const takerGaveBigNumber = new BigNumber(order.takerGave).shiftedBy(
             -inboundToken.decimals
           );
+
+          // Taken offers have been removed from the book. Any offers that are reposted
+          // will result in `OfferWritten` events that will be sent _after_ the
+          // `OrderCompleted` event. We therefore remove all taken offers here.
+          for (const takenOffer of order.takenOffers) {
+            db.markOfferAsDeleted(new OfferId(
+              mangroveId,
+              offerList,
+              takenOffer.id
+            ));
+          }
 
           // create order and taken offers
           // taken offer is not an aggregate
