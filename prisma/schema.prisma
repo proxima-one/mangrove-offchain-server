@@ -97,14 +97,10 @@ model MakerBalance {
 }
 
 model OfferList {
-  id              String   @id @db.VarChar(255)
-  mangroveId      String   @db.VarChar(255)
-  inboundTokenId  String   @db.VarChar(255)
-  outboundTokenId String   @db.VarChar(255)
-  active          Boolean?
-  fee             String?  @db.VarChar(80)
-  gasbase         Int?
-  density         String?  @db.VarChar(80)
+  id              String @id @db.VarChar(255)
+  mangroveId      String @db.VarChar(255)
+  inboundTokenId  String @db.VarChar(255)
+  outboundTokenId String @db.VarChar(255)
 
   mangrove       Mangrove        @relation(fields: [mangroveId], references: [id])
   inboundToken   Token           @relation(name: "OfferListsByInboundToken", fields: [inboundTokenId], references: [id])
@@ -112,6 +108,26 @@ model OfferList {
   offers         Offer[]
   takerApprovals TakerApproval[]
   orders         Order[]
+
+  // Events are not allowed to overwrite/delete data, as it might have to be restored on undo.
+  // Instead, we create new versions or mark the offer as deleted, which makes undo easy.
+  currentVersionId  String             @db.VarChar(255)
+  offerListVersions OfferListVersion[]
+}
+
+model OfferListVersion {
+  id          String   @id @db.VarChar(255)
+  offerListId String   @db.VarChar(255)
+  active      Boolean?
+  fee         String?  @db.VarChar(80)
+  gasbase     Int?
+  density     String?  @db.VarChar(80)
+
+  // The following fields are bookkeeping to support undo of events.
+  versionNumber Int
+  prevVersionId String? // This points to the older version that this version replaces, if any
+
+  offerList OfferList @relation(fields: [offerListId], references: [id])
 }
 
 model Offer {
