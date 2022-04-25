@@ -23,6 +23,15 @@ export class TokenId extends Id<string> {
   }
 }
 
+export class MangroveVersionId extends Id<string> {
+  public constructor(
+    public readonly mangroveId: string,
+    public readonly versionNumber: number
+  ) {
+    super(`${mangroveId}-${versionNumber}`);
+  }
+}
+
 export class OfferId extends Id<string> {
   public constructor(
     public readonly mangroveId: string,

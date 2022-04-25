@@ -6,6 +6,7 @@ import {
   AccountId,
   ChainId,
   MakerBalanceId,
+  MangroveVersionId,
   OfferId,
   OfferListId,
   OfferListVersionId,
@@ -39,13 +40,23 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
       await eventMatcher({
         MangroveCreated: async (e) => {
           if (undo) {
-            await db.deleteMangrove(e.id);
+            await db.deleteLatestMangroveVersion(mangroveId);
             return;
           }
 
           const chainId = new ChainId(e.chain.chainlistId);
           await db.ensureChain(chainId, e.chain.name);
-          await db.ensureMangrove(e.id, chainId, e.address);
+          await db.createMangrove(e.id, chainId, e.address);
+        },
+        MangroveParamsUpdated: async ({ params }) => {
+          if (undo) {
+            await db.deleteLatestMangroveVersion(mangroveId);
+            return;
+          }
+
+          await db.addVersionedMangrove(mangroveId, (model) => {
+            _.merge(model, params);
+          });
         },
         OfferRetracted: async (e) => {
           const offerId = new OfferId(mangroveId, e.offerList, e.offerId);
@@ -128,16 +139,6 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           }
 
           await db.addVersionedOfferList(id, (model) => {
-            _.merge(model, params);
-          });
-        },
-        MangroveParamsUpdated: async ({ params }) => {
-          if (undo) {
-            // TODO: Handle undo
-            // Do not not continue on unhandled undo as the state of the DB might be broken
-            this.#reportUnhandledUndoAndExit(event);
-          }
-          await db.updateMangrove(mangroveId, (model) => {
             _.merge(model, params);
           });
         },
@@ -456,7 +457,7 @@ export class DbOperations {
         where: { id: oldVersionId },
       });
       if (oldVersion === null) {
-        throw new Error(`Old OfferListVersion not found, id: ${oldVersion}`);
+        throw new Error(`Old OfferListVersion not found, id: ${oldVersionId}`);
       }
       const newVersionNumber = oldVersion.versionNumber + 1;
       const newVersionId = new OfferListVersionId(id, newVersionNumber);
@@ -470,7 +471,7 @@ export class DbOperations {
     updateFunc(newVersion);
 
     await this.tx.offerList.upsert(
-      toUpsert<prisma.OfferList>(
+      toUpsert(
         _.merge(offerList, {
           currentVersionId: newVersion.id,
         })
@@ -509,24 +510,35 @@ export class DbOperations {
     await this.tx.order.deleteMany({ where: { id: id.value } });
   }
 
-  public async ensureMangrove(id: string, chainId: ChainId, address: string) {
+  public async createMangrove(id: string, chainId: ChainId, address: string) {
     const mangrove = await this.tx.mangrove.findUnique({
       where: { id: id },
     });
 
     if (!mangrove) {
+      const newVersionId = new MangroveVersionId(id, 0);
       await this.tx.mangrove.create({
         data: {
           id: id,
           chainId: chainId.value,
           address: address,
-          gasprice: null,
-          gasmax: null,
-          dead: null,
+          currentVersionId: newVersionId.value,
+        },
+      });
+      await this.tx.mangroveVersion.create({
+        data: {
+          id: newVersionId.value,
+          mangroveId: id,
+          versionNumber: 0,
+          prevVersionId: null,
+          governance: null,
           monitor: null,
-          notify: null,
-          useOracle: null,
           vault: null,
+          useOracle: null,
+          notify: null,
+          gasmax: null,
+          gasprice: null,
+          dead: null,
         },
       });
     }
@@ -538,23 +550,68 @@ export class DbOperations {
     });
   }
 
-  public async updateMangrove(
+  // Add a new MangroveVersion to an existing Mangrove
+  public async addVersionedMangrove(
     id: string,
-    updateFunc: (model: prisma.Mangrove) => void
+    updateFunc: (model: prisma.MangroveVersion) => void
   ) {
+    const mangrove: Mangrove | null = await this.tx.mangrove.findUnique({
+      where: { id: id },
+    });
+    assert(mangrove);
+
+    const oldVersionId = mangrove.currentVersionId;
+    const oldVersion = await this.tx.mangroveVersion.findUnique({
+      where: { id: oldVersionId },
+    });
+    if (oldVersion === null) {
+      throw new Error(`Old MangroveVersion not found, id: ${oldVersionId}`);
+    }
+    const newVersionNumber = oldVersion.versionNumber + 1;
+    const newVersionId = new MangroveVersionId(id, newVersionNumber);
+    const newVersion = _.merge(oldVersion, {
+      id: newVersionId.value,
+      versionNumber: newVersionNumber,
+      prevVersionId: oldVersionId,
+    });
+
+    updateFunc(newVersion);
+
+    await this.tx.mangrove.upsert(
+      toUpsert(
+        _.merge(mangrove, {
+          currentVersionId: newVersion.id,
+        })
+      )
+    );
+
+    await this.tx.mangroveVersion.create({ data: newVersion });
+  }
+
+  public async deleteLatestMangroveVersion(id: string) {
     const mangrove = await this.tx.mangrove.findUnique({
       where: { id: id },
     });
+    if (mangrove === null) {
+      throw Error(`Mangrove not found - id: ${id}`);
+    }
 
-    assert(mangrove);
-    updateFunc(mangrove);
+    const mangroveVersion = await this.tx.mangroveVersion.findUnique({
+      where: { id: mangrove.currentVersionId },
+    });
+    await this.tx.mangroveVersion.delete({
+      where: { id: mangrove.currentVersionId },
+    });
 
-    await this.tx.mangrove.upsert(toUpsert(mangrove));
-    return mangrove;
-  }
-
-  public async deleteMangrove(id: string) {
-    await this.tx.mangrove.deleteMany({ where: { id: id } });
+    if (mangroveVersion!.prevVersionId === null) {
+      await this.tx.mangrove.delete({ where: { id: id } });
+    } else {
+      mangrove.currentVersionId = mangroveVersion!.prevVersionId;
+      await this.tx.mangrove.update({
+        where: { id: id },
+        data: mangrove,
+      });
+    }
   }
 
   public async updateMakerBalance(

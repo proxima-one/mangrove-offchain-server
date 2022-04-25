@@ -41,9 +41,26 @@ model Token {
 }
 
 model Mangrove {
+  id      String @id @db.VarChar(255)
+  chainId Int    @default(-1)
+  address String @default("") @db.VarChar(80)
+
+  chain          Chain           @relation(fields: [chainId], references: [id])
+  offerLists     OfferList[]
+  offers         Offer[]
+  orders         Order[]
+  makerBalances  MakerBalance[]
+  takerApprovals TakerApproval[]
+
+  // Events are not allowed to overwrite/delete data, as it might have to be restored on undo.
+  // Instead, we create new versions or mark the offer as deleted, which makes undo easy.
+  currentVersionId String            @db.VarChar(255)
+  mangroveVersions MangroveVersion[]
+}
+
+model MangroveVersion {
   id         String   @id @db.VarChar(255)
-  chainId    Int      @default(-1)
-  address    String   @default("") @db.VarChar(80)
+  mangroveId String   @db.VarChar(255)
   governance String?
   monitor    String?
   vault      String?
@@ -53,12 +70,11 @@ model Mangrove {
   gasprice   Int?
   dead       Boolean?
 
-  chain          Chain           @relation(fields: [chainId], references: [id])
-  offerLists     OfferList[]
-  offers         Offer[]
-  orders         Order[]
-  makerBalances  MakerBalance[]
-  takerApprovals TakerApproval[]
+  // The following fields are bookkeeping to support undo of events.
+  versionNumber Int
+  prevVersionId String? // This points to the older version that this version replaces, if any
+
+  mangrove Mangrove @relation(fields: [mangroveId], references: [id])
 }
 
 model Account {
