@@ -93,6 +93,15 @@ export class TakerApprovalId extends Id<string> {
   }
 }
 
+export class TakerApprovalVersionId extends Id<string> {
+  public constructor(
+    public readonly takerApprovalId: TakerApprovalId,
+    public readonly versionNumber: number
+  ) {
+    super(`${takerApprovalId.value}-${versionNumber}`);
+  }
+}
+
 export class OrderId extends Id<string> {
   public constructor(
     public readonly mangroveId: string,

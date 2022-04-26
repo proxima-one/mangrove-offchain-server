@@ -14,11 +14,12 @@ import {
   OrderId,
   TakenOfferId,
   TakerApprovalId,
+  TakerApprovalVersionId,
   TokenId,
 } from "../model";
 import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
-import { Mangrove, OfferList } from "@prisma/client";
+import { Mangrove, OfferList, TakerApproval } from "@prisma/client";
 import {
   PrismaStateTransitionHandler,
   PrismaTransaction,
@@ -153,21 +154,17 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           });
         },
         TakerApprovalUpdated: async ({ offerList, amount, spender, owner }) => {
-          if (undo) {
-            // TODO: Handle undo
-            // Do not not continue on unhandled undo as the state of the DB might be broken
-            this.#reportUnhandledUndoAndExit(event);
-          }
-          const takerApprovalId = new TakerApprovalId(
-            mangroveId,
-            offerList,
-            owner,
-            spender
-          );
-          const accountId = new AccountId(owner);
+          const id = new TakerApprovalId(mangroveId, offerList, owner, spender);
 
+          if (undo) {
+            await db.deleteLatestTakerApprovalVersion(id);
+            return;
+          }
+
+          const accountId = new AccountId(owner);
           await db.ensureAccount(accountId);
-          await db.updateTakerApproval(takerApprovalId, (model) => {
+
+          await db.addVersionedTakerApproval(id, (model) => {
             model.value = amount;
           });
         },
@@ -632,24 +629,89 @@ export class DbOperations {
     await this.tx.makerBalance.upsert(toUpsert(makerBalance));
   }
 
-  public async updateTakerApproval(
+  // Add a new TakerApprovalVersion to a (possibly new) TakerApproval
+  public async addVersionedTakerApproval(
     id: TakerApprovalId,
-    updateFunc: (model: prisma.TakerApproval) => void
+    updateFunc: (model: prisma.TakerApprovalVersion) => void
   ) {
-    const takerApproval = (await this.tx.takerApproval.findUnique({
+    let takerApproval: TakerApproval | null =
+      await this.tx.takerApproval.findUnique({
+        where: { id: id.value },
+      });
+    let newVersion: prisma.TakerApprovalVersion;
+
+    if (takerApproval === null) {
+      const newVersionId = new TakerApprovalVersionId(id, 0);
+      takerApproval = {
+        id: id.value,
+        mangroveId: id.mangroveId,
+        ownerId: new AccountId(id.ownerAddress).value,
+        spenderId: new AccountId(id.spenderAddress).value,
+        offerListId: new OfferListId(id.mangroveId, id.offerListKey).value,
+        currentVersionId: newVersionId.value,
+      };
+      newVersion = {
+        id: newVersionId.value,
+        takerApprovalId: id.value,
+        versionNumber: 0,
+        prevVersionId: null,
+        value: "0",
+      };
+    } else {
+      const oldVersionId = takerApproval.currentVersionId;
+      const oldVersion = await this.tx.takerApprovalVersion.findUnique({
+        where: { id: oldVersionId },
+      });
+      if (oldVersion === null) {
+        throw new Error(
+          `Old TakerApprovalVersion not found, id: ${oldVersionId}`
+        );
+      }
+      const newVersionNumber = oldVersion.versionNumber + 1;
+      const newVersionId = new TakerApprovalVersionId(id, newVersionNumber);
+      newVersion = _.merge(oldVersion, {
+        id: newVersionId.value,
+        versionNumber: newVersionNumber,
+        prevVersionId: oldVersionId,
+      });
+    }
+
+    updateFunc(newVersion);
+
+    await this.tx.takerApproval.upsert(
+      toUpsert(
+        _.merge(takerApproval, {
+          currentVersionId: newVersion.id,
+        })
+      )
+    );
+
+    await this.tx.takerApprovalVersion.create({ data: newVersion });
+  }
+
+  public async deleteLatestTakerApprovalVersion(id: TakerApprovalId) {
+    const takerApproval = await this.tx.takerApproval.findUnique({
       where: { id: id.value },
-    })) ?? {
-      id: id.value,
-      mangroveId: id.mangroveId,
-      ownerId: new AccountId(id.ownerAddress).value,
-      spenderId: new AccountId(id.spenderAddress).value,
-      offerListId: new OfferListId(id.mangroveId, id.offerListKey).value,
-      value: "0",
-    };
+    });
+    if (takerApproval === null)
+      throw Error(`TakerApproval not found - id: ${id.value}`);
 
-    updateFunc(takerApproval);
+    const currentVersion = await this.tx.takerApprovalVersion.findUnique({
+      where: { id: takerApproval.currentVersionId },
+    });
+    await this.tx.takerApprovalVersion.delete({
+      where: { id: takerApproval.currentVersionId },
+    });
 
-    await this.tx.takerApproval.upsert(toUpsert(takerApproval));
+    if (currentVersion!.prevVersionId === null) {
+      await this.tx.takerApproval.delete({ where: { id: id.value } });
+    } else {
+      takerApproval.currentVersionId = currentVersion!.prevVersionId;
+      await this.tx.takerApproval.update({
+        where: { id: id.value },
+        data: takerApproval,
+      });
+    }
   }
 }
 

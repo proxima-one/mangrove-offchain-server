@@ -94,12 +94,28 @@ model TakerApproval {
   offerListId String @db.VarChar(255)
   ownerId     String @db.VarChar(255)
   spenderId   String @db.VarChar(255)
-  value       String @db.VarChar(80)
 
   mangrove  Mangrove  @relation(fields: [mangroveId], references: [id])
   offerList OfferList @relation(fields: [offerListId], references: [id])
   owner     Account   @relation("OwnerApprovals", fields: [ownerId], references: [id])
   spender   Account   @relation("SpenderApprovals", fields: [spenderId], references: [id])
+
+  // Events are not allowed to overwrite/delete data, as it might have to be restored on undo.
+  // Instead, we create new versions or mark the offer as deleted, which makes undo easy.
+  currentVersionId      String                 @db.VarChar(255)
+  takerApprovalVersions TakerApprovalVersion[]
+}
+
+model TakerApprovalVersion {
+  id              String @id @db.VarChar(255)
+  takerApprovalId String @db.VarChar(255)
+  value           String @db.VarChar(80)
+
+  // The following fields are bookkeeping to support undo of events.
+  versionNumber Int
+  prevVersionId String? // This points to the older version that this version replaces, if any
+
+  takerApproval TakerApproval @relation(fields: [takerApprovalId], references: [id])
 }
 
 model MakerBalance {
