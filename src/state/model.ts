@@ -78,6 +78,15 @@ export class MakerBalanceId extends Id<string> {
   }
 }
 
+export class MakerBalanceVersionId extends Id<string> {
+  public constructor(
+    public readonly makerBalanceId: MakerBalanceId,
+    public readonly versionNumber: number
+  ) {
+    super(`${makerBalanceId.value}-${versionNumber}`);
+  }
+}
+
 export class TakerApprovalId extends Id<string> {
   public constructor(
     public readonly mangroveId: string,

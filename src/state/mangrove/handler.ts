@@ -6,6 +6,7 @@ import {
   AccountId,
   ChainId,
   MakerBalanceId,
+  MakerBalanceVersionId,
   MangroveVersionId,
   OfferId,
   OfferListId,
@@ -19,7 +20,7 @@ import {
 } from "../model";
 import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
-import { Mangrove, OfferList, TakerApproval } from "@prisma/client";
+import { MakerBalance, Mangrove, OfferList, TakerApproval } from "@prisma/client";
 import {
   PrismaStateTransitionHandler,
   PrismaTransaction,
@@ -144,12 +145,16 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           });
         },
         MakerBalanceUpdated: async ({ maker, amountChange }) => {
-          let amount = new BigNumber(amountChange);
-          if (undo) amount = amount.times(-1);
+          const id = new MakerBalanceId(mangroveId, maker);
 
-          const makerBalanceId = new MakerBalanceId(mangroveId, maker);
+          if (undo) {
+            await db.deleteLatestMakerBalanceVersion(id);
+            return;
+          }
 
-          await db.updateMakerBalance(makerBalanceId, (model) => {
+          const amount = new BigNumber(amountChange);
+
+          await db.addVersionedMakerBalance(id, (model) => {
             model.balance = new BigNumber(model.balance).plus(amount).toFixed();
           });
         },
@@ -611,22 +616,87 @@ export class DbOperations {
     }
   }
 
-  public async updateMakerBalance(
+  // Add a new MakerBalanceVersion to a (possibly new) MakerBalance
+  public async addVersionedMakerBalance(
     id: MakerBalanceId,
-    updateFunc: (model: prisma.MakerBalance) => void
+    updateFunc: (model: prisma.MakerBalanceVersion) => void
   ) {
-    const makerBalance = (await this.tx.makerBalance.findUnique({
+    let makerBalance: MakerBalance | null =
+      await this.tx.makerBalance.findUnique({
+        where: { id: id.value },
+      });
+    let newVersion: prisma.MakerBalanceVersion;
+
+    if (makerBalance === null) {
+      const newVersionId = new MakerBalanceVersionId(id, 0);
+      makerBalance = {
+        id: id.value,
+        mangroveId: id.mangroveId,
+        makerId: new AccountId(id.address).value,
+        currentVersionId: newVersionId.value,
+      };
+      newVersion = {
+        id: newVersionId.value,
+        makerBalanceId: id.value,
+        versionNumber: 0,
+        prevVersionId: null,
+        balance: "0",
+      };
+    } else {
+      const oldVersionId = makerBalance.currentVersionId;
+      const oldVersion = await this.tx.makerBalanceVersion.findUnique({
+        where: { id: oldVersionId },
+      });
+      if (oldVersion === null) {
+        throw new Error(
+          `Old MakerBalanceVersion not found, id: ${oldVersionId}`
+        );
+      }
+      const newVersionNumber = oldVersion.versionNumber + 1;
+      const newVersionId = new MakerBalanceVersionId(id, newVersionNumber);
+      newVersion = _.merge(oldVersion, {
+        id: newVersionId.value,
+        versionNumber: newVersionNumber,
+        prevVersionId: oldVersionId,
+      });
+    }
+
+    updateFunc(newVersion);
+
+    await this.tx.makerBalance.upsert(
+      toUpsert(
+        _.merge(makerBalance, {
+          currentVersionId: newVersion.id,
+        })
+      )
+    );
+
+    await this.tx.makerBalanceVersion.create({ data: newVersion });
+  }
+
+  public async deleteLatestMakerBalanceVersion(id: MakerBalanceId) {
+    const makerBalance = await this.tx.makerBalance.findUnique({
       where: { id: id.value },
-    })) ?? {
-      id: id.value,
-      mangroveId: id.mangroveId,
-      balance: "0",
-      makerId: new AccountId(id.address).value,
-    };
+    });
+    if (makerBalance === null)
+      throw Error(`MakerBalance not found - id: ${id.value}`);
 
-    updateFunc(makerBalance);
+    const currentVersion = await this.tx.makerBalanceVersion.findUnique({
+      where: { id: makerBalance.currentVersionId },
+    });
+    await this.tx.makerBalanceVersion.delete({
+      where: { id: makerBalance.currentVersionId },
+    });
 
-    await this.tx.makerBalance.upsert(toUpsert(makerBalance));
+    if (currentVersion!.prevVersionId === null) {
+      await this.tx.makerBalance.delete({ where: { id: id.value } });
+    } else {
+      makerBalance.currentVersionId = currentVersion!.prevVersionId;
+      await this.tx.makerBalance.update({
+        where: { id: id.value },
+        data: makerBalance,
+      });
+    }
   }
 
   // Add a new TakerApprovalVersion to a (possibly new) TakerApproval

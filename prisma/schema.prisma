@@ -53,7 +53,7 @@ model Mangrove {
   takerApprovals TakerApproval[]
 
   // Events are not allowed to overwrite/delete data, as it might have to be restored on undo.
-  // Instead, we create new versions or mark the offer as deleted, which makes undo easy.
+  // Instead, we create new versions which makes undo easy.
   currentVersionId String            @db.VarChar(255)
   mangroveVersions MangroveVersion[]
 }
@@ -101,7 +101,7 @@ model TakerApproval {
   spender   Account   @relation("SpenderApprovals", fields: [spenderId], references: [id])
 
   // Events are not allowed to overwrite/delete data, as it might have to be restored on undo.
-  // Instead, we create new versions or mark the offer as deleted, which makes undo easy.
+  // Instead, we create new versions which makes undo easy.
   currentVersionId      String                 @db.VarChar(255)
   takerApprovalVersions TakerApprovalVersion[]
 }
@@ -122,10 +122,26 @@ model MakerBalance {
   id         String @id @db.VarChar(255)
   mangroveId String @db.VarChar(100)
   makerId    String @db.VarChar(255)
-  balance    String @db.VarChar(80)
 
   mangrove Mangrove @relation(fields: [mangroveId], references: [id])
   maker    Account  @relation(fields: [makerId], references: [id])
+
+  // Events are not allowed to overwrite/delete data, as it might have to be restored on undo.
+  // Instead, we create new versions which makes undo easy.
+  currentVersionId     String                @db.VarChar(255)
+  makerBalanceVersions MakerBalanceVersion[]
+}
+
+model MakerBalanceVersion {
+  id             String @id @db.VarChar(255)
+  makerBalanceId String @db.VarChar(255)
+  balance        String @db.VarChar(80)
+
+  // The following fields are bookkeeping to support undo of events.
+  versionNumber Int
+  prevVersionId String? // This points to the older version that this version replaces, if any
+
+  makerBalance MakerBalance @relation(fields: [makerBalanceId], references: [id])
 }
 
 model OfferList {
@@ -142,7 +158,7 @@ model OfferList {
   orders         Order[]
 
   // Events are not allowed to overwrite/delete data, as it might have to be restored on undo.
-  // Instead, we create new versions or mark the offer as deleted, which makes undo easy.
+  // Instead, we create new versions which makes undo easy.
   currentVersionId  String             @db.VarChar(255)
   offerListVersions OfferListVersion[]
 }
