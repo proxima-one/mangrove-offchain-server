@@ -27,6 +27,22 @@ model Chain {
   tokens    Token[]
 }
 
+model Transaction {
+  id          String   @id @db.VarChar(255)
+  txHash      String   @db.VarChar(80)
+  from        String   @db.VarChar(80)
+  blockNumber Int
+  blockHash   String   @db.VarChar(80)
+  time        DateTime @db.Timestamp
+
+  mangroveVersions      MangroveVersion[]
+  takerApprovalVersions TakerApprovalVersion[]
+  makerBalanceVersions  MakerBalanceVersion[]
+  offerListVersions     OfferListVersion[]
+  offerVersions         OfferVersion[]
+  orders                Order[]
+}
+
 model Token {
   id       String @id @db.VarChar(255)
   chainId  Int
@@ -61,6 +77,7 @@ model Mangrove {
 model MangroveVersion {
   id         String   @id @db.VarChar(255)
   mangroveId String   @db.VarChar(255)
+  txId       String?  @db.VarChar(255)
   governance String?
   monitor    String?
   vault      String?
@@ -70,9 +87,11 @@ model MangroveVersion {
   gasprice   Int?
   dead       Boolean?
 
+  tx Transaction? @relation(fields: [txId], references: [id])
+
   // The following fields are bookkeeping to support undo of events.
   versionNumber Int
-  prevVersionId String? // This points to the older version that this version replaces, if any
+  prevVersionId String? @db.VarChar(255) // This points to the older version that this version replaces, if any
 
   mangrove Mangrove @relation(fields: [mangroveId], references: [id])
 }
@@ -109,11 +128,14 @@ model TakerApproval {
 model TakerApprovalVersion {
   id              String @id @db.VarChar(255)
   takerApprovalId String @db.VarChar(255)
+  txId            String @db.VarChar(255)
   value           String @db.VarChar(80)
+
+  tx Transaction @relation(fields: [txId], references: [id])
 
   // The following fields are bookkeeping to support undo of events.
   versionNumber Int
-  prevVersionId String? // This points to the older version that this version replaces, if any
+  prevVersionId String? @db.VarChar(255) // This points to the older version that this version replaces, if any
 
   takerApproval TakerApproval @relation(fields: [takerApprovalId], references: [id])
 }
@@ -135,11 +157,14 @@ model MakerBalance {
 model MakerBalanceVersion {
   id             String @id @db.VarChar(255)
   makerBalanceId String @db.VarChar(255)
+  txId           String @db.VarChar(255)
   balance        String @db.VarChar(80)
+
+  tx Transaction @relation(fields: [txId], references: [id])
 
   // The following fields are bookkeeping to support undo of events.
   versionNumber Int
-  prevVersionId String? // This points to the older version that this version replaces, if any
+  prevVersionId String? @db.VarChar(255) // This points to the older version that this version replaces, if any
 
   makerBalance MakerBalance @relation(fields: [makerBalanceId], references: [id])
 }
@@ -166,14 +191,17 @@ model OfferList {
 model OfferListVersion {
   id          String   @id @db.VarChar(255)
   offerListId String   @db.VarChar(255)
+  txId        String   @db.VarChar(255)
   active      Boolean?
   fee         String?  @db.VarChar(80)
   gasbase     Int?
   density     String?  @db.VarChar(80)
 
+  tx Transaction @relation(fields: [txId], references: [id])
+
   // The following fields are bookkeeping to support undo of events.
   versionNumber Int
-  prevVersionId String? // This points to the older version that this version replaces, if any
+  prevVersionId String? @db.VarChar(255) // This points to the older version that this version replaces, if any
 
   offerList OfferList @relation(fields: [offerListId], references: [id])
 }
@@ -195,14 +223,13 @@ model Offer {
 }
 
 model OfferVersion {
-  id             String   @id @db.VarChar(255)
-  offerId        String   @db.VarChar(255)
-  blockNumber    Int
-  time           DateTime @db.Timestamp
-  prevOfferId    String?
-  wants          String   @db.VarChar(80)
+  id             String  @id @db.VarChar(255)
+  offerId        String  @db.VarChar(255)
+  txId           String  @db.VarChar(255)
+  prevOfferId    String? @db.VarChar(255)
+  wants          String  @db.VarChar(80)
   wantsNumber    Float
-  gives          String   @db.VarChar(80)
+  gives          String  @db.VarChar(80)
   givesNumber    Float
   takerPaysPrice Float?
   makerPaysPrice Float?
@@ -211,20 +238,21 @@ model OfferVersion {
   live           Boolean
   deprovisioned  Boolean
 
+  tx Transaction @relation(fields: [txId], references: [id])
+
   // The following fields are bookkeeping to support undo of events.
   versionNumber Int
-  prevVersionId String? // This points to the older version that this version replaces, if any
+  prevVersionId String? @db.VarChar(255) // This points to the older version that this version replaces, if any
 
   offer Offer @relation(fields: [offerId], references: [id])
 }
 
 model Order {
-  id              String   @id @db.VarChar(255)
-  blockNumber     Int
-  time            DateTime @db.Timestamp
-  mangroveId      String   @db.VarChar(255)
-  offerListId     String   @db.VarChar(255)
-  takerId         String   @db.VarChar(255)
+  id              String @id @db.VarChar(255)
+  txId            String @db.VarChar(255)
+  mangroveId      String @db.VarChar(255)
+  offerListId     String @db.VarChar(255)
+  takerId         String @db.VarChar(255)
   takerGot        String
   takerGotNumber  Float
   takerGave       String
@@ -232,6 +260,8 @@ model Order {
   takerPaidPrice  Float?
   makerPaidPrice  Float?
   penalty         String
+
+  tx Transaction @relation(fields: [txId], references: [id])
 
   takenOffers TakenOffer[]
   mangrove    Mangrove     @relation(fields: [mangroveId], references: [id])

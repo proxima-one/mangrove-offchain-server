@@ -17,16 +17,17 @@ import {
   TakerApprovalId,
   TakerApprovalVersionId,
   TokenId,
+  TransactionId,
 } from "../model";
 import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
-import { MakerBalance, Mangrove, OfferList, TakerApproval } from "@prisma/client";
 import {
   PrismaStateTransitionHandler,
   PrismaTransaction,
   TypedEvent,
 } from "../../common";
 import { createPatternMatcher } from "../../utils/discriminatedUnion";
+import { Timestamp } from "@proximaone/stream-client-js";
 
 export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveSchema.streams.MangroveStreamEvent> {
   protected async handleEvents(
@@ -39,6 +40,28 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
       const mangroveId = payload.mangroveId!;
       const txRef = payload.tx;
 
+      // TODO: Having the chain id on all events would be good
+      let chainId: ChainId;
+      if (payload.type === "MangroveCreated") {
+        chainId = new ChainId(payload.chain.chainlistId);
+        await db.ensureChain(chainId, payload.chain.name);
+      } else {
+        chainId = await db.getChainId(mangroveId);
+      }
+
+      let transaction: prisma.Transaction | undefined;
+      if (txRef !== undefined) {
+        const txId = new TransactionId(chainId, txRef.txHash);
+        transaction = await db.ensureTransaction(
+          txId,
+          txRef.txHash,
+          txRef.from,
+          timestamp,
+          txRef.blockNumber,
+          txRef.blockHash
+        );
+      }
+
       await eventMatcher({
         MangroveCreated: async (e) => {
           if (undo) {
@@ -46,9 +69,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
             return;
           }
 
-          const chainId = new ChainId(e.chain.chainlistId);
-          await db.ensureChain(chainId, e.chain.name);
-          await db.createMangrove(e.id, chainId, e.address);
+          await db.createMangrove(e.id, chainId, e.address, transaction!);
         },
         MangroveParamsUpdated: async ({ params }) => {
           if (undo) {
@@ -56,9 +77,13 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
             return;
           }
 
-          await db.addVersionedMangrove(mangroveId, (model) => {
-            _.merge(model, params);
-          });
+          await db.addVersionedMangrove(
+            mangroveId,
+            (model) => {
+              _.merge(model, params);
+            },
+            transaction
+          );
         },
         OfferRetracted: async (e) => {
           const offerId = new OfferId(mangroveId, e.offerList, e.offerId);
@@ -106,8 +131,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
               makerId: maker,
             },
             {
-              blockNumber: txRef.blockNumber,
-              time: timestamp.date,
+              txId: transaction!.id,
               gasprice: offer.gasprice,
               gives: offer.gives,
               givesNumber: givesBigNumber.toNumber(),
@@ -127,8 +151,6 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           );
         },
         OfferListParamsUpdated: async ({ offerList, params }) => {
-          const mangrove = await db.getMangrove(mangroveId);
-          const chainId = new ChainId(mangrove!.chainId);
           const inboundTokenId = new TokenId(chainId, offerList.inboundToken);
           await db.assertTokenExists(inboundTokenId);
           const outboundTokenId = new TokenId(chainId, offerList.outboundToken);
@@ -140,7 +162,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
             return;
           }
 
-          await db.addVersionedOfferList(id, (model) => {
+          await db.addVersionedOfferList(id, transaction!, (model) => {
             _.merge(model, params);
           });
         },
@@ -154,7 +176,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
 
           const amount = new BigNumber(amountChange);
 
-          await db.addVersionedMakerBalance(id, (model) => {
+          await db.addVersionedMakerBalance(id, transaction!, (model) => {
             model.balance = new BigNumber(model.balance).plus(amount).toFixed();
           });
         },
@@ -169,7 +191,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           const accountId = new AccountId(owner);
           await db.ensureAccount(accountId);
 
-          await db.addVersionedTakerApproval(id, (model) => {
+          await db.addVersionedTakerApproval(id, transaction!, (model) => {
             model.value = amount;
           });
         },
@@ -216,8 +238,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           await tx.order.create({
             data: {
               id: orderId.value,
-              time: timestamp.date,
-              blockNumber: txRef.blockNumber,
+              txId: transaction!.id,
               offerListId: offerListId.value,
               mangroveId: mangroveId,
               takerId: takerAccountId.value,
@@ -282,6 +303,42 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
 
 export class DbOperations {
   public constructor(private readonly tx: PrismaTx) {}
+
+  public async getChainId(mangroveId: string): Promise<ChainId> {
+    const mangrove = await this.tx.mangrove.findUnique({
+      where: { id: mangroveId },
+      select: { chainId: true },
+    });
+    if (mangrove === null) {
+      throw new Error(`Mangrove not found, id: ${mangroveId}`);
+    }
+    return new ChainId(mangrove.chainId);
+  }
+
+  public async ensureTransaction(
+    id: TransactionId,
+    txHash: string,
+    from: string,
+    timestamp: Timestamp,
+    blockNumber: number,
+    blockHash: string
+  ): Promise<prisma.Transaction> {
+    let transaction = await this.tx.transaction.findUnique({
+      where: { id: id.value },
+    });
+    if (transaction === null) {
+      transaction = {
+        id: id.value,
+        txHash: txHash,
+        from: from,
+        blockNumber: blockNumber,
+        blockHash: blockHash,
+        time: timestamp.date,
+      };
+      await this.tx.transaction.create({ data: transaction });
+    }
+    return transaction;
+  }
 
   public async ensureAccount(id: AccountId): Promise<prisma.Account> {
     let account = await this.tx.account.findUnique({ where: { id: id.value } });
@@ -418,11 +475,14 @@ export class DbOperations {
   // Add a new OfferListVersion to a (possibly new) OfferList
   public async addVersionedOfferList(
     id: OfferListId,
+    tx: prisma.Transaction,
     updateFunc: (model: prisma.OfferListVersion) => void
   ) {
-    let offerList: OfferList | null = await this.tx.offerList.findUnique({
-      where: { id: id.value },
-    });
+    let offerList: prisma.OfferList | null = await this.tx.offerList.findUnique(
+      {
+        where: { id: id.value },
+      }
+    );
     let newVersion: prisma.OfferListVersion;
 
     if (offerList === null) {
@@ -446,6 +506,7 @@ export class DbOperations {
       newVersion = {
         id: newVersionId.value,
         offerListId: id.value,
+        txId: tx.id,
         versionNumber: 0,
         prevVersionId: null,
         active: null,
@@ -512,7 +573,12 @@ export class DbOperations {
     await this.tx.order.deleteMany({ where: { id: id.value } });
   }
 
-  public async createMangrove(id: string, chainId: ChainId, address: string) {
+  public async createMangrove(
+    id: string,
+    chainId: ChainId,
+    address: string,
+    tx?: prisma.Transaction
+  ) {
     const mangrove = await this.tx.mangrove.findUnique({
       where: { id: id },
     });
@@ -531,6 +597,7 @@ export class DbOperations {
         data: {
           id: newVersionId.value,
           mangroveId: id,
+          txId: tx === undefined ? null : tx.id,
           versionNumber: 0,
           prevVersionId: null,
           governance: null,
@@ -546,18 +613,13 @@ export class DbOperations {
     }
   }
 
-  public async getMangrove(id: string): Promise<Mangrove | null> {
-    return this.tx.mangrove.findUnique({
-      where: { id: id },
-    });
-  }
-
   // Add a new MangroveVersion to an existing Mangrove
   public async addVersionedMangrove(
     id: string,
-    updateFunc: (model: prisma.MangroveVersion) => void
+    updateFunc: (model: prisma.MangroveVersion) => void,
+    tx?: prisma.Transaction
   ) {
-    const mangrove: Mangrove | null = await this.tx.mangrove.findUnique({
+    const mangrove: prisma.Mangrove | null = await this.tx.mangrove.findUnique({
       where: { id: id },
     });
     assert(mangrove);
@@ -573,6 +635,7 @@ export class DbOperations {
     const newVersionId = new MangroveVersionId(id, newVersionNumber);
     const newVersion = _.merge(oldVersion, {
       id: newVersionId.value,
+      txId: tx === undefined ? null : tx.id,
       versionNumber: newVersionNumber,
       prevVersionId: oldVersionId,
     });
@@ -619,9 +682,10 @@ export class DbOperations {
   // Add a new MakerBalanceVersion to a (possibly new) MakerBalance
   public async addVersionedMakerBalance(
     id: MakerBalanceId,
+    tx: prisma.Transaction,
     updateFunc: (model: prisma.MakerBalanceVersion) => void
   ) {
-    let makerBalance: MakerBalance | null =
+    let makerBalance: prisma.MakerBalance | null =
       await this.tx.makerBalance.findUnique({
         where: { id: id.value },
       });
@@ -638,6 +702,7 @@ export class DbOperations {
       newVersion = {
         id: newVersionId.value,
         makerBalanceId: id.value,
+        txId: tx.id,
         versionNumber: 0,
         prevVersionId: null,
         balance: "0",
@@ -702,9 +767,10 @@ export class DbOperations {
   // Add a new TakerApprovalVersion to a (possibly new) TakerApproval
   public async addVersionedTakerApproval(
     id: TakerApprovalId,
+    tx: prisma.Transaction,
     updateFunc: (model: prisma.TakerApprovalVersion) => void
   ) {
-    let takerApproval: TakerApproval | null =
+    let takerApproval: prisma.TakerApproval | null =
       await this.tx.takerApproval.findUnique({
         where: { id: id.value },
       });
@@ -723,6 +789,7 @@ export class DbOperations {
       newVersion = {
         id: newVersionId.value,
         takerApprovalId: id.value,
+        txId: tx.id,
         versionNumber: 0,
         prevVersionId: null,
         value: "0",

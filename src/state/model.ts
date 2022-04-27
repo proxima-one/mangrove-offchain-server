@@ -8,6 +8,15 @@ export class AccountId extends Id<string> {
   }
 }
 
+export class TransactionId extends Id<string> {
+  public constructor(
+    public readonly chainId: ChainId,
+    public readonly txHash: string
+  ) {
+    super(`${chainId.chainlistId}-${txHash}`);
+  }
+}
+
 export class ChainId extends Id<number> {
   public constructor(public readonly chainlistId: number) {
     super(chainlistId);
