@@ -112,6 +112,11 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
               ? null
               : new OfferId(mangroveId, offerList, offer.prev);
 
+          const parentOrderId =
+            payload.parentOrderId === undefined
+              ? undefined
+              : new OrderId(mangroveId, offerList, payload.parentOrderId);
+
           const { outboundToken, inboundToken } = await db.getOfferListTokens(
             offerListId
           );
@@ -132,6 +137,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
             },
             {
               txId: transaction!.id,
+              parentOrderId: parentOrderId?.value ?? null,
               gasprice: offer.gasprice,
               gives: offer.gives,
               givesNumber: givesBigNumber.toNumber(),
@@ -174,6 +180,8 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
             return;
           }
 
+          // TODO: Add parentOrderId when sufficient information is available
+
           const amount = new BigNumber(amountChange);
 
           await db.addVersionedMakerBalance(id, transaction!, (model) => {
@@ -191,9 +199,19 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           const accountId = new AccountId(owner);
           await db.ensureAccount(accountId);
 
-          await db.addVersionedTakerApproval(id, transaction!, (model) => {
-            model.value = amount;
-          });
+          const parentOrderId =
+            payload.parentOrderId === undefined
+              ? undefined
+              : new OrderId(mangroveId, offerList, payload.parentOrderId);
+
+          await db.addVersionedTakerApproval(
+            id,
+            transaction!,
+            (model) => {
+              model.value = amount;
+            },
+            parentOrderId
+          );
         },
         OrderCompleted: async ({ id, order, offerList }) => {
           assert(txRef);
@@ -210,6 +228,11 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           }
 
           const offerListId = new OfferListId(mangroveId, offerList);
+
+          const parentOrderId =
+            payload.parentOrderId === undefined
+              ? undefined
+              : new OrderId(mangroveId, offerList, payload.parentOrderId);
 
           const { outboundToken, inboundToken } = await db.getOfferListTokens(
             offerListId
@@ -239,6 +262,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
             data: {
               id: orderId.value,
               txId: transaction!.id,
+              parentOrderId: parentOrderId?.value ?? null,
               offerListId: offerListId.value,
               mangroveId: mangroveId,
               takerId: takerAccountId.value,
@@ -768,7 +792,8 @@ export class DbOperations {
   public async addVersionedTakerApproval(
     id: TakerApprovalId,
     tx: prisma.Transaction,
-    updateFunc: (model: prisma.TakerApprovalVersion) => void
+    updateFunc: (model: prisma.TakerApprovalVersion) => void,
+    parentOrderId?: OrderId
   ) {
     let takerApproval: prisma.TakerApproval | null =
       await this.tx.takerApproval.findUnique({
@@ -790,6 +815,7 @@ export class DbOperations {
         id: newVersionId.value,
         takerApprovalId: id.value,
         txId: tx.id,
+        parentOrderId: parentOrderId?.value ?? null,
         versionNumber: 0,
         prevVersionId: null,
         value: "0",

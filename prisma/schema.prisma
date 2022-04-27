@@ -126,12 +126,14 @@ model TakerApproval {
 }
 
 model TakerApprovalVersion {
-  id              String @id @db.VarChar(255)
-  takerApprovalId String @db.VarChar(255)
-  txId            String @db.VarChar(255)
-  value           String @db.VarChar(80)
+  id              String  @id @db.VarChar(255)
+  takerApprovalId String  @db.VarChar(255)
+  txId            String  @db.VarChar(255)
+  parentOrderId   String? @db.VarChar(255)
+  value           String  @db.VarChar(80)
 
-  tx Transaction @relation(fields: [txId], references: [id])
+  tx          Transaction @relation(fields: [txId], references: [id])
+  parentOrder Order?      @relation(fields: [parentOrderId], references: [id])
 
   // The following fields are bookkeeping to support undo of events.
   versionNumber Int
@@ -226,6 +228,7 @@ model OfferVersion {
   id             String  @id @db.VarChar(255)
   offerId        String  @db.VarChar(255)
   txId           String  @db.VarChar(255)
+  parentOrderId  String? @db.VarChar(255)
   prevOfferId    String? @db.VarChar(255)
   wants          String  @db.VarChar(80)
   wantsNumber    Float
@@ -238,7 +241,8 @@ model OfferVersion {
   live           Boolean
   deprovisioned  Boolean
 
-  tx Transaction @relation(fields: [txId], references: [id])
+  tx          Transaction @relation(fields: [txId], references: [id])
+  parentOrder Order?      @relation(fields: [parentOrderId], references: [id])
 
   // The following fields are bookkeeping to support undo of events.
   versionNumber Int
@@ -248,11 +252,12 @@ model OfferVersion {
 }
 
 model Order {
-  id              String @id @db.VarChar(255)
-  txId            String @db.VarChar(255)
-  mangroveId      String @db.VarChar(255)
-  offerListId     String @db.VarChar(255)
-  takerId         String @db.VarChar(255)
+  id              String  @id @db.VarChar(255)
+  txId            String  @db.VarChar(255)
+  parentOrderId   String? @db.VarChar(255)
+  mangroveId      String  @db.VarChar(255)
+  offerListId     String  @db.VarChar(255)
+  takerId         String  @db.VarChar(255)
   takerGot        String
   takerGotNumber  Float
   takerGave       String
@@ -261,12 +266,16 @@ model Order {
   makerPaidPrice  Float?
   penalty         String
 
-  tx Transaction @relation(fields: [txId], references: [id])
+  tx          Transaction @relation(fields: [txId], references: [id])
+  parentOrder Order?      @relation("ParentOrders", fields: [parentOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
-  takenOffers TakenOffer[]
-  mangrove    Mangrove     @relation(fields: [mangroveId], references: [id])
-  offerList   OfferList    @relation(fields: [offerListId], references: [id])
-  taker       Account      @relation(fields: [takerId], references: [id])
+  takenOffers                TakenOffer[]
+  mangrove                   Mangrove               @relation(fields: [mangroveId], references: [id])
+  offerList                  OfferList              @relation(fields: [offerListId], references: [id])
+  taker                      Account                @relation(fields: [takerId], references: [id])
+  childOrders                Order[]                @relation("ParentOrders")
+  childTakerApprovalVersions TakerApprovalVersion[]
+  childOfferVersions         OfferVersion[]
 }
 
 model TakenOffer {
