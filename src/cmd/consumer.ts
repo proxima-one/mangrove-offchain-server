@@ -10,7 +10,7 @@ import { MangroveEventHandler, TokenEventHandler } from "../state";
 
 const retries = parseInt(process.env["CONSUMER_RETRIES"] ?? "100");
 const retryFactor = parseFloat(process.env["CONSUMER_RETRY_FACTOR"] ?? "1.2");
-const batchSize = parseInt(process.env["BATCH_SIZE"] ?? "500");
+const batchSize = parseInt(process.env["BATCH_SIZE"] ?? "50");
 
 const prisma = new PrismaClient();
 const streamClient = new ProximaStreamsClient("streams.proxima.one:443");
@@ -25,7 +25,7 @@ async function main() {
       consumeStream(
         new MangroveEventHandler(
           prisma,
-          "v4.domain-events.polygon-mumbai.mangrove.streams.proxima.one"
+          "v5.domain-events.polygon-mumbai.mangrove.streams.proxima.one"
         )
       ),
     () =>

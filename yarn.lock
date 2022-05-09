@@ -882,6 +882,14 @@
     bignumber.js "^9.0.1"
     long "^4.0.0"
 
+"@proximaone/stream-schema-base@^0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-base/-/stream-schema-base-0.2.0.tgz#6cf8cf02aeb54c933226760cbed4b512f1097f79"
+  integrity sha512-kUJpTgnv0+LTX3BkIkSyS9xPSTqV3+PMPDVQCCkSSmMxCy1W+Aems1AqYRUTbvHC550QaQnrXSqKbY0/mvId2w==
+  dependencies:
+    bignumber.js "^9.0.1"
+    long "^4.0.0"
+
 "@proximaone/stream-schema-fungible-token@^0.2.0":
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-fungible-token/-/stream-schema-fungible-token-0.2.0.tgz#997e878b58e0c219c40c579efa9caa3216591554"
@@ -889,12 +897,12 @@
   dependencies:
     "@proximaone/stream-schema-base" "^0.1.11"
 
-"@proximaone/stream-schema-mangrove@^0.1.9":
-  version "0.1.9"
-  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-mangrove/-/stream-schema-mangrove-0.1.9.tgz#cb593c1c370331391100e5800be5f7bce123585e"
-  integrity sha512-pg5N8TdTfgeOLuq4NlGijy1za98k/hiKzu5aNUus/EYCfXjP0IlLqFSIj2uvRe/HVP1uhQ40LVY1tmVstBCb9g==
+"@proximaone/stream-schema-mangrove@^0.2.1":
+  version "0.2.1"
+  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-mangrove/-/stream-schema-mangrove-0.2.1.tgz#f2527b0e99ced18eebf47bf686301e83237b8953"
+  integrity sha512-0+h1hJhjCPds+jbKAIEzlyjgt1Tr9XnO+MMIEOBKRBTswFiacggkEoehSdtNO8auuAISpHGnntmcvUTkyzkulQ==
   dependencies:
-    "@proximaone/stream-schema-base" "^0.1.11"
+    "@proximaone/stream-schema-base" "^0.2.0"
 
 "@sinonjs/commons@^1.7.0":
   version "1.8.3"

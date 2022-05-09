@@ -29,15 +29,23 @@ import {
 import { createPatternMatcher } from "../../utils/discriminatedUnion";
 import { Timestamp } from "@proximaone/stream-client-js";
 
-export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveSchema.streams.MangroveStreamEvent> {
+export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveSchema.events.MangroveEvent> {
   protected async handleEvents(
-    events: TypedEvent<mangroveSchema.streams.MangroveStreamEvent>[],
+    events: TypedEvent<mangroveSchema.events.MangroveEvent>[],
     tx: PrismaTransaction
   ): Promise<void> {
     const db = new DbOperations(tx);
     for (const event of events) {
       const { payload, undo, timestamp } = event;
       const mangroveId = payload.mangroveId!;
+      const parentOrderId =
+        payload.parentOrder === undefined
+          ? undefined
+          : new OrderId(
+              mangroveId,
+              payload.parentOrder.offerList,
+              payload.parentOrder.id
+            );
       const txRef = payload.tx;
 
       // TODO: Having the chain id on all events would be good
@@ -55,7 +63,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
         transaction = await db.ensureTransaction(
           txId,
           txRef.txHash,
-          txRef.from,
+          txRef.sender,
           timestamp,
           txRef.blockNumber,
           txRef.blockHash
@@ -111,11 +119,6 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
             offer.prev == 0
               ? null
               : new OfferId(mangroveId, offerList, offer.prev);
-
-          const parentOrderId =
-            payload.parentOrderId === undefined
-              ? undefined
-              : new OrderId(mangroveId, offerList, payload.parentOrderId);
 
           const { outboundToken, inboundToken } = await db.getOfferListTokens(
             offerListId
@@ -199,11 +202,6 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           const accountId = new AccountId(owner);
           await db.ensureAccount(accountId);
 
-          const parentOrderId =
-            payload.parentOrderId === undefined
-              ? undefined
-              : new OrderId(mangroveId, offerList, payload.parentOrderId);
-
           await db.addVersionedTakerApproval(
             id,
             transaction!,
@@ -228,11 +226,6 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           }
 
           const offerListId = new OfferListId(mangroveId, offerList);
-
-          const parentOrderId =
-            payload.parentOrderId === undefined
-              ? undefined
-              : new OrderId(mangroveId, offerList, payload.parentOrderId);
 
           const { outboundToken, inboundToken } = await db.getOfferListTokens(
             offerListId
@@ -309,14 +302,12 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
     }
   }
 
-  protected deserialize(
-    payload: Buffer
-  ): mangroveSchema.streams.MangroveStreamEvent {
+  protected deserialize(payload: Buffer): mangroveSchema.events.MangroveEvent {
     return mangroveSchema.streams.mangrove.serdes.deserialize(payload);
   }
 
   #reportUnhandledUndoAndExit(
-    event: TypedEvent<mangroveSchema.streams.MangroveStreamEvent>
+    event: TypedEvent<mangroveSchema.events.MangroveEvent>
   ) {
     console.error(
       `Undo unhandled for event ${event.payload.type} - exiting to avoid data corruption`
@@ -898,4 +889,4 @@ interface Upsert<T> {
 }
 
 const eventMatcher =
-  createPatternMatcher<mangroveSchema.streams.MangroveStreamEvent>();
+  createPatternMatcher<mangroveSchema.events.MangroveEvent>();
