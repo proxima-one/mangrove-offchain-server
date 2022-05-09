@@ -8,6 +8,15 @@ export class AccountId extends Id<string> {
   }
 }
 
+export class TransactionId extends Id<string> {
+  public constructor(
+    public readonly chainId: ChainId,
+    public readonly txHash: string
+  ) {
+    super(`${chainId.chainlistId}-${txHash}`);
+  }
+}
+
 export class ChainId extends Id<number> {
   public constructor(public readonly chainlistId: number) {
     super(chainlistId);
@@ -20,6 +29,15 @@ export class TokenId extends Id<string> {
     public readonly tokenAddress: string
   ) {
     super(`${chainId.chainlistId}-${tokenAddress}`);
+  }
+}
+
+export class MangroveVersionId extends Id<string> {
+  public constructor(
+    public readonly mangroveId: string,
+    public readonly versionNumber: number
+  ) {
+    super(`${mangroveId}-${versionNumber}`);
   }
 }
 
@@ -69,6 +87,15 @@ export class MakerBalanceId extends Id<string> {
   }
 }
 
+export class MakerBalanceVersionId extends Id<string> {
+  public constructor(
+    public readonly makerBalanceId: MakerBalanceId,
+    public readonly versionNumber: number
+  ) {
+    super(`${makerBalanceId.value}-${versionNumber}`);
+  }
+}
+
 export class TakerApprovalId extends Id<string> {
   public constructor(
     public readonly mangroveId: string,
@@ -81,6 +108,15 @@ export class TakerApprovalId extends Id<string> {
         offerListKey
       )}-${ownerAddress}-${spenderAddress}`
     );
+  }
+}
+
+export class TakerApprovalVersionId extends Id<string> {
+  public constructor(
+    public readonly takerApprovalId: TakerApprovalId,
+    public readonly versionNumber: number
+  ) {
+    super(`${takerApprovalId.value}-${versionNumber}`);
   }
 }
 
