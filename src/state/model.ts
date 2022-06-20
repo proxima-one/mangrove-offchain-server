@@ -3,8 +3,20 @@ export class Id<T extends string | number> {
 }
 
 export class AccountId extends Id<string> {
-  public constructor(public readonly address: string) {
-    super(address);
+  public constructor(
+    public readonly chainId: ChainId,
+    public readonly address: string
+  ) {
+    super(`${chainId.chainlistId}-${address}`);
+  }
+}
+
+export class StratId extends AccountId {
+  public constructor(
+    public readonly chainId: ChainId,
+    public readonly address: string
+  ) {
+    super(chainId, address);
   }
 }
 
@@ -32,22 +44,35 @@ export class TokenId extends Id<string> {
   }
 }
 
+// NB: Mangrove ID's in the Proxima event streams already have a chain id prefix,
+// so we don't add that to the ID string as we do for other top-level entities.
+export class MangroveId extends Id<string> {
+  public constructor(
+    public readonly chainId: ChainId,
+    public readonly mangroveId: string
+  ) {
+    super(mangroveId);
+  }
+}
+
 export class MangroveVersionId extends Id<string> {
   public constructor(
-    public readonly mangroveId: string,
+    public readonly mangroveId: MangroveId,
     public readonly versionNumber: number
   ) {
-    super(`${mangroveId}-${versionNumber}`);
+    super(`${mangroveId.value}-${versionNumber}`);
   }
 }
 
 export class OfferId extends Id<string> {
   public constructor(
-    public readonly mangroveId: string,
+    public readonly mangroveId: MangroveId,
     public readonly offerListKey: OfferListKey,
     public readonly offerNumber: number
   ) {
-    super(`${mangroveId}-${offerListKeyShortStr(offerListKey)}-${offerNumber}`);
+    super(
+      `${mangroveId.value}-${offerListKeyShortStr(offerListKey)}-${offerNumber}`
+    );
   }
 }
 
@@ -62,10 +87,10 @@ export class OfferVersionId extends Id<string> {
 
 export class OfferListId extends Id<string> {
   public constructor(
-    public readonly mangroveId: string,
+    public readonly mangroveId: MangroveId,
     public readonly offerListKey: OfferListKey
   ) {
-    super(`${mangroveId}-${offerListKeyShortStr(offerListKey)}`);
+    super(`${mangroveId.value}-${offerListKeyShortStr(offerListKey)}`);
   }
 }
 
@@ -80,10 +105,10 @@ export class OfferListVersionId extends Id<string> {
 
 export class MakerBalanceId extends Id<string> {
   public constructor(
-    public readonly mangroveId: string,
+    public readonly mangroveId: MangroveId,
     public readonly address: string
   ) {
-    super(`${mangroveId}-${address}`);
+    super(`${mangroveId.value}-${address}`);
   }
 }
 
@@ -98,13 +123,13 @@ export class MakerBalanceVersionId extends Id<string> {
 
 export class TakerApprovalId extends Id<string> {
   public constructor(
-    public readonly mangroveId: string,
+    public readonly mangroveId: MangroveId,
     public readonly offerListKey: OfferListKey,
     public readonly ownerAddress: string,
     public readonly spenderAddress: string
   ) {
     super(
-      `${mangroveId}-${offerListKeyShortStr(
+      `${mangroveId.value}-${offerListKeyShortStr(
         offerListKey
       )}-${ownerAddress}-${spenderAddress}`
     );
@@ -122,11 +147,11 @@ export class TakerApprovalVersionId extends Id<string> {
 
 export class OrderId extends Id<string> {
   public constructor(
-    public readonly mangroveId: string,
+    public readonly mangroveId: MangroveId,
     public readonly offerListKey: OfferListKey,
     public readonly order: string
   ) {
-    super(`${mangroveId}-${offerListKeyShortStr(offerListKey)}-${order}`);
+    super(`${mangroveId.value}-${offerListKeyShortStr(offerListKey)}-${order}`);
   }
 }
 
@@ -149,4 +174,18 @@ function offerListKeyShortStr({
 export interface OfferListKey {
   inboundToken: string;
   outboundToken: string;
+}
+
+export class OrderSummaryId extends Id<string> {
+  public constructor(
+    public readonly mangroveId: MangroveId,
+    public readonly offerListKey: OfferListKey,
+    public readonly orderSummaryId: string
+  ) {
+    super(
+      `${mangroveId.value}-${offerListKeyShortStr(
+        offerListKey
+      )}-${orderSummaryId}`
+    );
+  }
 }

@@ -897,10 +897,10 @@
   dependencies:
     "@proximaone/stream-schema-base" "^0.1.11"
 
-"@proximaone/stream-schema-mangrove@^0.2.1":
-  version "0.2.1"
-  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-mangrove/-/stream-schema-mangrove-0.2.1.tgz#f2527b0e99ced18eebf47bf686301e83237b8953"
-  integrity sha512-0+h1hJhjCPds+jbKAIEzlyjgt1Tr9XnO+MMIEOBKRBTswFiacggkEoehSdtNO8auuAISpHGnntmcvUTkyzkulQ==
+"@proximaone/stream-schema-mangrove@^0.2.2":
+  version "0.2.5"
+  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-mangrove/-/stream-schema-mangrove-0.2.5.tgz#08949f2118dc0dd9ac1d4764a68ec70b1a972a8b"
+  integrity sha512-9ua388eGC7JSOawszF8TgBRtUPxHQUiYIsDLr5LmbYpP29nPunJcpKQiH+das/SRuPJQc1iubFg7u/azqC1BUg==
   dependencies:
     "@proximaone/stream-schema-base" "^0.2.0"
 

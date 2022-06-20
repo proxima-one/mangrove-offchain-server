@@ -46,6 +46,7 @@ model Transaction {
   offerListVersions     OfferListVersion[]
   offerVersions         OfferVersion[]
   orders                Order[]
+  orderSummaries        OrderSummary[]
 }
 
 model Token {
@@ -113,6 +114,17 @@ model Account {
   offers                Offer[]
   orders                Order[]
   makerBalances         MakerBalance[]
+  takerOrderSummaries   OrderSummary[]
+
+  strat Strat? // An account may be a strat contract
+}
+
+model Strat {
+  id String @id @db.VarChar(255)
+
+  account Account @relation(fields: [id], references: [id])
+
+  stratOrderSummaries OrderSummary[]
 }
 
 model TakerApproval {
@@ -191,6 +203,7 @@ model OfferList {
   offers         Offer[]
   takerApprovals TakerApproval[]
   orders         Order[]
+  orderSummaries OrderSummary[]
 
   // Events are not allowed to overwrite/delete data, as it might have to be restored on undo.
   // Instead, we create new versions which makes undo easy.
@@ -226,10 +239,11 @@ model Offer {
   currentVersionId String  @db.VarChar(255)
   deleted          Boolean @default(false) // The offer has been deleted
 
-  mangrove      Mangrove       @relation(fields: [mangroveId], references: [id])
-  offerList     OfferList      @relation(fields: [offerListId], references: [id])
-  maker         Account        @relation(fields: [makerId], references: [id])
-  offerVersions OfferVersion[]
+  mangrove       Mangrove       @relation(fields: [mangroveId], references: [id])
+  offerList      OfferList      @relation(fields: [offerListId], references: [id])
+  maker          Account        @relation(fields: [makerId], references: [id])
+  orderSummaries OrderSummary[]
+  offerVersions  OfferVersion[]
 }
 
 model OfferVersion {
@@ -299,6 +313,32 @@ model TakenOffer {
   failReason       String?
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+}
+
+// strats
+
+model OrderSummary {
+  id              String  @id @db.VarChar(255)
+  txId            String  @db.VarChar(255)
+  mangroveId      String  @db.VarChar(255)
+  stratId         String  @db.VarChar(255)
+  offerListId     String  @db.VarChar(255)
+  takerId         String  @db.VarChar(255)
+  selling         Boolean
+  takerGot        String
+  takerGotNumber  Float
+  takerGave       String
+  takerGaveNumber Float
+  price           Float
+  penalty         String
+  penaltyNumber   Float
+  restingOrderId  String  @db.VarChar(255)
+
+  tx           Transaction @relation(fields: [txId], references: [id])
+  strat        Strat       @relation(fields: [stratId], references: [id])
+  offerList    OfferList   @relation(fields: [offerListId], references: [id])
+  taker        Account     @relation(fields: [takerId], references: [id])
+  restingOrder Offer       @relation(fields: [restingOrderId], references: [id])
 }
 
 // store consumed streams state

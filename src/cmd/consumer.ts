@@ -6,7 +6,12 @@ import {
 import { Subscription } from "rxjs";
 import retry from "async-retry";
 import { StateTransitionHandler } from "../common";
-import { MangroveEventHandler, TokenEventHandler } from "../state";
+import {
+  MangroveEventHandler,
+  TokenEventHandler,
+  IOrderLogicEventHandler as TakerStratEventHandler,
+  MultiUserStratEventHandler,
+} from "../state";
 
 const retries = parseInt(process.env["CONSUMER_RETRIES"] ?? "100");
 const retryFactor = parseFloat(process.env["CONSUMER_RETRY_FACTOR"] ?? "1.2");
@@ -26,6 +31,20 @@ async function main() {
         new MangroveEventHandler(
           prisma,
           "v5.domain-events.polygon-mumbai.mangrove.streams.proxima.one"
+        )
+      ),
+    () =>
+      consumeStream(
+        new TakerStratEventHandler(
+          prisma,
+          "v3.taker-strategies.polygon-mumbai.mangrove.streams.proxima.one"
+        )
+      ),
+    () =>
+      consumeStream(
+        new MultiUserStratEventHandler(
+          prisma,
+          "v3.multi-user-strategies.polygon-mumbai.mangrove.streams.proxima.one"
         )
       ),
     () =>
