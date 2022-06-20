@@ -23,17 +23,22 @@ model Chain {
   id   Int    @id
   name String
 
-  mangroves Mangrove[]
-  tokens    Token[]
+  transactions Transaction[]
+  accounts     Account[]
+  mangroves    Mangrove[]
+  tokens       Token[]
 }
 
 model Transaction {
   id          String   @id @db.VarChar(255)
+  chainId     Int      @default(80001)
   txHash      String   @db.VarChar(80)
   from        String   @db.VarChar(80)
   blockNumber Int
   blockHash   String   @db.VarChar(80)
   time        DateTime @db.Timestamp
+
+  chain Chain @relation(fields: [chainId], references: [id])
 
   mangroveVersions      MangroveVersion[]
   takerApprovalVersions TakerApprovalVersion[]
@@ -98,7 +103,10 @@ model MangroveVersion {
 
 model Account {
   id      String @id @db.VarChar(255)
+  chainId Int    @default(80001)
   address String @db.VarChar(80)
+
+  chain Chain @relation(fields: [chainId], references: [id])
 
   ownedTakerApprovals   TakerApproval[] @relation("OwnerApprovals")
   spenderTakerApprovals TakerApproval[] @relation("SpenderApprovals")

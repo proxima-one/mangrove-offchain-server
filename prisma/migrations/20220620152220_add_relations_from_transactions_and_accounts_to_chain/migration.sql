@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Account" ADD COLUMN     "chainId" INTEGER NOT NULL DEFAULT 80001;
+
+-- AlterTable
+ALTER TABLE "Transaction" ADD COLUMN     "chainId" INTEGER NOT NULL DEFAULT 80001;
