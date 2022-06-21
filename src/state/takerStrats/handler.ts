@@ -73,9 +73,17 @@ export class IOrderLogicEventHandler extends PrismaStateTransitionHandler<mangro
             e.restingOrderId
           );
 
-          const { outboundToken, inboundToken } = await db.getOfferListTokens(
-            offerListId
-          );
+          let outboundToken, inboundToken;
+          try {
+            const tokens = await db.getOfferListTokens(
+              offerListId
+            );
+            outboundToken = tokens.outboundToken;
+            inboundToken = tokens.inboundToken;
+          } catch (e) {
+            console.log(`failed to get offer list tokens - tx=${txRef.txHash}`, event);
+            throw e;
+          }
           const takerGotBigNumber = new BigNumber(e.takerGot).shiftedBy(
             -outboundToken.decimals
           );
