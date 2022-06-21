@@ -109,7 +109,7 @@ export class DbOperations {
       },
     });
     if (offerList === null) {
-      throw new Error(`offer list ${id.value} doesn't exist - chainId=${id.mangroveId.chainId}, mangroveId=${id.mangroveId.value}, outboundToken=${id.offerListKey.outboundToken},  inboundToken=${id.offerListKey.inboundToken}`);
+      throw new Error(`offer list ${id.value} doesn't exist - chainId=${id.mangroveId.chainId.chainlistId}, mangroveId=${id.mangroveId.value}, outboundToken=${id.offerListKey.outboundToken},  inboundToken=${id.offerListKey.inboundToken}`);
     }
     return {
       outboundToken: offerList!.outboundToken,
