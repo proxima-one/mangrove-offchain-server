@@ -37,14 +37,14 @@ async function main() {
       consumeStream(
         new TakerStratEventHandler(
           prisma,
-          "v3.taker-strategies.polygon-mumbai.mangrove.streams.proxima.one"
+          "v4.multi-user-strategies.polygon-mumbai.mangrove.streams.proxima.one"
         )
       ),
     () =>
       consumeStream(
         new MultiUserStratEventHandler(
           prisma,
-          "v3.multi-user-strategies.polygon-mumbai.mangrove.streams.proxima.one"
+          "v4.multi-user-strategies.polygon-mumbai.mangrove.streams.proxima.one"
         )
       ),
     () =>

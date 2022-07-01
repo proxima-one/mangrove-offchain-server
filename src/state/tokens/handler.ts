@@ -1,5 +1,4 @@
 import * as prisma from "@prisma/client";
-import * as _ from "lodash";
 import {
   PrismaStateTransitionHandler,
   PrismaTransaction,
@@ -16,41 +15,35 @@ export class TokenEventHandler extends PrismaStateTransitionHandler<ft.streams.N
   ): Promise<void> {
     const commands: prisma.PrismaPromise<any>[] = [];
 
-    // load
-    const affectedTokensIds = _.uniq(
-      events.map((x) => this.getTokenId(x.payload).value)
-    );
-    const tokens = await tx.token.findMany({
-      where: { id: { in: affectedTokensIds } },
-    });
-    const tokensLookup: Record<string, prisma.Token> = {};
-    for (const token of tokens) tokensLookup[token.id] = token;
-
     // handle
     for (const { undo, timestamp, payload } of events) {
+      // Skip tokens with malformed data
+      if (!isValidToken(payload)) {
+        continue;
+      }
+
       const tokenId = this.getTokenId(payload);
       if (undo) {
-        if (tokensLookup[tokenId.value])
-          commands.push(
-            tx.token.delete({
-              where: { id: tokenId.value },
-            })
-          );
+        // ensure that all preceeding events have been processed and undo sequentially
+        // before proceeding to avoid parellel handling of undos with following NewToken events
+        await Promise.all(commands);
+        commands.length = 0;
+        await tx.token.delete({
+          where: { id: tokenId.value },
+        });
       } else {
-        if (!tokensLookup[tokenId.value]) {
-          commands.push(
-            tx.token.create({
-              data: {
-                id: tokenId.value,
-                chainId: chains[payload.chain],
-                address: payload.contractAddress,
-                symbol: payload.symbol,
-                name: payload.name,
-                decimals: payload.decimals ?? 0,
-              },
-            })
-          );
-        }
+        commands.push(
+          tx.token.create({
+            data: {
+              id: tokenId.value,
+              chainId: chains[payload.chain],
+              address: payload.contractAddress,
+              symbol: payload.symbol,
+              name: payload.name,
+              decimals: payload.decimals ?? 0,
+            },
+          })
+        );
       }
     }
 
@@ -67,6 +60,14 @@ export class TokenEventHandler extends PrismaStateTransitionHandler<ft.streams.N
   private getTokenId(token: ft.NewToken) {
     return new TokenId(new ChainId(chains[token.chain]), token.contractAddress);
   }
+}
+
+function isValidToken(token: ft.NewToken) {
+  return isValidString(token.name) && isValidString(token.symbol);
+}
+
+function isValidString(s: string): boolean {
+  return !/.*[\x00].*/.test(s);
 }
 
 const chains: Record<string, number> = {
