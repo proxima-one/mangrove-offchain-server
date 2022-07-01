@@ -51,7 +51,7 @@ async function main() {
       consumeStream(
         new TokenEventHandler(
           prisma,
-          "new-tokens.polygon-mumbai.fungible-token.streams.proxima.one"
+          "v1.new-tokens.polygon-mumbai.fungible-token.streams.proxima.one"
         )
       ),
   ];

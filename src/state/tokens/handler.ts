@@ -13,10 +13,11 @@ export class TokenEventHandler extends PrismaStateTransitionHandler<ft.streams.N
     events: TypedEvent<ft.streams.NewFungibleTokenStreamEvent>[],
     tx: PrismaTransaction
   ): Promise<void> {
-    const commands: prisma.PrismaPromise<any>[] = [];
+    const commands: Promise<any>[] = [];
 
     // handle
-    for (const { undo, timestamp, payload } of events) {
+    for (const event of events) {
+      const { undo, timestamp, payload } = event;
       // Skip tokens with malformed data
       if (!isValidToken(payload)) {
         continue;
@@ -33,16 +34,24 @@ export class TokenEventHandler extends PrismaStateTransitionHandler<ft.streams.N
         });
       } else {
         commands.push(
-          tx.token.create({
-            data: {
-              id: tokenId.value,
-              chainId: chains[payload.chain],
-              address: payload.contractAddress,
-              symbol: payload.symbol,
-              name: payload.name,
-              decimals: payload.decimals ?? 0,
-            },
-          })
+          tx.token
+            .create({
+              data: {
+                id: tokenId.value,
+                chainId: chains[payload.chain],
+                address: payload.contractAddress,
+                symbol: payload.symbol,
+                name: payload.name,
+                decimals: payload.decimals ?? 0,
+              },
+            })
+            .catch((err) => {
+              console.error(
+                `Token ${tokenId.value} failed to be created`,
+                event
+              );
+              throw err;
+            })
         );
       }
     }
