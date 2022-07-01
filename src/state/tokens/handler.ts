@@ -14,6 +14,26 @@ export class TokenEventHandler extends PrismaStateTransitionHandler<ft.streams.N
     tx: PrismaTransaction
   ): Promise<void> {
     const commands: Promise<any>[] = [];
+    // ensure all chains exist
+    for (const [chainName, chainId] of Object.entries(chains)) {
+      // FIXME: There's a bug that will cause this to occasionally fail, see https://github.com/prisma/prisma/issues/11191
+      // tx.chain.upsert({
+      //   where: { id: chainId },
+      //   create: { id: chainId, name: chainName },
+      //   update: { id: chainId, name: chainName },
+      // })
+      commands.push(
+        tx.chain.findUnique({ where: { id: chainId } }).then((chain) => {
+          if (chain === null) {
+            return tx.chain.create({
+              data: { id: chainId, name: chainName },
+            });
+          }
+        })
+      );
+    }
+    await Promise.all(commands);
+    commands.length = 0;
 
     // handle
     for (const event of events) {
