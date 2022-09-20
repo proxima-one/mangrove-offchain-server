@@ -6,10 +6,14 @@ import { buildSchema } from "type-graphql";
 import { ApolloServer } from "apollo-server";
 import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
 import {
+  CustomMakerBalanceFieldsResolver,
+  CustomMangroveFieldsResolver,
   CustomOfferFieldsResolver,
+  CustomOfferListFieldsResolver,
   CustomOfferVersionFieldsResolver,
   CustomOrderFieldsResolver,
   CustomTakenOfferFieldsResolver,
+  CustomTakerApprovalFieldsResolver,
   CustomTokenFieldsResolver,
 } from "../resolvers/customFieldResolvers";
 
@@ -75,6 +79,10 @@ async function main() {
       graphql.ChainRelationsResolver,
       graphql.TokenRelationsResolver,
 
+      CustomMangroveFieldsResolver,
+      CustomTakerApprovalFieldsResolver,
+      CustomMakerBalanceFieldsResolver,
+      CustomOfferListFieldsResolver,
       CustomTokenFieldsResolver,
       CustomOfferFieldsResolver,
       CustomOfferVersionFieldsResolver,

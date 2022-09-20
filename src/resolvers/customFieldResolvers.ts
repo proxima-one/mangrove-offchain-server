@@ -1,9 +1,17 @@
 import { Ctx, FieldResolver, Resolver, Root } from "type-graphql";
 import {
+  MakerBalance,
+  MakerBalanceVersion,
+  Mangrove,
+  MangroveVersion,
   Offer,
+  OfferList,
+  OfferListVersion,
   OfferVersion,
   Order,
   TakenOffer,
+  TakerApproval,
+  TakerApprovalVersion,
   Token,
 } from "@generated/type-graphql";
 import { PrismaClient } from "@prisma/client";
@@ -23,6 +31,58 @@ async function fetchTokenPriceInUsd(token: Token) {
 type Context = {
   prisma: PrismaClient;
 };
+
+@Resolver((of) => Mangrove)
+export class CustomMangroveFieldsResolver {
+  @FieldResolver((type) => MangroveVersion, { nullable: true })
+  async currentVersion(
+    @Root() mangrove: Mangrove,
+    @Ctx() ctx: Context
+  ): Promise<MangroveVersion | null> {
+    return await ctx.prisma.mangroveVersion.findUnique({
+      where: { id: mangrove.currentVersionId },
+    });
+  }
+}
+
+@Resolver((of) => TakerApproval)
+export class CustomTakerApprovalFieldsResolver {
+  @FieldResolver((type) => TakerApprovalVersion, { nullable: true })
+  async currentVersion(
+    @Root() takerApproval: TakerApproval,
+    @Ctx() ctx: Context
+  ): Promise<TakerApprovalVersion | null> {
+    return await ctx.prisma.takerApprovalVersion.findUnique({
+      where: { id: takerApproval.currentVersionId },
+    });
+  }
+}
+
+@Resolver((of) => MakerBalance)
+export class CustomMakerBalanceFieldsResolver {
+  @FieldResolver((type) => MakerBalanceVersion, { nullable: true })
+  async currentVersion(
+    @Root() makerBalance: MakerBalance,
+    @Ctx() ctx: Context
+  ): Promise<MakerBalanceVersion | null> {
+    return await ctx.prisma.makerBalanceVersion.findUnique({
+      where: { id: makerBalance.currentVersionId },
+    });
+  }
+}
+
+@Resolver((of) => OfferList)
+export class CustomOfferListFieldsResolver {
+  @FieldResolver((type) => OfferListVersion, { nullable: true })
+  async currentVersion(
+    @Root() offerList: OfferList,
+    @Ctx() ctx: Context
+  ): Promise<OfferListVersion | null> {
+    return await ctx.prisma.offerListVersion.findUnique({
+      where: { id: offerList.currentVersionId },
+    });
+  }
+}
 
 @Resolver((of) => Token)
 export class CustomTokenFieldsResolver {
