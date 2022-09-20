@@ -9,6 +9,7 @@ import {
   OfferListVersion,
   OfferVersion,
   Order,
+  OrderSummary,
   TakenOffer,
   TakerApproval,
   TakerApprovalVersion,
@@ -273,6 +274,48 @@ export class CustomTakenOfferFieldsResolver {
   }
 }
 
+@Resolver((of) => OrderSummary)
+export class CustomOrderSummaryFieldsResolver {
+  @FieldResolver((type) => Number, { nullable: true })
+  async takerGotInUsd(
+    @Root() order: OrderSummary,
+    @Ctx() ctx: Context
+  ): Promise<number | undefined> {
+    return amountFieldToUsd(
+      order,
+      order.takerGotNumber,
+      findOutboundTokenFromOrderSummaryOrFail,
+      ctx
+    );
+  }
+
+  @FieldResolver((type) => Number, { nullable: true })
+  async takerGaveInUsd(
+    @Root() order: OrderSummary,
+    @Ctx() ctx: Context
+  ): Promise<number | undefined> {
+    return amountFieldToUsd(
+      order,
+      order.takerGaveNumber,
+      findInboundTokenFromOrderSummaryOrFail,
+      ctx
+    );
+  }
+
+  @FieldResolver((type) => Number, { nullable: true })
+  async priceInUsd(
+    @Root() order: OrderSummary,
+    @Ctx() ctx: Context
+  ): Promise<number | undefined> {
+    return amountFieldToUsd(
+      order,
+      order.price,
+      findInboundTokenFromOrderSummaryOrFail,
+      ctx
+    );
+  }
+}
+
 async function amountFieldToUsd<Entity>(
   entity: Entity,
   amount: number | null | undefined,
@@ -377,5 +420,35 @@ async function findInboundTokenFromTakenOfferOrFail(
     .inboundToken();
   if (!inboundToken)
     throw Error(`Cannot find inbound token from takenOffer '${takenOffer.id}'`);
+  return inboundToken;
+}
+
+async function findOutboundTokenFromOrderSummaryOrFail(
+  orderSummary: OrderSummary,
+  prisma: PrismaClient
+): Promise<Token> {
+  const outboundToken = await prisma.orderSummary
+    .findUnique({
+      where: { id: orderSummary.id },
+    })
+    .offerList()
+    .outboundToken();
+  if (!outboundToken)
+    throw Error(`Cannot find outbound token from orderSummary '${orderSummary.id}'`);
+  return outboundToken;
+}
+
+async function findInboundTokenFromOrderSummaryOrFail(
+  orderSummary: OrderSummary,
+  prisma: PrismaClient
+): Promise<Token> {
+  const inboundToken = await prisma.orderSummary
+    .findUnique({
+      where: { id: orderSummary.id },
+    })
+    .offerList()
+    .inboundToken();
+  if (!inboundToken)
+    throw Error(`Cannot find inbound token from orderSummary '${orderSummary.id}'`);
   return inboundToken;
 }
