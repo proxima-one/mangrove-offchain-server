@@ -1,0 +1,2 @@
+worker: yarn start:dist:consumer
+release: npx prisma migrate deploy
