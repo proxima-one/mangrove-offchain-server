@@ -26,7 +26,7 @@ import {
 
 const prisma = new PrismaClient();
 
-const PORT = process.env.PORT || 4000;
+
 
 async function main() {
   const schema = await buildSchema({
@@ -139,11 +139,15 @@ async function main() {
     validate: false,
   });
 
+  const PORT = process.env.PORT || 4000;
+  const WINDOW = process.env.RATE_LIMIT_WINDOW ? parseFloat( process.env.RATE_LIMIT_WINDOW ) : 15;
+  const MAX = process.env.RATE_LIMIT_MAX ? parseInt( process.env.RATE_LIMIT_MAX ) : 100;
+
   const app = express();
 
   const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+    windowMs: WINDOW * 60 * 1000, // 15 minutes
+    max: MAX, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
     message: " To many calls from this IP"
