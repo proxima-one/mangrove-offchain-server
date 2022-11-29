@@ -27,8 +27,6 @@ import { AddressInfo } from "net";
 
 const prisma = new PrismaClient();
 
-
-
 async function main() {
   const schema = await buildSchema({
     resolvers: [
@@ -141,8 +139,12 @@ async function main() {
   });
 
   const PORT = process.env.PORT || 4000;
-  const WINDOW = process.env.RATE_LIMIT_WINDOW ? parseFloat( process.env.RATE_LIMIT_WINDOW ) : 15;
-  const MAX = process.env.RATE_LIMIT_MAX ? parseInt( process.env.RATE_LIMIT_MAX ) : 100;
+  const WINDOW = process.env.RATE_LIMIT_WINDOW
+    ? parseFloat(process.env.RATE_LIMIT_WINDOW)
+    : 15;
+  const MAX = process.env.RATE_LIMIT_MAX
+    ? parseInt(process.env.RATE_LIMIT_MAX)
+    : 100;
 
   const app = express();
 
@@ -151,7 +153,7 @@ async function main() {
     max: MAX, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    message: " To many calls from this IP"
+    message: " To many calls from this IP",
   });
 
   app.use(limiter);
@@ -175,16 +177,16 @@ async function main() {
     })
   );
 
-  let thisServer = httpServer.listen({ port: PORT });
+  const thisServer = httpServer.listen({ port: PORT });
 
-  let address = thisServer.address()
-  let url = "http://localhost:"+PORT;
-  if(typeof address === 'string' && address != "::"){
+  const address = thisServer.address();
+  let url = "http://localhost:" + PORT;
+  if (typeof address === "string" && address != "::") {
     url = address;
-  } else if( address && (address as AddressInfo).address != "::" ){
-    url = (address as AddressInfo).address + ":" + (address as AddressInfo).port;
+  } else if (address && (address as AddressInfo).address != "::") {
+    url =
+      (address as AddressInfo).address + ":" + (address as AddressInfo).port;
   }
-
 
   // await new Promise((resolve) => httpServer.listen({ port: PORT }));
   console.log(`🚀 Server ready at ${url}`);
