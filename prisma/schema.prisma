@@ -289,7 +289,7 @@ model Order {
   penalty         String
 
   tx          Transaction @relation(fields: [txId], references: [id])
-  parentOrder Order?      @relation("ParentOrders", fields: [parentOrderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parentOrder Order?      @relation("ParentOrders", fields: [parentOrderId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
   takenOffers                TakenOffer[]
   mangrove                   Mangrove               @relation(fields: [mangroveId], references: [id])

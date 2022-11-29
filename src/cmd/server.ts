@@ -3,8 +3,14 @@ import "reflect-metadata";
 import { PrismaClient } from "@prisma/client";
 import * as graphql from "@generated/type-graphql";
 import { buildSchema } from "type-graphql";
-import { ApolloServer } from "apollo-server";
-import { ApolloServerPluginLandingPageGraphQLPlayground } from "apollo-server-core";
+import { ApolloServer } from "@apollo/server";
+import express from "express";
+import http from "http";
+import cors from "cors";
+import bodyParser from "body-parser";
+import rateLimit from "express-rate-limit";
+import { expressMiddleware } from "@apollo/server/express4";
+import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import {
   CustomMakerBalanceFieldsResolver,
   CustomMangroveFieldsResolver,
@@ -133,17 +139,41 @@ async function main() {
     validate: false,
   });
 
-  const server = new ApolloServer({
-    schema: schema,
-    introspection: true,
-    plugins: [ApolloServerPluginLandingPageGraphQLPlayground()],
-    context: {
-      prisma,
-    },
+  const app = express();
+
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    message: " To many calls from this IP"
   });
 
-  const { url } = await server.listen(PORT);
-  console.log(`Server is running, GraphQL Playground available at ${url}`);
+  app.use(limiter);
+  const httpServer = http.createServer(app);
+
+  const server = new ApolloServer({
+    schema,
+    plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
+  });
+
+  await server.start();
+
+  app.use(
+    "/",
+    cors(),
+    bodyParser.json(),
+    expressMiddleware(server, {
+      context: async ({ req, res }) => ({
+        prisma,
+      }),
+    })
+  );
+
+  httpServer.listen({ port: PORT });
+
+  // await new Promise((resolve) => httpServer.listen({ port: PORT }));
+  console.log(`🚀 Server ready at http://localhost:4000/`);
 }
 
 main()
