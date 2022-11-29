@@ -162,7 +162,7 @@ async function main() {
 
   const server = new ApolloServer({
     schema,
-
+    introspection: process.env.GRAPHQL_PRODUCTION === 'false',
     plugins: [     // Install a landing page plugin based on NODE_ENV
     process.env.GRAPHQL_PRODUCTION === 'true'
       ? ApolloServerPluginLandingPageProductionDefault({
