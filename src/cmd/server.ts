@@ -23,6 +23,7 @@ import {
   CustomTakerApprovalFieldsResolver,
   CustomTokenFieldsResolver,
 } from "../resolvers/customFieldResolvers";
+import { AddressInfo } from "net";
 
 const prisma = new PrismaClient();
 
@@ -174,10 +175,19 @@ async function main() {
     })
   );
 
-  httpServer.listen({ port: PORT });
+  let thisServer = httpServer.listen({ port: PORT });
+
+  let address = thisServer.address()
+  let url = "http://localhost:"+PORT;
+  if(typeof address === 'string' && address != "::"){
+    url = address;
+  } else if( address && (address as AddressInfo).address != "::" ){
+    url = (address as AddressInfo).address + ":" + (address as AddressInfo).port;
+  }
+
 
   // await new Promise((resolve) => httpServer.listen({ port: PORT }));
-  console.log(`🚀 Server ready at http://localhost:4000/`);
+  console.log(`🚀 Server ready at ${url}`);
 }
 
 main()
