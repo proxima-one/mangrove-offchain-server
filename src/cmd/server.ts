@@ -11,7 +11,10 @@ import bodyParser from "body-parser";
 import rateLimit from "express-rate-limit";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
-import { ApolloServerPluginLandingPageLocalDefault, ApolloServerPluginLandingPageProductionDefault } from '@apollo/server/plugin/landingPage/default';
+import {
+  ApolloServerPluginLandingPageLocalDefault,
+  ApolloServerPluginLandingPageProductionDefault,
+} from "@apollo/server/plugin/landingPage/default";
 import {
   CustomMakerBalanceFieldsResolver,
   CustomMangroveFieldsResolver,
@@ -162,15 +165,17 @@ async function main() {
 
   const server = new ApolloServer({
     schema,
-    introspection: process.env.GRAPHQL_PRODUCTION === 'false',
-    plugins: [     // Install a landing page plugin based on NODE_ENV
-    process.env.GRAPHQL_PRODUCTION === 'true'
-      ? ApolloServerPluginLandingPageProductionDefault({
-          graphRef: 'my-graph-id@my-graph-variant',
-          footer: false,
-        })
-      : ApolloServerPluginLandingPageLocalDefault({ footer: false })
-      , ApolloServerPluginDrainHttpServer({ httpServer })],
+    introspection: process.env.GRAPHQL_PRODUCTION === "false",
+    plugins: [
+      // Install a landing page plugin based on NODE_ENV
+      process.env.GRAPHQL_PRODUCTION === "true"
+        ? ApolloServerPluginLandingPageProductionDefault({
+            graphRef: "my-graph-id@my-graph-variant",
+            footer: false,
+          })
+        : ApolloServerPluginLandingPageLocalDefault({ footer: false }),
+      ApolloServerPluginDrainHttpServer({ httpServer }),
+    ],
   });
 
   await server.start();
