@@ -1,11 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import {
-  ProximaStreamsClient,
-  StreamReader,
+  ProximaStreamClient,
+  Offset,
+  BufferedStreamReader,
 } from "@proximaone/stream-client-js";
 import { Subscription } from "rxjs";
 import retry from "async-retry";
-import { StateTransitionHandler } from "../common";
+import { StreamEventHandler } from "../common";
 import {
   MangroveEventHandler,
   TokenEventHandler,
@@ -18,7 +19,7 @@ const retryFactor = parseFloat(process.env["CONSUMER_RETRY_FACTOR"] ?? "1.2");
 const batchSize = parseInt(process.env["BATCH_SIZE"] ?? "50");
 
 const prisma = new PrismaClient();
-const streamClient = new ProximaStreamsClient("streams.proxima.one:443");
+const streamClient = new ProximaStreamClient();
 const timeout = 10 * 60 * 1000;
 
 let stopped = false;
@@ -30,28 +31,28 @@ async function main() {
       consumeStream(
         new MangroveEventHandler(
           prisma,
-          "v5.domain-events.polygon-mumbai.mangrove.streams.proxima.one"
+          "proxima.mangrove.polygon-mumbai.domain-events.0_1"
         )
       ),
     () =>
       consumeStream(
         new TakerStratEventHandler(
           prisma,
-          "v4.multi-user-strategies.polygon-mumbai.mangrove.streams.proxima.one"
+          "proxima.mangrove.polygon-mumbai.multi-user-strategies.0_1"
         )
       ),
     () =>
       consumeStream(
         new MultiUserStratEventHandler(
           prisma,
-          "v4.multi-user-strategies.polygon-mumbai.mangrove.streams.proxima.one"
+          "proxima.mangrove.polygon-mumbai.multi-user-strategies.0_1"
         )
       ),
     () =>
       consumeStream(
         new TokenEventHandler(
           prisma,
-          "v1.new-tokens.polygon-mumbai.fungible-token.streams.proxima.one"
+          "proxima.ft.polygon-mumbai.new-tokens.0_2"
         )
       ),
   ];
@@ -64,28 +65,32 @@ async function main() {
   );
 }
 
-async function consumeStream<T>(handler: StateTransitionHandler) {
-  const currentStateRef = await handler.getCurrentStreamState();
-  const stream = currentStateRef.stream;
+async function consumeStream<T>(handler: StreamEventHandler) {
+  const currentOffset = await handler.getCurrentStreamOffset();
+  const stream = handler.getStreamName();
 
-  console.log(`consuming stream ${stream} from state ${currentStateRef.state}`);
-  const reader = new StreamReader(streamClient, stream, currentStateRef.state);
+  console.log(
+    `consuming stream ${stream} from offset ${currentOffset.toString()}`
+  );
+  const pauseable = await streamClient.streamEvents(stream, currentOffset);
+  const reader = BufferedStreamReader.fromStream(pauseable);
 
   while (!stopped) {
-    const transitions = await reader.tryRead(batchSize, timeout);
-    if (transitions.length == 0) continue;
+    const events = await reader.read(batchSize);
+    if (events === undefined) {
+      console.log(`Finished consuming stream ${stream}`);
+      break;
+    }
 
     try {
-      await handler.handleTransitions(transitions);
+      await handler.handleEvents(events);
     } catch (err) {
-      console.error("error handling transitions", err);
+      console.error("error handling events", err);
       throw err;
     }
 
     console.log(
-      `handled ${stream}: ${transitions[
-        transitions.length - 1
-      ].newState.toString()}`
+      `handled ${stream}: ${events[events.length - 1].offset.toString()}`
     );
   }
 }

@@ -1,6 +1,6 @@
 import * as prisma from "@prisma/client";
 import {
-  PrismaStateTransitionHandler,
+  PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
 } from "../../common";
@@ -8,8 +8,8 @@ import {
 import * as ft from "@proximaone/stream-schema-fungible-token";
 import { ChainId, TokenId } from "../model";
 
-export class TokenEventHandler extends PrismaStateTransitionHandler<ft.streams.NewFungibleTokenStreamEvent> {
-  protected async handleEvents(
+export class TokenEventHandler extends PrismaStreamEventHandler<ft.streams.NewFungibleTokenStreamEvent> {
+  protected async handleParsedEvents(
     events: TypedEvent<ft.streams.NewFungibleTokenStreamEvent>[],
     tx: PrismaTransaction
   ): Promise<void> {

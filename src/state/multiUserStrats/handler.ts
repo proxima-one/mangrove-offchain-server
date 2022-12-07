@@ -10,14 +10,14 @@ import {
 } from "../model";
 import BigNumber from "bignumber.js";
 import {
-  PrismaStateTransitionHandler,
+  PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
 } from "../../common";
 import { createPatternMatcher } from "../../utils/discriminatedUnion";
 
-export class MultiUserStratEventHandler extends PrismaStateTransitionHandler<mangroveSchema.strategyEvents.MultiUserStrategyEvent> {
-  protected async handleEvents(
+export class MultiUserStratEventHandler extends PrismaStreamEventHandler<mangroveSchema.strategyEvents.MultiUserStrategyEvent> {
+  protected async handleParsedEvents(
     events: TypedEvent<mangroveSchema.strategyEvents.MultiUserStrategyEvent>[],
     tx: PrismaTransaction
   ): Promise<void> {

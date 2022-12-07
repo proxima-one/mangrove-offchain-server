@@ -19,16 +19,15 @@ import { DbOperations } from "../dbOperations";
 import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
 import {
-  PrismaStateTransitionHandler,
+  PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
 } from "../../common";
 import { createPatternMatcher } from "../../utils/discriminatedUnion";
 import { MangroveParams } from "@proximaone/stream-schema-mangrove/dist/core";
-import { Order } from "@prisma/client";
 
-export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveSchema.events.MangroveEvent> {
-  protected async handleEvents(
+export class MangroveEventHandler extends PrismaStreamEventHandler<mangroveSchema.events.MangroveEvent> {
+  protected async handleParsedEvents(
     events: TypedEvent<mangroveSchema.events.MangroveEvent>[],
     tx: PrismaTransaction
   ): Promise<void> {

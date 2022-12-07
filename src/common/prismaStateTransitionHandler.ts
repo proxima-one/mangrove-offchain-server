@@ -1,53 +1,52 @@
-import { StateTransitionHandler } from "./stateTransitionHandler";
+import { StreamEventHandler } from "./stateTransitionHandler";
 import { PrismaClient } from "@prisma/client";
-import {
-  State,
-  StreamStateRef,
-  Timestamp,
-  Transition,
-} from "@proximaone/stream-client-js";
+import { Offset, Timestamp, StreamEvent } from "@proximaone/stream-client-js";
 import * as prisma from "@prisma/client";
 
-export class PrismaStateTransitionHandler<TEventPayload>
-  implements StateTransitionHandler
+export class PrismaStreamEventHandler<TEventPayload>
+  implements StreamEventHandler
 {
   public constructor(
     protected readonly prisma: PrismaClient,
     protected readonly stream: string
   ) {}
 
-  public async getCurrentStreamState(): Promise<StreamStateRef> {
+  public getStreamName(): string {
+    return this.stream;
+  }
+
+  public async getCurrentStreamOffset(): Promise<Offset> {
     const streamConsumer = await this.prisma.streams.findFirst({
       where: { id: this.stream },
     });
 
-    const state = streamConsumer?.state
-      ? new State(streamConsumer?.state)
-      : State.genesis;
-    return new StreamStateRef(this.stream, state);
+    const offset = streamConsumer?.offset
+      ? Offset.fromString(streamConsumer.offset)
+      : Offset.zero;
+    return offset;
   }
 
-  public async handleTransitions(transitions: Transition[]): Promise<void> {
-    if (transitions.length == 0) return;
+  public async handleEvents(events: StreamEvent[]): Promise<void> {
+    if (events.length == 0) return;
 
     await this.prisma.$transaction(
       async (tx) => {
-        await this.handleEvents(
-          transitions.map((x) => {
+        await this.handleParsedEvents(
+          events.map((event) => {
             return {
-              undo: x.event.undo,
-              timestamp: x.event.timestamp,
-              payload: this.deserialize(x.event.payload),
+              undo: event.undo,
+              timestamp: event.timestamp,
+              payload: this.deserialize(Buffer.from(event.payload)),
             };
           }),
           tx
         );
 
-        const state = transitions[transitions.length - 1].newState;
+        const offset = events[events.length - 1].offset;
         await tx.streams.upsert({
           where: { id: this.stream },
-          create: { id: this.stream, state: state.id },
-          update: { state: state.id },
+          create: { id: this.stream, offset: offset.toString() },
+          update: { offset: offset.toString() },
         });
       },
       { timeout: 5 * 60 * 1000, maxWait: 1 * 60 * 1000 }
@@ -58,7 +57,7 @@ export class PrismaStateTransitionHandler<TEventPayload>
     throw new Error("not implemented");
   }
 
-  protected async handleEvents(
+  protected async handleParsedEvents(
     events: TypedEvent<TEventPayload>[],
     tx: PrismaTransaction
   ): Promise<void> {

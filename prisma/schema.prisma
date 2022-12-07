@@ -341,8 +341,8 @@ model OrderSummary {
   restingOrder Offer       @relation(fields: [restingOrderId], references: [id])
 }
 
-// store consumed streams state
+// store consumed streams offsets
 model Streams {
-  id    String @id @db.VarChar(255)
-  state String @db.VarChar(255)
+  id     String @id @db.VarChar(255)
+  offset String @db.VarChar(255)
 }
