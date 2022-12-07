@@ -30,7 +30,7 @@
   "dependencies": {
     "@apollo/server": "^4.2.2",
     "@prisma/client": "^4.6.1",
-    "@proximaone/stream-client-js": "^0.7.0",
+    "@proximaone/stream-client-js": "^1.2.0",
     "@proximaone/stream-schema-fungible-token": "^0.2.0",
     "@proximaone/stream-schema-mangrove": "^0.2.6",
     "@types/cors": "^2.8.12",
@@ -50,7 +50,7 @@
     "node-fetch-cache": "^3.0.5",
     "prisma": "^4.6.1",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.5.4",
+    "rxjs": "^7.5.5",
     "tslib": "^2.4.1",
     "type-graphql": "2.0.0-beta.1",
     "typegraphql-prisma": "^0.23.0"

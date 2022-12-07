@@ -3,11 +3,9 @@
 import * as dotenv from "dotenv";
 import { program } from "commander";
 import {
-  Event,
-  ProximaStreamsClient,
-  State,
-  StreamStateRef,
-  Transition,
+  ProximaStreamClient,
+  Offset,
+  StreamEvent,
 } from "@proximaone/stream-client-js";
 import { filter, map, takeWhile, tap } from "rxjs";
 import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
@@ -16,10 +14,9 @@ dotenv.config();
 const orderId =
   "polygon-mumbai-0xa34b-0xc873x0xf61c-0xef556623fb2757b42db21a7886c40ff64e25ffbc646e38464139f0bb0ece93f3-0";
 
-const proximaClient = new ProximaStreamsClient("streams.proxima.one:443");
+const proximaClient = new ProximaStreamClient();
 
-const defaultStream =
-  "v4.domain-events.polygon-mumbai.mangrove.streams.proxima.one";
+const defaultStream = "proxima.mangrove.polygon-mumbai.domain-events.0_1";
 
 async function main() {
   program.name("dev").usage("<command> [options]");
@@ -29,12 +26,12 @@ async function main() {
     .option("-s, --stream", "stream", defaultStream)
     .action(async (orderId, options) => {
       console.log(`looking for order ${orderId} in ${options.stream}`);
-      const $stream = proximaClient
-        .streamTransitionsAfter(
-          new StreamStateRef(options.stream, State.genesis)
-        )
-        .pipe(tap(notifyProgress));
-      const filtered = $stream.pipe(
+      const $stream = await proximaClient.streamEvents(
+        options.stream,
+        Offset.zero
+      );
+      const filtered = $stream.observable.pipe(
+        tap(notifyProgress),
         map((x) => deserializeMangroveEvent(x)),
         filter(
           (x) =>
@@ -51,18 +48,20 @@ async function main() {
   program
     .command("dump-stream")
     .option("-s, --stream <stream>", "stream", defaultStream)
-    .option("-f, --from <from>", "state from", State.genesis.id)
-    .option("-f, --to <to>", "state to", "")
+    .option("-f, --from <from>", "offset from", Offset.zero.toString())
+    .option("-f, --to <to>", "offset to", "")
     .action(async (options) => {
       console.log(`dumping stream ${options.stream} from ${options.from}`);
-      const $stream = proximaClient.streamTransitionsAfter(
-        new StreamStateRef(options.stream, new State(options.from))
+      const $stream = await proximaClient.streamEvents(
+        options.stream,
+        Offset.fromString(options.from)
       );
 
-      const stateTo = options.to ? new State(options.to) : undefined;
-      const deserialized = $stream.pipe(
+      const offsetTo = options.to ? Offset.fromString(options.to) : undefined;
+
+      const deserialized = $stream.observable.pipe(
         takeWhile((x) => {
-          return stateTo ? x.newState.id !== stateTo.id : true;
+          return offsetTo ? !x.offset.equals(offsetTo) : true;
         }),
         map((x) => deserializeMangroveEvent(x))
       );
@@ -75,23 +74,23 @@ async function main() {
   await program.parseAsync(process.argv);
 }
 
-function deserializeMangroveEvent({ newState, event }: Transition) {
+function deserializeMangroveEvent(event: StreamEvent) {
   return {
     event: {
       payload: mangroveSchema.streams.mangrove.serdes.deserialize(
-        event.payload
+        Buffer.from(event.payload)
       ),
       undo: event.undo,
       timestamp: event.timestamp,
     },
-    newState: newState,
+    newState: event.offset,
   };
 }
 
 let lastNotified = 0;
-function notifyProgress(transition: Transition) {
+function notifyProgress(event: StreamEvent) {
   if (new Date().getTime() - lastNotified < 5000) return;
-  console.log(`progress: ${transition.newState.id}`);
+  console.log(`progress: ${event.offset.toString()}`);
   lastNotified = new Date().getTime();
 }
 
