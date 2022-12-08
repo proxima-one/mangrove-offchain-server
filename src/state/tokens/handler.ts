@@ -7,6 +7,7 @@ import {
 
 import * as ft from "@proximaone/stream-schema-fungible-token";
 import { ChainId, TokenId } from "../model";
+import { strict as assert } from "assert";
 
 export class TokenEventHandler extends PrismaStreamEventHandler<ft.streams.NewFungibleTokenStreamEvent> {
   protected async handleParsedEvents(
@@ -49,14 +50,23 @@ export class TokenEventHandler extends PrismaStreamEventHandler<ft.streams.NewFu
         // before proceeding to avoid parellel handling of undos with following NewToken events
         await Promise.all(commands);
         commands.length = 0;
-        await tx.token.delete({
+        const result = await tx.token.delete({
           where: { id: tokenId.value },
+          select: { hasDuplicates: true },
         });
+        if (result.hasDuplicates) {
+          throw new Error(
+            `Removed token ${tokenId.value} which had duplicates previously`
+          );
+        }
       } else {
         commands.push(
           tx.token
-            .create({
-              data: {
+            .upsert({
+              where: {
+                id: tokenId.value,
+              },
+              create: {
                 id: tokenId.value,
                 chainId: chains[payload.chain],
                 address: payload.contractAddress,
@@ -64,6 +74,20 @@ export class TokenEventHandler extends PrismaStreamEventHandler<ft.streams.NewFu
                 name: payload.name,
                 decimals: payload.decimals ?? 0,
               },
+              update: {
+                hasDuplicates: true,
+              },
+              select: {
+                hasDuplicates: true,
+              },
+            })
+            .then((e) => {
+              if (e.hasDuplicates) {
+                console.error(
+                  `Token ${tokenId.value} is already present in DB. Keeping the previous value.`,
+                  event
+                );
+              }
             })
             .catch((err) => {
               console.error(

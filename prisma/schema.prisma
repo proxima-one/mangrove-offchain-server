@@ -50,12 +50,13 @@ model Transaction {
 }
 
 model Token {
-  id       String @id @db.VarChar(255)
-  chainId  Int
-  address  String @default("") @db.VarChar(80)
-  symbol   String
-  name     String
-  decimals Int
+  id            String  @id @db.VarChar(255)
+  chainId       Int
+  address       String  @default("") @db.VarChar(80)
+  symbol        String
+  name          String
+  decimals      Int
+  hasDuplicates Boolean @default(false)
 
   chain                   Chain       @relation(fields: [chainId], references: [id])
   offerListsWhereInbound  OfferList[] @relation("OfferListsByInboundToken")
