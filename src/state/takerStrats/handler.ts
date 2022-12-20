@@ -14,15 +14,24 @@ import {
 } from "../model";
 import BigNumber from "bignumber.js";
 import {
-  PrismaStateTransitionHandler,
+  PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
 } from "../../common";
 import { createPatternMatcher } from "../../utils/discriminatedUnion";
+import { PrismaClient } from "@prisma/client";
 
-export class IOrderLogicEventHandler extends PrismaStateTransitionHandler<mangroveSchema.strategyEvents.TakerStrategyEvent> {
-  protected async handleEvents(
-    events: TypedEvent<mangroveSchema.strategyEvents.TakerStrategyEvent>[],
+export class IOrderLogicEventHandler extends PrismaStreamEventHandler<mangroveSchema.strategyEvents.StrategyEvent> {
+  public constructor(
+    prisma: PrismaClient,
+    stream: string,
+    private readonly chainId: ChainId
+  ) {
+    super(prisma, stream);
+  }
+
+  protected async handleParsedEvents(
+    events: TypedEvent<mangroveSchema.strategyEvents.StrategyEvent>[],
     tx: PrismaTransaction
   ): Promise<void> {
     const db = new DbOperations(tx);
@@ -42,11 +51,22 @@ export class IOrderLogicEventHandler extends PrismaStateTransitionHandler<mangro
       );
 
       await eventMatcher({
+        LogIncident: async (e) => {},
+        NewOwnedOffer: async (e) => {},
         OrderSummary: async (e) => {
+          // TODO: set selling & penalty logic correctly, review offerList
+          const selling = false;
+          const penalty = "0";
+
+          // const offerList = {
+          //   outboundToken: e.selling ? e.base : e.quote,
+          //   inboundToken: e.selling ? e.quote : e.base,
+          // };
           const offerList = {
-            outboundToken: e.selling ? e.base : e.quote,
-            inboundToken: e.selling ? e.quote : e.base,
+            outboundToken: e.outboundToken,
+            inboundToken: e.inboundToken,
           };
+
           await db.assertTokenExists(
             new TokenId(chainId, offerList.outboundToken)
           );
@@ -91,7 +111,7 @@ export class IOrderLogicEventHandler extends PrismaStateTransitionHandler<mangro
           const takerGaveBigNumber = new BigNumber(e.takerGave).shiftedBy(
             -inboundToken.decimals
           );
-          const penaltyBigNumber = new BigNumber(e.penalty).shiftedBy(-18); // TODO: The number of decimals for the native currency might be chain dependent
+          const penaltyBigNumber = new BigNumber(penalty).shiftedBy(-18); // TODO: The number of decimals for the native currency might be chain dependent
 
           await db.createOrderSummary({
             id: orderSummaryId.value,
@@ -100,13 +120,13 @@ export class IOrderLogicEventHandler extends PrismaStateTransitionHandler<mangro
             stratId: stratId.value,
             offerListId: offerListId.value,
             takerId: takerAccountId.value,
-            selling: e.selling,
+            selling: selling,
             takerGot: e.takerGot,
             takerGotNumber: takerGotBigNumber.toNumber(),
             takerGave: e.takerGave,
             takerGaveNumber: takerGaveBigNumber.toNumber(),
             price: takerGaveBigNumber.div(takerGotBigNumber).toNumber(),
-            penalty: e.penalty,
+            penalty: penalty,
             penaltyNumber: penaltyBigNumber.toNumber(),
             restingOrderId: restingOrderId.value,
           });
@@ -117,10 +137,10 @@ export class IOrderLogicEventHandler extends PrismaStateTransitionHandler<mangro
 
   protected deserialize(
     payload: Buffer
-  ): mangroveSchema.strategyEvents.TakerStrategyEvent {
-    return mangroveSchema.streams.takerStrategies.serdes.deserialize(payload);
+  ): mangroveSchema.strategyEvents.StrategyEvent {
+    return mangroveSchema.streams.strategies.serdes.deserialize(payload);
   }
 }
 
 const eventMatcher =
-  createPatternMatcher<mangroveSchema.strategyEvents.TakerStrategyEvent>();
+  createPatternMatcher<mangroveSchema.strategyEvents.StrategyEvent>();

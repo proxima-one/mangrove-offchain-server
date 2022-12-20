@@ -1,16 +1,23 @@
-import * as prisma from "@prisma/client";
 import {
-  PrismaStateTransitionHandler,
+  PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
 } from "../../common";
 
-import * as ft from "@proximaone/stream-schema-fungible-token";
 import { ChainId, TokenId } from "../model";
+import { PrismaClient } from "@prisma/client";
 
-export class TokenEventHandler extends PrismaStateTransitionHandler<ft.streams.NewFungibleTokenStreamEvent> {
-  protected async handleEvents(
-    events: TypedEvent<ft.streams.NewFungibleTokenStreamEvent>[],
+export class TokenEventHandler extends PrismaStreamEventHandler<NewToken> {
+  public constructor(
+    prisma: PrismaClient,
+    stream: string,
+    private readonly chainId: ChainId
+  ) {
+    super(prisma, stream);
+  }
+
+  protected async handleParsedEvents(
+    events: TypedEvent<NewToken>[],
     tx: PrismaTransaction
   ): Promise<void> {
     const commands: Promise<any>[] = [];
@@ -49,7 +56,7 @@ export class TokenEventHandler extends PrismaStateTransitionHandler<ft.streams.N
         // before proceeding to avoid parellel handling of undos with following NewToken events
         await Promise.all(commands);
         commands.length = 0;
-        await tx.token.delete({
+        const result = await tx.token.delete({
           where: { id: tokenId.value },
         });
       } else {
@@ -58,8 +65,8 @@ export class TokenEventHandler extends PrismaStateTransitionHandler<ft.streams.N
             .create({
               data: {
                 id: tokenId.value,
-                chainId: chains[payload.chain],
-                address: payload.contractAddress,
+                chainId: this.chainId.chainlistId,
+                address: payload.address,
                 symbol: payload.symbol,
                 name: payload.name,
                 decimals: payload.decimals ?? 0,
@@ -80,18 +87,16 @@ export class TokenEventHandler extends PrismaStateTransitionHandler<ft.streams.N
     await Promise.all(commands);
   }
 
-  protected deserialize(
-    payload: Buffer
-  ): ft.streams.NewFungibleTokenStreamEvent {
-    return ft.streams.newFungibleToken.serdes.deserialize(payload);
+  protected deserialize(payload: Buffer): NewToken {
+    return JSON.parse(payload.toString());
   }
 
-  private getTokenId(token: ft.NewToken) {
-    return new TokenId(new ChainId(chains[token.chain]), token.contractAddress);
+  private getTokenId(token: NewToken) {
+    return new TokenId(this.chainId, token.address);
   }
 }
 
-function isValidToken(token: ft.NewToken) {
+function isValidToken(token: NewToken) {
   return isValidString(token.name) && isValidString(token.symbol);
 }
 
@@ -105,3 +110,11 @@ const chains: Record<string, number> = {
   "eth-main": 1,
   "bsc-main": 56,
 };
+
+export interface NewToken {
+  address: string;
+  symbol: string;
+  name: string;
+  totalSupply: string;
+  decimals?: number;
+}

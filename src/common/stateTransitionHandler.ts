@@ -1,10 +1,7 @@
-import {
-  State,
-  StreamStateRef,
-  Transition,
-} from "@proximaone/stream-client-js";
+import { Offset, StreamEvent } from "@proximaone/stream-client-js";
 
-export interface StateTransitionHandler {
-  getCurrentStreamState(): Promise<StreamStateRef>;
-  handleTransitions(transitions: Transition[]): Promise<void>;
+export interface StreamEventHandler {
+  getStreamName(): string;
+  getCurrentStreamOffset(): Promise<Offset>;
+  handleEvents(events: StreamEvent[]): Promise<void>;
 }

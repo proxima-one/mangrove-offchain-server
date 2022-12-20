@@ -1,91 +1,90 @@
 import { PrismaClient } from "@prisma/client";
 import {
-  ProximaStreamsClient,
-  StreamReader,
+  ProximaStreamClient,
+  BufferedStreamReader,
 } from "@proximaone/stream-client-js";
 import { Subscription } from "rxjs";
 import retry from "async-retry";
-import { StateTransitionHandler } from "../common";
+import { StreamEventHandler } from "../common";
 import {
   MangroveEventHandler,
   TokenEventHandler,
   IOrderLogicEventHandler as TakerStratEventHandler,
-  MultiUserStratEventHandler,
 } from "../state";
+import { ChainId } from "../state/model";
+import { defaultConfig } from "./config";
 
 const retries = parseInt(process.env["CONSUMER_RETRIES"] ?? "100");
 const retryFactor = parseFloat(process.env["CONSUMER_RETRY_FACTOR"] ?? "1.2");
 const batchSize = parseInt(process.env["BATCH_SIZE"] ?? "50");
 
 const prisma = new PrismaClient();
-const streamClient = new ProximaStreamsClient("streams.proxima.one:443");
+const streamClient = new ProximaStreamClient();
 const timeout = 10 * 60 * 1000;
 
 let stopped = false;
 let subscription: Subscription;
 
 async function main() {
-  const streamConsumers = [
-    () =>
-      consumeStream(
-        new MangroveEventHandler(
-          prisma,
-          "v5.domain-events.polygon-mumbai.mangrove.streams.proxima.one"
-        )
-      ),
-    () =>
-      consumeStream(
-        new TakerStratEventHandler(
-          prisma,
-          "v4.multi-user-strategies.polygon-mumbai.mangrove.streams.proxima.one"
-        )
-      ),
-    () =>
-      consumeStream(
-        new MultiUserStratEventHandler(
-          prisma,
-          "v4.multi-user-strategies.polygon-mumbai.mangrove.streams.proxima.one"
-        )
-      ),
-    () =>
-      consumeStream(
-        new TokenEventHandler(
-          prisma,
-          "v1.new-tokens.polygon-mumbai.fungible-token.streams.proxima.one"
-        )
-      ),
-  ];
+  // todo: read config from file or env var, etc
+  const config = defaultConfig;
+  const streamEventHandlers: StreamEventHandler[] = [];
+
+  for (const [chain, streamSchemas] of Object.entries(config.chains)) {
+    console.log(`consuming chain ${chain} using following steams`, streamSchemas);
+
+    const chainId = new ChainId(parseInt(chain));
+    streamEventHandlers.push(
+      ...(streamSchemas.mangrove ?? []).map(
+        (s) => new MangroveEventHandler(prisma, s, chainId)
+      )
+    );
+    streamEventHandlers.push(
+      ...(streamSchemas.tokens ?? []).map(
+        (s) => new TokenEventHandler(prisma, s, chainId)
+      )
+    );
+    streamEventHandlers.push(
+      ...(streamSchemas.strats ?? []).map(
+        (s) => new TakerStratEventHandler(prisma, s, chainId)
+      )
+    );
+  }
 
   await Promise.all(
-    streamConsumers.map((consumerFunc) => retry(consumerFunc), {
+    streamEventHandlers.map((handler) => retry(() => consumeStream(handler)), {
       retries: retries,
       factor: retryFactor,
     })
   );
 }
 
-async function consumeStream<T>(handler: StateTransitionHandler) {
-  const currentStateRef = await handler.getCurrentStreamState();
-  const stream = currentStateRef.stream;
+async function consumeStream(handler: StreamEventHandler) {
+  const currentOffset = await handler.getCurrentStreamOffset();
+  const stream = handler.getStreamName();
 
-  console.log(`consuming stream ${stream} from state ${currentStateRef.state}`);
-  const reader = new StreamReader(streamClient, stream, currentStateRef.state);
+  console.log(
+    `consuming stream ${stream} from offset ${currentOffset.toString()}`
+  );
+  const pauseable = await streamClient.streamEvents(stream, currentOffset);
+  const reader = BufferedStreamReader.fromStream(pauseable);
 
   while (!stopped) {
-    const transitions = await reader.tryRead(batchSize, timeout);
-    if (transitions.length == 0) continue;
+    const events = await reader.read(batchSize);
+    if (events === undefined) {
+      console.log(`Finished consuming stream ${stream}`);
+      break;
+    }
 
     try {
-      await handler.handleTransitions(transitions);
+      await handler.handleEvents(events);
     } catch (err) {
-      console.error("error handling transitions", err);
+      console.error("error handling events", err);
       throw err;
     }
 
     console.log(
-      `handled ${stream}: ${transitions[
-        transitions.length - 1
-      ].newState.toString()}`
+      `handled ${stream}: ${events[events.length - 1].offset.toString()}`
     );
   }
 }

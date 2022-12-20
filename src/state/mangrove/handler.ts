@@ -19,24 +19,31 @@ import { DbOperations } from "../dbOperations";
 import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
 import {
-  PrismaStateTransitionHandler,
+  PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
 } from "../../common";
 import { createPatternMatcher } from "../../utils/discriminatedUnion";
 import { MangroveParams } from "@proximaone/stream-schema-mangrove/dist/core";
-import { Order } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
-export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveSchema.events.MangroveEvent> {
-  protected async handleEvents(
+export class MangroveEventHandler extends PrismaStreamEventHandler<mangroveSchema.events.MangroveEvent> {
+  public constructor(
+    prisma: PrismaClient,
+    stream: string,
+    private readonly chainId: ChainId
+  ) {
+    super(prisma, stream);
+  }
+
+  protected async handleParsedEvents(
     events: TypedEvent<mangroveSchema.events.MangroveEvent>[],
     tx: PrismaTransaction
   ): Promise<void> {
     const db = new DbOperations(tx);
     for (const event of events) {
       const { payload, undo, timestamp } = event;
-      const chainId: ChainId = new ChainId(payload.chainId);
-      const mangroveId = new MangroveId(chainId, payload.mangroveId!);
+      const mangroveId = new MangroveId(this.chainId, payload.mangroveId!);
       const parentOrderId =
         payload.parentOrder === undefined
           ? undefined
@@ -49,7 +56,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
 
       let transaction: prisma.Transaction | undefined;
       if (txRef !== undefined) {
-        const txId = new TransactionId(chainId, txRef.txHash);
+        const txId = new TransactionId(this.chainId, txRef.txHash);
         transaction = await db.ensureTransaction(
           txId,
           txRef.txHash,
@@ -65,7 +72,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           this.handleMangroveCreated(
             undo,
             mangroveId,
-            chainId,
+            this.chainId,
             transaction,
             db,
             e
@@ -84,7 +91,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           this.handleOfferWritten(
             txRef,
             undo,
-            chainId,
+            this.chainId,
             mangroveId,
             offerList,
             maker,
@@ -95,7 +102,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
           ),
         OfferListParamsUpdated: async ({ offerList, params }) =>
           this.handleOfferListParamsUpdated(
-            chainId,
+            this.chainId,
             offerList,
             mangroveId,
             undo,
@@ -119,7 +126,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
             owner,
             spender,
             undo,
-            chainId,
+            this.chainId,
             amount,
             parentOrderId,
             transaction,
@@ -133,7 +140,7 @@ export class MangroveEventHandler extends PrismaStateTransitionHandler<mangroveS
             id,
             undo,
             mangroveId,
-            chainId,
+            this.chainId,
             transaction,
             db,
             parentOrderId,

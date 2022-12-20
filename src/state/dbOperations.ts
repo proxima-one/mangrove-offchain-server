@@ -55,7 +55,7 @@ export class DbOperations {
         from: from,
         blockNumber: blockNumber,
         blockHash: blockHash,
-        time: timestamp.date,
+        time: new Date(timestamp.epochMs),
       };
       await this.tx.transaction.create({ data: transaction });
     }

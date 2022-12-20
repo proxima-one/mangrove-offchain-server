@@ -50,12 +50,12 @@ model Transaction {
 }
 
 model Token {
-  id       String @id @db.VarChar(255)
-  chainId  Int
-  address  String @default("") @db.VarChar(80)
-  symbol   String
-  name     String
-  decimals Int
+  id            String  @id @db.VarChar(255)
+  chainId       Int
+  address       String  @default("") @db.VarChar(80)
+  symbol        String
+  name          String
+  decimals      Int
 
   chain                   Chain       @relation(fields: [chainId], references: [id])
   offerListsWhereInbound  OfferList[] @relation("OfferListsByInboundToken")
@@ -341,8 +341,8 @@ model OrderSummary {
   restingOrder Offer       @relation(fields: [restingOrderId], references: [id])
 }
 
-// store consumed streams state
+// store consumed streams offsets
 model Streams {
-  id    String @id @db.VarChar(255)
-  state String @db.VarChar(255)
+  id     String @id @db.VarChar(255)
+  offset String @db.VarChar(255)
 }

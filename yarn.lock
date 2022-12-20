@@ -1003,22 +1003,17 @@
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
   integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
 
-"@proximaone/stream-client-js@^0.7.0":
-  version "0.7.0"
-  resolved "https://registry.yarnpkg.com/@proximaone/stream-client-js/-/stream-client-js-0.7.0.tgz#40dd755145c292638af2334041c667e52758e4a0"
-  integrity sha512-AA4mTq/InSG+o4Y2x2iNTNP6kEhh0z/xEW9h04hAZZtheKU1n2YprmAbJlQ0exlvniS7MtmfA0bLDrLVC2mKeA==
+"@proximaone/stream-client-js@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@proximaone/stream-client-js/-/stream-client-js-1.2.1.tgz#7eff551e55e1002f7f45f772874a6c729f992e9d"
+  integrity sha512-AQPPkrtWR/FEEyIf5naZPxQZXskDWK9v/Fu2tyOKXA3jVh2vXwYr0eeJ9l8MgYwu6hXBFfcZ9yfLJwSJfPgoQA==
   dependencies:
     "@grpc/grpc-js" "^1.6.1"
+    axios "^1.1.3"
     google-protobuf "^3.20.0"
+    lodash "^4.17.21"
+    node-cache "^5.1.2"
     rxjs "^7.5.5"
-
-"@proximaone/stream-schema-base@^0.1.11":
-  version "0.1.11"
-  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-base/-/stream-schema-base-0.1.11.tgz#0b83d8b77646a7653a1dea4180f6959de2a670ee"
-  integrity sha512-H+j93N3dRvHZhuSqrq8hfhm7E4sJKi5QvNqs0nGfW4mJRTJOrxOdoehR8p5nQxnk+fvENR1QsCcZsbDCDyk75w==
-  dependencies:
-    bignumber.js "^9.0.1"
-    long "^4.0.0"
 
 "@proximaone/stream-schema-base@^0.2.0":
   version "0.2.0"
@@ -1028,17 +1023,10 @@
     bignumber.js "^9.0.1"
     long "^4.0.0"
 
-"@proximaone/stream-schema-fungible-token@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-fungible-token/-/stream-schema-fungible-token-0.2.0.tgz#997e878b58e0c219c40c579efa9caa3216591554"
-  integrity sha512-tCLIWeWFjFQguO0/vXotvp7qyUTEu1YQeR9AJqUv9KN2Q8aCepmFLnpwio8vbXGtxGtNOMy//dzlzJRlvl9A9A==
-  dependencies:
-    "@proximaone/stream-schema-base" "^0.1.11"
-
-"@proximaone/stream-schema-mangrove@^0.2.6":
-  version "0.2.6"
-  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-mangrove/-/stream-schema-mangrove-0.2.6.tgz#06436841566407f107483d5e7a13be1ff2f8d624"
-  integrity sha512-+WZoGgNOrT498otFpclGoB+P4WKgYKm8wf2ltyTPxbJ4cnpZFke/Wihjy79vbYILTbt4h97H0dspoEtZk4eGKw==
+"@proximaone/stream-schema-mangrove@^0.3.1":
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-mangrove/-/stream-schema-mangrove-0.3.1.tgz#c20e1427f7403950e86724ae5a457e9190afb623"
+  integrity sha512-2OkvM1wCgwZ1aykdgCR39hKa8SybWoQl8qB8kh4G2xHNZ3oBOgMDggRstTi4tXo0OPHyp4w0G0yJpqxAJoA+tA==
   dependencies:
     "@proximaone/stream-schema-base" "^0.2.0"
 
@@ -1645,6 +1633,15 @@ asynckit@^0.4.0:
   resolved "https://registry.yarnpkg.com/asynckit/-/asynckit-0.4.0.tgz#c79ed97f7f34cb8f2ba1bc9790bcc366474b4b79"
   integrity sha1-x57Zf380y48robyXkLzDZkdLS3k=
 
+axios@^1.1.3:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-1.2.1.tgz#44cf04a3c9f0c2252ebd85975361c026cb9f864a"
+  integrity sha512-I88cFiGu9ryt/tfVEi4kX2SITsvDddTajXTOFmt2uK1ZVA8LytjtdeyefdQWEf5PU8w+4SSJDoYnggflB5tW4A==
+  dependencies:
+    follow-redirects "^1.15.0"
+    form-data "^4.0.0"
+    proxy-from-env "^1.1.0"
+
 babel-jest@^27.5.1:
   version "27.5.1"
   resolved "https://registry.yarnpkg.com/babel-jest/-/babel-jest-27.5.1.tgz#a1bf8d61928edfefd21da27eb86a695bfd691444"
@@ -1989,6 +1986,11 @@ cliui@^7.0.2:
     string-width "^4.2.0"
     strip-ansi "^6.0.0"
     wrap-ansi "^7.0.0"
+
+clone@2.x:
+  version "2.1.2"
+  resolved "https://registry.yarnpkg.com/clone/-/clone-2.1.2.tgz#1b7f4b9f591f1e8f83670401600345a02887435f"
+  integrity sha512-3Pe/CF1Nn94hyhIYpjtiLhdCoEoz0DqQ+988E9gmeEdQZlojxnOb74wctFyuwWQHzqyf9X7C7MG8juUpqBJT8w==
 
 clone@^1.0.2:
   version "1.0.4"
@@ -2734,10 +2736,24 @@ flatted@^3.1.0:
   resolved "https://registry.yarnpkg.com/flatted/-/flatted-3.2.5.tgz#76c8584f4fc843db64702a6bd04ab7a8bd666da3"
   integrity sha512-WIWGi2L3DyTUvUrwRKgGi9TwxQMUEqPOPQBVi71R96jZXJdFskXEmf54BoZaS1kknGODoIGASGEzBUYdyMCBJg==
 
+follow-redirects@^1.15.0:
+  version "1.15.2"
+  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.15.2.tgz#b460864144ba63f2681096f274c4e57026da2c13"
+  integrity sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==
+
 form-data@^3.0.0:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/form-data/-/form-data-3.0.1.tgz#ebd53791b78356a99af9a300d4282c4d5eb9755f"
   integrity sha512-RHkBKtLWUVwd7SqRIvCZMEvAMoGUp0XU+seQiZejj0COz3RI3hWP4sCv3gZWWLjJTd7rGwcsF5eKZGii0r/hbg==
+  dependencies:
+    asynckit "^0.4.0"
+    combined-stream "^1.0.8"
+    mime-types "^2.1.12"
+
+form-data@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/form-data/-/form-data-4.0.0.tgz#93919daeaf361ee529584b9b31664dc12c9fa452"
+  integrity sha512-ETEklSGi5t0QMZuiXoA/Q6vcnxcLQP5vdugSpuAyi6SVGi2clPPp+xgEhuMaHC+zGgn31Kd235W35f7Hykkaww==
   dependencies:
     asynckit "^0.4.0"
     combined-stream "^1.0.8"
@@ -4115,6 +4131,13 @@ node-abort-controller@^3.0.1:
   resolved "https://registry.yarnpkg.com/node-abort-controller/-/node-abort-controller-3.0.1.tgz#f91fa50b1dee3f909afabb7e261b1e1d6b0cb74e"
   integrity sha512-/ujIVxthRs+7q6hsdjHMaj8hRG9NuWmwrz+JdRwZ14jdFoKSkm+vDsCbF9PLpnSqjaWQJuTmVtcWHNLr+vrOFw==
 
+node-cache@^5.1.2:
+  version "5.1.2"
+  resolved "https://registry.yarnpkg.com/node-cache/-/node-cache-5.1.2.tgz#f264dc2ccad0a780e76253a694e9fd0ed19c398d"
+  integrity sha512-t1QzWwnk4sjLWaQAS8CHgOJ+RAfmHpxFWmc36IWTiWHQfs0w5JDMBS1b1ZxQteo0vVVuWJvIUKHDkkeK7vIGCg==
+  dependencies:
+    clone "2.x"
+
 node-fetch-cache@^3.0.5:
   version "3.0.5"
   resolved "https://registry.yarnpkg.com/node-fetch-cache/-/node-fetch-cache-3.0.5.tgz#102f56b525f81a27f566f1573188061d7160cfce"
@@ -4488,6 +4511,11 @@ proxy-addr@~2.0.7:
     forwarded "0.2.0"
     ipaddr.js "1.9.1"
 
+proxy-from-env@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/proxy-from-env/-/proxy-from-env-1.1.0.tgz#e102f16ca355424865755d2c9e8ea4f24d58c3e2"
+  integrity sha512-D+zkORCbA9f1tdWRK0RaCR3GPv50cMxcrz4X8k5LTSUD1Dkw47mKJEZQNunItRTkWwgtaUSo1RVFRIG9ZXiFYg==
+
 psl@^1.1.33:
   version "1.8.0"
   resolved "https://registry.yarnpkg.com/psl/-/psl-1.8.0.tgz#9326f8bcfb013adcc005fdff056acce020e51c24"
@@ -4685,7 +4713,7 @@ run-parallel@^1.1.9:
   dependencies:
     queue-microtask "^1.2.2"
 
-rxjs@^7.5.4, rxjs@^7.5.5:
+rxjs@^7.5.5:
   version "7.5.5"
   resolved "https://registry.yarnpkg.com/rxjs/-/rxjs-7.5.5.tgz#2ebad89af0f560f460ad5cc4213219e1f7dd4e9f"
   integrity sha512-sy+H0pQofO95VDmFLzyaw9xNJU4KTRSwQIGM6+iG3SypAtCiLDzpeG8sJrNCWn2Up9km+KhkvTdbkrdy+yzZdw==
