@@ -76,5 +76,6 @@
   },
   "jest": {
     "preset": "<rootDir>/"
-  }
+  },
+  "packageManager": "yarn@3.3.0"
 }
