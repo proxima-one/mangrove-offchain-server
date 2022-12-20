@@ -1003,10 +1003,10 @@
   resolved "https://registry.yarnpkg.com/@protobufjs/utf8/-/utf8-1.1.0.tgz#a777360b5b39a1a2e5106f8e858f2fd2d060c570"
   integrity sha1-p3c2C1s5oaLlEG+OhY8v0tBgxXA=
 
-"@proximaone/stream-client-js@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@proximaone/stream-client-js/-/stream-client-js-1.2.0.tgz#5c7b0a21ec2b2745716ef91e0f74c1e084a90d68"
-  integrity sha512-YM8TpHx1VTJIN4TohmQpNrP0gOtyhB3p1ynS0l2AVbxekxWyFU/RZT8O11aUyTQNyCzTnAh9P/4kmhDM7W0dvA==
+"@proximaone/stream-client-js@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@proximaone/stream-client-js/-/stream-client-js-1.2.1.tgz#7eff551e55e1002f7f45f772874a6c729f992e9d"
+  integrity sha512-AQPPkrtWR/FEEyIf5naZPxQZXskDWK9v/Fu2tyOKXA3jVh2vXwYr0eeJ9l8MgYwu6hXBFfcZ9yfLJwSJfPgoQA==
   dependencies:
     "@grpc/grpc-js" "^1.6.1"
     axios "^1.1.3"
@@ -1014,14 +1014,6 @@
     lodash "^4.17.21"
     node-cache "^5.1.2"
     rxjs "^7.5.5"
-
-"@proximaone/stream-schema-base@^0.1.11":
-  version "0.1.11"
-  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-base/-/stream-schema-base-0.1.11.tgz#0b83d8b77646a7653a1dea4180f6959de2a670ee"
-  integrity sha512-H+j93N3dRvHZhuSqrq8hfhm7E4sJKi5QvNqs0nGfW4mJRTJOrxOdoehR8p5nQxnk+fvENR1QsCcZsbDCDyk75w==
-  dependencies:
-    bignumber.js "^9.0.1"
-    long "^4.0.0"
 
 "@proximaone/stream-schema-base@^0.2.0":
   version "0.2.0"
@@ -1031,17 +1023,10 @@
     bignumber.js "^9.0.1"
     long "^4.0.0"
 
-"@proximaone/stream-schema-fungible-token@^0.2.0":
-  version "0.2.0"
-  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-fungible-token/-/stream-schema-fungible-token-0.2.0.tgz#997e878b58e0c219c40c579efa9caa3216591554"
-  integrity sha512-tCLIWeWFjFQguO0/vXotvp7qyUTEu1YQeR9AJqUv9KN2Q8aCepmFLnpwio8vbXGtxGtNOMy//dzlzJRlvl9A9A==
-  dependencies:
-    "@proximaone/stream-schema-base" "^0.1.11"
-
-"@proximaone/stream-schema-mangrove@^0.2.6":
-  version "0.2.6"
-  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-mangrove/-/stream-schema-mangrove-0.2.6.tgz#06436841566407f107483d5e7a13be1ff2f8d624"
-  integrity sha512-+WZoGgNOrT498otFpclGoB+P4WKgYKm8wf2ltyTPxbJ4cnpZFke/Wihjy79vbYILTbt4h97H0dspoEtZk4eGKw==
+"@proximaone/stream-schema-mangrove@^0.3.1":
+  version "0.3.1"
+  resolved "https://registry.yarnpkg.com/@proximaone/stream-schema-mangrove/-/stream-schema-mangrove-0.3.1.tgz#c20e1427f7403950e86724ae5a457e9190afb623"
+  integrity sha512-2OkvM1wCgwZ1aykdgCR39hKa8SybWoQl8qB8kh4G2xHNZ3oBOgMDggRstTi4tXo0OPHyp4w0G0yJpqxAJoA+tA==
   dependencies:
     "@proximaone/stream-schema-base" "^0.2.0"
 

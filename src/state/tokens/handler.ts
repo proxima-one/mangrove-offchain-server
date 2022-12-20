@@ -1,17 +1,23 @@
-import * as prisma from "@prisma/client";
 import {
   PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
 } from "../../common";
 
-import * as ft from "@proximaone/stream-schema-fungible-token";
 import { ChainId, TokenId } from "../model";
-import { strict as assert } from "assert";
+import { PrismaClient } from "@prisma/client";
 
-export class TokenEventHandler extends PrismaStreamEventHandler<ft.streams.NewFungibleTokenStreamEvent> {
+export class TokenEventHandler extends PrismaStreamEventHandler<NewToken> {
+  public constructor(
+    prisma: PrismaClient,
+    stream: string,
+    private readonly chainId: ChainId
+  ) {
+    super(prisma, stream);
+  }
+
   protected async handleParsedEvents(
-    events: TypedEvent<ft.streams.NewFungibleTokenStreamEvent>[],
+    events: TypedEvent<NewToken>[],
     tx: PrismaTransaction
   ): Promise<void> {
     const commands: Promise<any>[] = [];
@@ -52,42 +58,19 @@ export class TokenEventHandler extends PrismaStreamEventHandler<ft.streams.NewFu
         commands.length = 0;
         const result = await tx.token.delete({
           where: { id: tokenId.value },
-          select: { hasDuplicates: true },
         });
-        if (result.hasDuplicates) {
-          throw new Error(
-            `Removed token ${tokenId.value} which had duplicates previously`
-          );
-        }
       } else {
         commands.push(
           tx.token
-            .upsert({
-              where: {
+            .create({
+              data: {
                 id: tokenId.value,
-              },
-              create: {
-                id: tokenId.value,
-                chainId: chains[payload.chain],
-                address: payload.contractAddress,
+                chainId: this.chainId.chainlistId,
+                address: payload.address,
                 symbol: payload.symbol,
                 name: payload.name,
                 decimals: payload.decimals ?? 0,
               },
-              update: {
-                hasDuplicates: true,
-              },
-              select: {
-                hasDuplicates: true,
-              },
-            })
-            .then((e) => {
-              if (e.hasDuplicates) {
-                console.error(
-                  `Token ${tokenId.value} is already present in DB. Keeping the previous value.`,
-                  event
-                );
-              }
             })
             .catch((err) => {
               console.error(
@@ -104,18 +87,16 @@ export class TokenEventHandler extends PrismaStreamEventHandler<ft.streams.NewFu
     await Promise.all(commands);
   }
 
-  protected deserialize(
-    payload: Buffer
-  ): ft.streams.NewFungibleTokenStreamEvent {
-    return ft.streams.newFungibleToken.serdes.deserialize(payload);
+  protected deserialize(payload: Buffer): NewToken {
+    return JSON.parse(payload.toString());
   }
 
-  private getTokenId(token: ft.NewToken) {
-    return new TokenId(new ChainId(chains[token.chain]), token.contractAddress);
+  private getTokenId(token: NewToken) {
+    return new TokenId(this.chainId, token.address);
   }
 }
 
-function isValidToken(token: ft.NewToken) {
+function isValidToken(token: NewToken) {
   return isValidString(token.name) && isValidString(token.symbol);
 }
 
@@ -129,3 +110,11 @@ const chains: Record<string, number> = {
   "eth-main": 1,
   "bsc-main": 56,
 };
+
+export interface NewToken {
+  address: string;
+  symbol: string;
+  name: string;
+  totalSupply: string;
+  decimals?: number;
+}

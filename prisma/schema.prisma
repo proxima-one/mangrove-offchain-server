@@ -56,7 +56,6 @@ model Token {
   symbol        String
   name          String
   decimals      Int
-  hasDuplicates Boolean @default(false)
 
   chain                   Chain       @relation(fields: [chainId], references: [id])
   offerListsWhereInbound  OfferList[] @relation("OfferListsByInboundToken")

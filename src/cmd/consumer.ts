@@ -1,7 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import {
   ProximaStreamClient,
-  Offset,
   BufferedStreamReader,
 } from "@proximaone/stream-client-js";
 import { Subscription } from "rxjs";
@@ -11,8 +10,9 @@ import {
   MangroveEventHandler,
   TokenEventHandler,
   IOrderLogicEventHandler as TakerStratEventHandler,
-  MultiUserStratEventHandler,
 } from "../state";
+import { ChainId } from "../state/model";
+import { defaultConfig } from "./config";
 
 const retries = parseInt(process.env["CONSUMER_RETRIES"] ?? "100");
 const retryFactor = parseFloat(process.env["CONSUMER_RETRY_FACTOR"] ?? "1.2");
@@ -26,46 +26,40 @@ let stopped = false;
 let subscription: Subscription;
 
 async function main() {
-  const streamConsumers = [
-    () =>
-      consumeStream(
-        new MangroveEventHandler(
-          prisma,
-          "proxima.mangrove.polygon-mumbai.domain-events.0_1"
-        )
-      ),
-    () =>
-      consumeStream(
-        new TakerStratEventHandler(
-          prisma,
-          "proxima.mangrove.polygon-mumbai.multi-user-strategies.0_1"
-        )
-      ),
-    () =>
-      consumeStream(
-        new MultiUserStratEventHandler(
-          prisma,
-          "proxima.mangrove.polygon-mumbai.multi-user-strategies.0_1"
-        )
-      ),
-    () =>
-      consumeStream(
-        new TokenEventHandler(
-          prisma,
-          "proxima.ft.polygon-mumbai.new-tokens.0_2"
-        )
-      ),
-  ];
+  // todo: read config from file or env var, etc
+  const config = defaultConfig;
+  const streamEventHandlers: StreamEventHandler[] = [];
+
+  for (const [chain, streamSchemas] of Object.entries(config.chains)) {
+    console.log(`consuming chain ${chain} using following steams`, streamSchemas);
+
+    const chainId = new ChainId(parseInt(chain));
+    streamEventHandlers.push(
+      ...(streamSchemas.mangrove ?? []).map(
+        (s) => new MangroveEventHandler(prisma, s, chainId)
+      )
+    );
+    streamEventHandlers.push(
+      ...(streamSchemas.tokens ?? []).map(
+        (s) => new TokenEventHandler(prisma, s, chainId)
+      )
+    );
+    streamEventHandlers.push(
+      ...(streamSchemas.strats ?? []).map(
+        (s) => new TakerStratEventHandler(prisma, s, chainId)
+      )
+    );
+  }
 
   await Promise.all(
-    streamConsumers.map((consumerFunc) => retry(consumerFunc), {
+    streamEventHandlers.map((handler) => retry(() => consumeStream(handler)), {
       retries: retries,
       factor: retryFactor,
     })
   );
 }
 
-async function consumeStream<T>(handler: StreamEventHandler) {
+async function consumeStream(handler: StreamEventHandler) {
   const currentOffset = await handler.getCurrentStreamOffset();
   const stream = handler.getStreamName();
 
