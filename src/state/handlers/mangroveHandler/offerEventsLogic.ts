@@ -1,6 +1,7 @@
 import * as prisma from "@prisma/client";
 import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
 
+import { Token } from "@prisma/client";
 import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
 import { AllDbOperations } from "state/dbOperations/allDbOperations";
@@ -10,15 +11,18 @@ import {
   MangroveId,
   OfferId,
   OfferListId,
+  OfferListKey,
   OrderId,
 } from "../../model";
+import { getBigNumber, getPrice } from "../handlerUtils";
 
 export class OfferEventsLogic {
   async handleOfferRetracted(
     mangroveId: MangroveId,
     undo: boolean,
     e: mangroveSchema.events.OfferRetracted,
-    db: AllDbOperations
+    db: AllDbOperations,
+    txId: string,
   ) {
     const offerId = new OfferId(mangroveId, e.offerList, e.offerId);
     if (undo) {
@@ -30,9 +34,10 @@ export class OfferEventsLogic {
     }
     await db.mangroveOrderOperations.addMangroveOrderVersionFromOfferId(
       offerId,
+      txId,
       (m) => (m.cancelled = true)
     );
-    await db.offerOperations.markOfferAsDeleted(offerId);
+    await db.offerOperations.addVersionedOffer(offerId, txId, (m) => m.deleted = true);
   }
 
   async handleOfferWritten(
@@ -43,7 +48,7 @@ export class OfferEventsLogic {
     offerList: mangroveSchema.core.OfferList,
     maker: string,
     offer: mangroveSchema.core.Offer,
-    transaction: prisma.Transaction | undefined,
+    transaction: prisma.Transaction,
     db: AllDbOperations,
     parentOrderId: OrderId | undefined
   ) {
@@ -57,51 +62,51 @@ export class OfferEventsLogic {
 
     const accountId = new AccountId(chainId, maker);
     await db.accountOperations.ensureAccount(accountId);
-
-    const offerListId = new OfferListId(mangroveId, offerList);
-
-    const prevOfferId = 
-      offer.prev == 0 ? null : new OfferId(mangroveId, offerList, offer.prev);
-
-    const { outboundToken, inboundToken } =
-      await db.offerListOperations.getOfferListTokens({
-        id: offerListId,
-      });
-    const givesBigNumber = new BigNumber(offer.gives).shiftedBy(
-      -outboundToken.decimals
-    );
-    const wantsBigNumber = new BigNumber(offer.wants).shiftedBy(
-      -inboundToken.decimals
-    );
+    const tokens = await db.offerListOperations.getOfferListTokens({
+      id: new OfferListId(mangroveId, offerList),
+    });
 
     await db.offerOperations.addVersionedOffer(
       offerId,
+      transaction?.id,
+      (v) => this.offerWrittenFunc(v, offer, mangroveId, tokens, transaction!.id, parentOrderId),
       {
-        id: offerId.value,
-        mangroveId: mangroveId.value,
-        offerListId: offerListId.value,
-        makerId: maker,
-      },
-      {
-        txId: transaction!.id,
-        parentOrderId: parentOrderId?.value ?? null,
-        deleted: false,
-        gasprice: offer.gasprice,
-        gives: offer.gives,
-        givesNumber: givesBigNumber.toNumber(),
-        wants: offer.wants,
-        wantsNumber: wantsBigNumber.toNumber(),
-        takerPaysPrice: givesBigNumber.gt(0)
-          ? wantsBigNumber.div(givesBigNumber).toNumber()
-          : null,
-        makerPaysPrice: wantsBigNumber.gt(0)
-          ? givesBigNumber.div(wantsBigNumber).toNumber()
-          : null,
-        gasreq: offer.gasreq,
-        live: new BigNumber(offer.gives).isPositive(),
-        deprovisioned: offer.gasprice == 0,
-        prevOfferId: prevOfferId ? prevOfferId.value : null,
+        makerId: accountId
       }
     );
+  }
+
+  async offerWrittenFunc(
+    offerVersion: Omit<prisma.OfferVersion, "id" | "offerId" | "versionNumber" | "prevVersionId">,
+    offer: mangroveSchema.core.Offer,
+    mangroveId: MangroveId,
+    tokens: { inboundToken: {address:string, decimals: number}, outboundToken: {address:string, decimals: number} },
+    txId: string,
+    parentOrderId?: OrderId) {
+    const givesBigNumber = getBigNumber({ value: offer.gives, token: tokens.outboundToken });
+    const wantsBigNumber = getBigNumber({ value: offer.wants, token: tokens.inboundToken });
+    offerVersion.txId = txId;
+    offerVersion.parentOrderId = parentOrderId?.value ?? null;
+    offerVersion.deleted = false;
+    offerVersion.gasprice = offer.gasprice;
+    offerVersion.gives = offer.gives;
+    offerVersion.givesNumber = givesBigNumber.toNumber();
+    offerVersion.wants = offer.wants;
+    offerVersion.wantsNumber = wantsBigNumber.toNumber();
+    offerVersion.takerPaysPrice = getPrice({ over: wantsBigNumber, under: givesBigNumber });
+    offerVersion.makerPaysPrice = getPrice({ over: givesBigNumber, under: wantsBigNumber });
+    offerVersion.gasreq = offer.gasreq;
+    offerVersion.live = new BigNumber(offer.gives).isPositive();
+    offerVersion.deprovisioned = this.getDeprovisioned(offer);
+    offerVersion.prevOfferId = this.getPrevOfferId(offer, mangroveId, tokens);
+  };
+
+  getPrevOfferId(offer: {prev: number}, mangroveId: MangroveId, tokens: { inboundToken: {address:string}, outboundToken: {address:string} }): string | null {
+    const offerListKey: OfferListKey = { inboundToken: tokens.inboundToken.address, outboundToken: tokens.outboundToken.address };
+    return offer.prev == 0 ? null : new OfferId(mangroveId, offerListKey, offer.prev).value;
+  }
+
+  getDeprovisioned(offer: {gasprice:number}): boolean {
+    return offer.gasprice == 0;
   }
 }

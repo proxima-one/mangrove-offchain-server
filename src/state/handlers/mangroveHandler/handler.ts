@@ -1,6 +1,6 @@
 import * as prisma from "@prisma/client";
 import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
-
+import _ from "lodash";
 import { PrismaClient } from "@prisma/client";
 import {
   PrismaStreamEventHandler,
@@ -49,7 +49,7 @@ export class MangroveEventHandler extends PrismaStreamEventHandler<mangroveSchem
             );
       const txRef = payload.tx;
       
-      let transaction: prisma.Transaction | undefined;
+      let transaction: prisma.Transaction;
       if (txRef !== undefined) {
         const txId = new TransactionId(this.chainId, txRef.txHash);
         transaction = await allDbOperation.transactionOperations.ensureTransaction({
@@ -59,29 +59,34 @@ export class MangroveEventHandler extends PrismaStreamEventHandler<mangroveSchem
           timestamp: timestamp,
           blockNumber: txRef.blockNumber,
           blockHash: txRef.blockHash
-      });
+        });
       }
 
       await eventMatcher({
-        MangroveCreated: async (e) =>
-          this.mangroveEventsLogic.handleMangroveCreated(
-            undo,
-            mangroveId,
-            this.chainId,
-            transaction,
-            allDbOperation.mangroveOperation,
-            e
-          ),
-        MangroveParamsUpdated: async ({ params }) =>
-          this.mangroveEventsLogic.handleMangroveParamsUpdated(
-            undo,
-            mangroveId,
-            params,
-            transaction,
-            allDbOperation.mangroveOperation
-          ),
+        MangroveCreated: async (e) =>{
+          if (undo) {
+            await allDbOperation.mangroveOperation.deleteLatestMangroveVersion(mangroveId);
+            return;
+          }
+          await allDbOperation.mangroveOperation.addVersionedMangrove({ id:mangroveId, txId: transaction!.id, address: e.address });
+        }
+        ,
+        MangroveParamsUpdated: async ({ params }) =>{
+          if (undo) {
+            await allDbOperation.mangroveOperation.deleteLatestMangroveVersion(mangroveId);
+            return;
+          }
+      
+          await allDbOperation.mangroveOperation.addVersionedMangrove({
+            id: mangroveId,
+            txId: transaction!.id,
+            updateFunc: (model) => {
+              _.merge(model, params);
+            },
+          });
+        },
         OfferRetracted: async (e) =>
-          this.offerEventsLogic.handleOfferRetracted(mangroveId, undo, e, allDbOperation),
+          this.offerEventsLogic.handleOfferRetracted(mangroveId, undo, e, allDbOperation, transaction!.id),
         OfferWritten: async ({ offer, maker, offerList }) =>
           this.offerEventsLogic.handleOfferWritten(
             txRef,
@@ -139,7 +144,6 @@ export class MangroveEventHandler extends PrismaStreamEventHandler<mangroveSchem
             transaction,
             allDbOperation,
             parentOrderId,
-            tx
           ),
       })(payload);
     }

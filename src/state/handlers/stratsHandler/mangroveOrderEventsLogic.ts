@@ -1,4 +1,4 @@
-import { Transaction } from ".prisma/client";
+import { Transaction, MangroveOrderVersion, TakenOffer, Token, MangroveOrder } from ".prisma/client";
 import { PrismaClient } from "@prisma/client";
 import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
 import { OrderSummary } from "@proximaone/stream-schema-mangrove/dist/strategyEvents";
@@ -16,43 +16,18 @@ import {
   StratId,
   TokenId,
 } from "../../model";
+import { MangroveOrderIds, MangroveOrderOperations } from "../../../state/dbOperations/mangroveOrderOperations";
+import { mangrove } from "@proximaone/stream-schema-mangrove/dist/streams";
 
-type MangroveOrderIds = {
-  mangroveOrderId: string;
-  txId: string;
-  mangroveId: string;
-  stratId: string;
-  offerListId: string;
-  takerId: string;
-  // orderId: string;
-  currentVersionId: string;
-};
+
 
 export class MangroveOrderEventsLogic {
-  async getOutboundInbound(
-    offerListId: OfferListId,
-    db: AllDbOperations,
-    txHash: string,
-    event: any
-  ) {
-    let outboundToken, inboundToken;
-    try {
-      const tokens = await db.offerListOperations.getOfferListTokens({
-        id: offerListId,
-      });
-      outboundToken = tokens.outboundToken;
-      inboundToken = tokens.inboundToken;
-    } catch (e) {
-      console.log(`failed to get offer list tokens - tx=${txHash}`, event);
-      throw e;
-    }
-    return { outboundToken, inboundToken };
-  }
 
 
   async handleSetExpiry(
     db: AllDbOperations,
     chainId: ChainId,
+    txId: string,
     params: {
       mangroveId: string;
       offerId: number;
@@ -61,18 +36,17 @@ export class MangroveOrderEventsLogic {
       inboundToken: string;
     }
   ) {
-    const offerId = new OfferId(
-      new MangroveId(chainId, params.mangroveId),
-      {
-        inboundToken: params.inboundToken,
-        outboundToken: params.outboundToken,
-      },
-      params.offerId
-    );
+    const offerListKey = {
+      inboundToken: params.inboundToken,
+      outboundToken: params.outboundToken,
+    };
+    const mangroveId = new MangroveId(chainId, params.mangroveId);
+    const offerId = new OfferId( mangroveId, offerListKey, params.offerId );
 
     db.mangroveOrderOperations.addMangroveOrderVersionFromOfferId(
       offerId,
-      (m) => (m.expiryDate = new Date( params.expiry.epochMs ))
+      txId,
+      (m) => (m.expiryDate = new Date(params.expiry.epochMs))
     );
   }
 
@@ -97,11 +71,11 @@ export class MangroveOrderEventsLogic {
     );
     const mangroveId = new MangroveId(chainId, e.mangroveId);
     const offerListId = new OfferListId(mangroveId, offerList);
-    const mangroveOrderId = new MangroveOrderId({
-      mangroveId: mangroveId,
-      offerListKey: offerList,
-      mangroveOrderId: e.id,
-    });
+    const mangroveOrderId = new MangroveOrderId(
+      mangroveId,
+      offerList,
+      e.id,
+    );
 
     if (undo) {
       await db.mangroveOrderOperations.deleteMangroveOrder(mangroveOrderId);
@@ -109,58 +83,35 @@ export class MangroveOrderEventsLogic {
     }
     const restingOrderId = new OfferId(mangroveId, offerList, e.restingOrderId);
 
-    const { outboundToken, inboundToken } = await this.getOutboundInbound(
-      offerListId,
-      db,
-      txHash,
-      event
-    );
+    const { outboundToken, inboundToken } = await db.offerListOperations.getOfferListTokens({
+      id:offerListId
+  });
+    const takerGaveNumber = getNumber({
+      value: e.takerGave,
+      token: inboundToken,
+    });
+    const takerGotNumber = getNumber({
+      value: e.takerGot,
+      token: outboundToken,
+    });
 
-    const mangroveOrderVersion = await this.createMangroveOrderVersion(
-      e,
-      inboundToken,
-      outboundToken,
-      mangroveOrderId,
-      db
-    );
+    let initialVersionFunc = (version: Omit<MangroveOrderVersion, "id" | "mangroveOrderId" | "versionNumber" | "prevVersionId">) => {
+      version.filled = this.getFilled(e, outboundToken);
+      version.cancelled = false;
+      version.failed = false;
+      version.failedReason = null;
+      version.takerGot = e.takerGot;
+      version.takerGotNumber = takerGotNumber;
+      version.takerGave = e.takerGave;
+      version.takerGaveNumber = takerGaveNumber;
+      version.price = getPrice({ over: takerGaveNumber, under: takerGotNumber }) ?? 0;
+      version.expiryDate = new Date(e.expiryDate);
+    }
 
-    const mangroveOrderIds: MangroveOrderIds = {
-      mangroveOrderId: mangroveOrderId.value,
-      txId: transaction.id,
-      mangroveId: mangroveId.value,
-      stratId: new StratId(chainId, e.address).value,
-      offerListId: offerListId.value,
+
+    let initialMangroveOrderValue = {
       takerId: new AccountId(chainId, e.taker).value,
-      // orderId: e.orderId,
-      currentVersionId: mangroveOrderVersion.id,
-    };
-
-    await this.createMangroveOrder(
-      db,
-      mangroveOrderIds,
-      e,
-      outboundToken,
-      inboundToken,
-      restingOrderId
-    );
-  }
-
-  async createMangroveOrder(
-    db: AllDbOperations,
-    mangroveOrderIds: MangroveOrderIds,
-    e: mangroveSchema.strategyEvents.OrderSummary,
-    outboundToken: { decimals: number },
-    inboundToken: { decimals: number },
-    restingOrderId: OfferId
-  ) {
-    await db.mangroveOrderOperations.createMangroveOrder({
-      id: mangroveOrderIds.mangroveOrderId,
-      txId: mangroveOrderIds.txId,
-      mangroveId: mangroveOrderIds.mangroveId,
-      stratId: mangroveOrderIds.stratId,
-      offerListId: mangroveOrderIds.offerListId,
-      takerId: mangroveOrderIds.takerId,
-      // orderId: mangroveOrderIds.orderId,
+      stratId: new StratId(chainId, e.address).value,
       fillOrKill: e.fillOrKill.valueOf(),
       fillWants: e.fillWants.valueOf(),
       restingOrder: e.restingOrder.valueOf(),
@@ -179,52 +130,69 @@ export class MangroveOrderEventsLogic {
       totalFee: e.fee,
       totalFeeNumber: getNumber({ value: e.fee, token: outboundToken }),
       restingOrderId: restingOrderId.value,
-      currentVersionId: mangroveOrderIds.currentVersionId,
-    });
+    }
+
+    await db.mangroveOrderOperations.addMangroveOrderVersion(mangroveOrderId, transaction.id, initialVersionFunc, initialMangroveOrderValue);
+
   }
 
-  async createMangroveOrderVersion(
-    e: mangroveSchema.strategyEvents.OrderSummary,
-    inboundToken: { decimals: number },
-    outboundToken: { decimals: number },
-    mangroveOrderId: MangroveOrderId,
-    db: AllDbOperations
+  async newVersionOfMangroveOrderFromTakenOffer(
+    takenOffer: Omit<TakenOffer, "orderId" | "offerVersionId">,
+    tokens: {
+      outboundToken: { decimals: number },
+      inboundToken: { decimals: number },
+    },
+    mangroveOrder: { fillWants: boolean, takerWants: string, takerGives: string, totalFee: string },
+    newVersion: Omit<MangroveOrderVersion, "id" | "mangroveOrderId" | "versionNumber" | "prevVersionId">
   ) {
-    const takerGaveNumber = getNumber({
-      value: e.takerGave,
-      token: inboundToken,
-    });
-    const takerGotNumber = getNumber({
-      value: e.takerGot,
-      token: outboundToken,
-    });
-    const mangroveOrderVersionId = new MangroveOrderVersionId({
-      mangroveOrderId: mangroveOrderId,
-      versionNumber: 0,
-    });
 
-    return await db.mangroveOrderOperations.createMangroveOrderVersion({
-      id: mangroveOrderVersionId.value,
-      mangroveOrderId: mangroveOrderId.value,
-      filled: e.fillWants
-        ? e.takerWants ==
-          addNumberStrings({
-            value1: e.takerGot,
-            value2: e.fee,
-            token: outboundToken,
-          })
-        : e.takerGave == e.takerGives,
-      cancelled: false,
-      failed: false,
-      failedReason: null,
-      takerGot: e.takerGot,
-      takerGotNumber: takerGotNumber,
-      takerGave: e.takerGave,
-      takerGaveNumber: takerGaveNumber,
-      price: getPrice({ over: takerGaveNumber, under: takerGotNumber}) ?? 0,
-      expiryDate: new Date( e.expiryDate ),
-      versionNumber: 0,
-      prevVersionId: null,
+    newVersion.failed = this.getFailed(takenOffer);
+    newVersion.failedReason = this.getFailedReason(takenOffer);
+    newVersion.takerGave = addNumberStrings({
+      value1: newVersion.takerGave,
+      value2: takenOffer.takerGave,
+      token: tokens.inboundToken,
     });
+    newVersion.takerGaveNumber = getNumber({
+      value: newVersion.takerGave,
+      token: tokens.inboundToken,
+    });
+    newVersion.takerGot = addNumberStrings({
+      value1: newVersion.takerGot,
+      value2: takenOffer.takerGot,
+      token: tokens.outboundToken,
+    });
+    newVersion.takerGotNumber = getNumber({
+      value: newVersion.takerGot,
+      token: tokens.inboundToken,
+    });
+    newVersion.filled = this.getFilled({ ...mangroveOrder, ...newVersion, fee: mangroveOrder.totalFee}, tokens.outboundToken);
+    newVersion.price = getPrice({
+      over: newVersion.takerGaveNumber,
+      under: newVersion.takerGotNumber
+    }
+    ) ?? 0;
+
+  }
+
+  getFilled(event: {fillWants: boolean, takerWants: string, takerGives: string, fee: string, takerGave: string, takerGot: string }, outboundToken: { decimals: number }) {
+    return event.fillWants
+      ? event.takerWants ==
+      addNumberStrings({
+        value1: event.takerGot,
+        value2: event.fee,
+        token: outboundToken,
+      })
+      : event.takerGave == event.takerGives;
+  }
+
+  getFailedReason(
+    o: {failReason: string| null, posthookData:string |null}
+  ): string | null {
+    return o.failReason ? o.failReason : o.posthookData;
+  }
+
+  getFailed(o: {posthookFailed: boolean, posthookData:string |null}): boolean {
+    return o.posthookFailed || o.posthookData != null;
   }
 }
