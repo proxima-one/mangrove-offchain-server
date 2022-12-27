@@ -1,6 +1,6 @@
 import assert from "assert";
 import { before, describe, it } from "mocha";
-import { TakerApprovalOperations } from "../../../../src/state/dbOperations/takerApprovalOperations";
+import { TakerApprovalOperations } from "state/dbOperations/takerApprovalOperations";
 import {
   AccountId,
   ChainId,
@@ -11,8 +11,8 @@ import {
   TakerApprovalId,
   TakerApprovalVersionId,
   TokenId
-} from "../../../../src/state/model";
-import { prisma } from "../../../../src/utils/test/mochaHooks";
+} from "state/model";
+import { prisma } from "utils/test/mochaHooks";
 import { TakerApproval, TakerApprovalVersion } from "@prisma/client";
 
 describe("Taker Approval Operations Integration test suite", () => {

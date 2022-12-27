@@ -1,17 +1,17 @@
 import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
-import { allDbOperations } from "../../dbOperations/allDbOperations";
+import { allDbOperations } from "state/dbOperations/allDbOperations";
 
 import { PrismaClient } from "@prisma/client";
 import {
   PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
-} from "../../../common";
-import { createPatternMatcher } from "../../../utils/discriminatedUnion";
+} from "common";
+import { createPatternMatcher } from "utils/discriminatedUnion";
 import {
   ChainId,
   TransactionId
-} from "../../model";
+} from "state/model";
 import { MangroveOrderEventsLogic } from "./mangroveOrderEventsLogic";
 
 export class IOrderLogicEventHandler extends PrismaStreamEventHandler<mangroveSchema.strategyEvents.StrategyEvent> {

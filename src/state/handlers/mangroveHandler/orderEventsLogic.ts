@@ -2,7 +2,6 @@ import * as prisma from "@prisma/client";
 import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
 
 import { strict as assert } from "assert";
-import { AllDbOperations } from "state/dbOperations/allDbOperations";
 import {
   AccountId,
   ChainId,
@@ -11,8 +10,9 @@ import {
   OfferListId,
   OrderId,
   TakenOfferId
-} from "../../model";
-import { getBigNumber, getNumber, getPrice } from "../handlerUtils";
+} from "state/model";
+import { getBigNumber, getNumber, getPrice } from "state/handlers/handlerUtils";
+import { AllDbOperations } from "state/dbOperations/allDbOperations";
 
 export class OrderEventLogic {
   async handleOrderCompleted(

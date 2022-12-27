@@ -6,15 +6,15 @@ import {
   PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
-} from "../../../common";
-import { createPatternMatcher } from "../../../utils/discriminatedUnion";
-import { allDbOperations } from "../../dbOperations/allDbOperations";
+} from "common";
+import { createPatternMatcher } from "utils/discriminatedUnion";
+import { allDbOperations } from "state/dbOperations/allDbOperations";
 import {
   ChainId,
   MangroveId,
   OrderId,
   TransactionId
-} from "../../model";
+} from "state/model";
 import { MangroveEventsLogic } from "./mangroveEventsLogic";
 import { OfferEventsLogic } from "./offerEventsLogic";
 import { OrderEventLogic } from "./orderEventsLogic";

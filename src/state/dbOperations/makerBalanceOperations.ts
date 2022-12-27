@@ -5,7 +5,7 @@ import {
   AccountId,
   MakerBalanceId,
   MakerBalanceVersionId,
-} from "../../state/model";
+} from "state/model";
 
 export class MakerBalanceOperations extends DbOperations {
   // Add a new MakerBalanceVersion to a (possibly new) MakerBalance

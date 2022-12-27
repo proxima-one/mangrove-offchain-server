@@ -1,7 +1,7 @@
 import * as prismaModel from "@prisma/client";
 import assert from "assert";
 import { before, describe } from "mocha";
-import { OfferListOperations } from "../../../../src/state/dbOperations/offerListOperations";
+import { OfferListOperations } from "state/dbOperations/offerListOperations";
 import {
   ChainId,
   MangroveId,
@@ -9,8 +9,8 @@ import {
   OfferListKey,
   OfferListVersionId,
   TokenId
-} from "../../../../src/state/model";
-import { prisma } from "../../../../src/utils/test/mochaHooks";
+} from "state/model";
+import { prisma } from "utils/test/mochaHooks";
 
 describe("OfferList Operations Integration test suite", () => {
   let offerListOperations: OfferListOperations;

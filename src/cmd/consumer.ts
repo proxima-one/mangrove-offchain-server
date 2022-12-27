@@ -5,13 +5,13 @@ import {
 } from "@proximaone/stream-client-js";
 import { Subscription } from "rxjs";
 import retry from "async-retry";
-import { StreamEventHandler } from "../common";
+import { StreamEventHandler } from "common";
 import {
   MangroveEventHandler,
   TokenEventHandler,
   IOrderLogicEventHandler as TakerStratEventHandler,
-} from "../state";
-import { ChainId } from "../state/model";
+} from "state";
+import { ChainId } from "state/model";
 import { defaultConfig } from "./config";
 
 const retries = parseInt(process.env["CONSUMER_RETRIES"] ?? "100");

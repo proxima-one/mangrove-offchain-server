@@ -1,15 +1,15 @@
 import { MakerBalanceVersion } from "@prisma/client";
 import assert from "assert";
 import { before, describe, it } from "mocha";
-import { MakerBalanceOperations } from "../../../../src/state/dbOperations/makerBalanceOperations";
+import { MakerBalanceOperations } from "state/dbOperations/makerBalanceOperations";
 import {
   AccountId,
   ChainId,
   MakerBalanceId,
   MakerBalanceVersionId,
   MangroveId,
-} from "../../../../src/state/model";
-import { prisma } from "../../../../src/utils/test/mochaHooks";
+} from "state/model";
+import { prisma } from "utils/test/mochaHooks";
 
 describe("Maker Balance Operations Integration test suite", () => {
   let makerBalanceOperations: MakerBalanceOperations;

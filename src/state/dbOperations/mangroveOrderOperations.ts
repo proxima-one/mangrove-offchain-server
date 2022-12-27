@@ -1,22 +1,12 @@
 import * as prisma from "@prisma/client";
+import { MangroveOrder } from "@prisma/client";
 import * as _ from "lodash";
-import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
-import { MangroveOrder, TakenOffer, Transaction } from "@prisma/client";
 import {
-  addNumberStrings,
-  getNumber,
-  getPrice
-} from "../handlers/handlerUtils";
-import {
-  AccountId,
-  ChainId,
-  MangroveId,
   MangroveOrderId,
   MangroveOrderVersionId,
   OfferId,
-  OfferListId,
-  StratId
-} from "../model";
+  OfferListId
+} from "state/model";
 import { DbOperations, PrismaTx, toUpsert } from "./dbOperations";
 import { OfferListOperations } from "./offerListOperations";
 

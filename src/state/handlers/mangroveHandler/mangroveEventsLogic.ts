@@ -16,7 +16,7 @@ import {
   OrderId,
   TakerApprovalId,
   TokenId,
-} from "../../model";
+} from "state/model";
 
 export class MangroveEventsLogic {
 

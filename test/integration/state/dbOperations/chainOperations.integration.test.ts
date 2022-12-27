@@ -1,8 +1,8 @@
 import assert from "assert";
 import { before, describe, it } from "mocha";
-import { ChainOperations } from "../../../../src/state/dbOperations/chainOperations";
-import { ChainId, MangroveId } from "../../../../src/state/model";
-import { prisma } from "../../../../src/utils/test/mochaHooks";
+import { ChainOperations } from "state/dbOperations/chainOperations";
+import { ChainId, MangroveId } from "state/model";
+import { prisma } from "utils/test/mochaHooks";
 
 describe("Chain Operations Integration test suite", () => {
   let chainOperations: ChainOperations;

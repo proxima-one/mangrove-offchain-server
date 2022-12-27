@@ -1,11 +1,11 @@
 import assert from "assert";
 import { before, describe, it } from "mocha";
-import { TokenOperations } from "../../../../src/state/dbOperations/tokenOperations";
+import { TokenOperations } from "state/dbOperations/tokenOperations";
 import {
   ChainId,
   TokenId
-} from "../../../../src/state/model";
-import { prisma } from "../../../../src/utils/test/mochaHooks";
+} from "state/model";
+import { prisma } from "utils/test/mochaHooks";
 
 describe("Token Operations Integration test suite", () => {
   let tokenOperations: TokenOperations;

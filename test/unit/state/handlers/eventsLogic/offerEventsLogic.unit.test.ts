@@ -1,6 +1,6 @@
 import { describe } from "mocha";
-import { OfferEventsLogic } from "../../../../../src/state/handlers/mangroveHandler/offerEventsLogic"
-import { ChainId, MangroveId, OfferId, OrderId } from "../../../../../src/state/model";
+import { OfferEventsLogic } from "state/handlers/mangroveHandler/offerEventsLogic"
+import { ChainId, MangroveId, OfferId, OrderId } from "state/model";
 import { OfferVersion } from "@prisma/client";
 import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
 import assert from "assert";

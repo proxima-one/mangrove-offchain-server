@@ -1,7 +1,7 @@
 import { describe } from "mocha";
-import { AccountId, ChainId, MangroveId, OfferListId, OrderId, TakenOfferId } from "../../../../../src/state/model";
+import { AccountId, ChainId, MangroveId, OfferListId, OrderId, TakenOfferId } from "state/model";
 import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
-import { OrderEventLogic } from "../../../../../src/state/handlers/mangroveHandler/orderEventsLogic";
+import { OrderEventLogic } from "state/handlers/mangroveHandler/orderEventsLogic";
 import assert from "assert";
 
 
