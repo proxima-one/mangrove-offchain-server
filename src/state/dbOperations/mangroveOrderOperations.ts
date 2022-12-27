@@ -6,7 +6,7 @@ import {
   MangroveOrderVersionId,
   OfferId,
   OfferListId
-} from "state/model";
+} from "src/state/model";
 import { DbOperations, PrismaTx, toUpsert } from "./dbOperations";
 import { OfferListOperations } from "./offerListOperations";
 

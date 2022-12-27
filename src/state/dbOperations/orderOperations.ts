@@ -1,10 +1,10 @@
 import * as prismaModel from "@prisma/client";
 import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
-import { MangroveId, OfferId, OrderId } from "state/model";
+import { MangroveId, OfferId, OrderId } from "src/state/model";
 import { DbOperations, PrismaTx } from "./dbOperations";
 import { MangroveOrderOperations } from "./mangroveOrderOperations";
 import { OfferOperations } from "./offerOperations";
-import { MangroveOrderEventsLogic } from "state/handlers/stratsHandler/mangroveOrderEventsLogic";
+import { MangroveOrderEventsLogic } from "src/state/handlers/stratsHandler/mangroveOrderEventsLogic";
 
 export class OrderOperations extends DbOperations {
 

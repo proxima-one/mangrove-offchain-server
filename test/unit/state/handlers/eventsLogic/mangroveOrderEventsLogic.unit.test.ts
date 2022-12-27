@@ -1,5 +1,5 @@
 import assert from "assert";
-import { MangroveOrderEventsLogic } from "state/handlers/stratsHandler/mangroveOrderEventsLogic"
+import { MangroveOrderEventsLogic } from "src/state/handlers/stratsHandler/mangroveOrderEventsLogic"
 import * as prismaModel from "@prisma/client";
 
 describe("Mangrove Order Events Logic Unit Test Suite", () => {

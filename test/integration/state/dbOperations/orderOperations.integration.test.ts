@@ -1,12 +1,12 @@
 import { Order, TakenOffer } from "@prisma/client";
 import assert from "assert";
 import { describe, it } from "mocha";
-import { MangroveOrderOperations } from "state/dbOperations/mangroveOrderOperations";
-import { OrderOperations } from "state/dbOperations/orderOperations";
-import { AccountId, ChainId, MangroveId, MangroveOrderId, MangroveOrderVersionId, OfferId, OfferListId, OfferListVersionId, OfferVersionId, OrderId, StratId, TakenOfferId, TokenId } from "state/model";
+import { MangroveOrderOperations } from "src/state/dbOperations/mangroveOrderOperations";
+import { OrderOperations } from "src/state/dbOperations/orderOperations";
+import { AccountId, ChainId, MangroveId, MangroveOrderId, MangroveOrderVersionId, OfferId, OfferListId, OfferListVersionId, OfferVersionId, OrderId, StratId, TakenOfferId, TokenId } from "src/state/model";
 import { prisma } from "utils/test/mochaHooks";
 import { OfferListParams } from "@proximaone/stream-schema-mangrove/dist/core";
-import { OfferOperations } from "state/dbOperations/offerOperations";
+import { OfferOperations } from "src/state/dbOperations/offerOperations";
 
 describe("Order Operations Integration test Suite", () => {
 

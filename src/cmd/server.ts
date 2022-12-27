@@ -27,7 +27,7 @@ import {
   CustomTakenOfferFieldsResolver,
   CustomTakerApprovalFieldsResolver,
   CustomTokenFieldsResolver,
-} from "resolvers/customFieldResolvers";
+} from "src/resolvers/customFieldResolvers";
 import { AddressInfo } from "net";
 
 const prisma = new PrismaClient();

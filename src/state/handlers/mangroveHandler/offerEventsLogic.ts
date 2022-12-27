@@ -3,7 +3,7 @@ import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
 
 import { strict as assert } from "assert";
 import BigNumber from "bignumber.js";
-import { AllDbOperations } from "state/dbOperations/allDbOperations";
+import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
 import {
   AccountId,
   ChainId,
@@ -12,8 +12,8 @@ import {
   OfferListId,
   OfferListKey,
   OrderId,
-} from "state/model";
-import { getBigNumber, getPrice } from "state/handlers/handlerUtils";
+} from "src/state/model";
+import { getBigNumber, getPrice } from "src/state/handlers/handlerUtils";
 
 export class OfferEventsLogic {
   async handleOfferRetracted(

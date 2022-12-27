@@ -1,4 +1,4 @@
-import { TokenId } from "state/model";
+import { TokenId } from "src/state/model";
 import { DbOperations } from "./dbOperations";
 
 export class TokenOperations extends DbOperations {

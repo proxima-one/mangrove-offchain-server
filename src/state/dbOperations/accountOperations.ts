@@ -1,4 +1,4 @@
-import { AccountId } from "state/model";
+import { AccountId } from "src/state/model";
 import { DbOperations } from "./dbOperations";
 import * as prisma from "@prisma/client";
 

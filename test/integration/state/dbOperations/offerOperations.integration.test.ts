@@ -1,7 +1,7 @@
 import * as prismaModel from "@prisma/client";
 import assert from "assert";
 import { before, describe } from "mocha";
-import { OfferOperations } from "state/dbOperations/offerOperations";
+import { OfferOperations } from "src/state/dbOperations/offerOperations";
 import {
   AccountId,
   ChainId,
@@ -11,7 +11,7 @@ import {
   OfferListKey,
   OfferVersionId,
   TokenId
-} from "state/model";
+} from "src/state/model";
 import { prisma } from "utils/test/mochaHooks";
 
 describe("Offer Operations Integration test suite", () => {

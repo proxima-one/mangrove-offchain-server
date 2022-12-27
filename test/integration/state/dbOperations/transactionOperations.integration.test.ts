@@ -1,11 +1,11 @@
 import { PrismaClient, Transaction } from "@prisma/client";
 import assert from "assert";
 import { after, before, describe, it } from "mocha";
-import { TransactionOperations } from "state/dbOperations/transactionOperations";
+import { TransactionOperations } from "src/state/dbOperations/transactionOperations";
 import {
   ChainId,
   TransactionId
-} from "state/model";
+} from "src/state/model";
 import { clearPostgres } from "utils/test/prismaUtils";
 import {prisma} from "utils/test/mochaHooks"
 import { Timestamp } from "@proximaone/stream-client-js";

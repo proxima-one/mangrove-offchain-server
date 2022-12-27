@@ -4,9 +4,9 @@ import * as _ from "lodash";
 
 import { MangroveParams } from "@proximaone/stream-schema-mangrove/dist/core";
 import BigNumber from "bignumber.js";
-import { AllDbOperations } from "state/dbOperations/allDbOperations";
-import { MakerBalanceOperations } from "state/dbOperations/makerBalanceOperations";
-import { MangroveOperations } from "state/dbOperations/mangroveOperations";
+import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
+import { MakerBalanceOperations } from "src/state/dbOperations/makerBalanceOperations";
+import { MangroveOperations } from "src/state/dbOperations/mangroveOperations";
 import {
   AccountId,
   ChainId,
@@ -16,7 +16,7 @@ import {
   OrderId,
   TakerApprovalId,
   TokenId,
-} from "state/model";
+} from "src/state/model";
 
 export class MangroveEventsLogic {
 

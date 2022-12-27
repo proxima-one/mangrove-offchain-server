@@ -5,7 +5,7 @@ import {
   OfferListId,
   OfferListVersionId,
   TokenId,
-} from "state/model";
+} from "src/state/model";
 import { DbOperations, toUpsert } from "./dbOperations";
 
 export class OfferListOperations extends DbOperations {

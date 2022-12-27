@@ -1,7 +1,7 @@
 import * as prisma from "@prisma/client";
 
 import { Timestamp } from "@proximaone/stream-client-js";
-import { TransactionId } from "state/model";
+import { TransactionId } from "src/state/model";
 import { DbOperations } from "./dbOperations";
 
 export class TransactionOperations extends DbOperations {

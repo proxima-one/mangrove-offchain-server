@@ -10,9 +10,9 @@ import {
   OfferListId,
   OrderId,
   TakenOfferId
-} from "state/model";
-import { getBigNumber, getNumber, getPrice } from "state/handlers/handlerUtils";
-import { AllDbOperations } from "state/dbOperations/allDbOperations";
+} from "src/state/model";
+import { getBigNumber, getNumber, getPrice } from "src/state/handlers/handlerUtils";
+import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
 
 export class OrderEventLogic {
   async handleOrderCompleted(

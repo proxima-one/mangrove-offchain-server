@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "outDir": "./dist",
-    "baseUrl": "src",
     "lib": [
       "ES2019",
       "esnext.asynciterable"
@@ -21,8 +20,14 @@
     "downlevelIteration": true,
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    "baseUrl": "src/",
+    "paths": {"src/*": ["./*"]}
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "test/**/*.test.ts"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "test/**/*.test.ts"
+  ],
   "exclude": [
     "node_modules"
   ]

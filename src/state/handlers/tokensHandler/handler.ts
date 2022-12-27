@@ -2,9 +2,9 @@ import {
   PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
-} from "common";
+} from "src/common";
 
-import { ChainId, TokenId } from "state/model";
+import { ChainId, TokenId } from "src/state/model";
 import { PrismaClient } from "@prisma/client";
 
 export class TokenEventHandler extends PrismaStreamEventHandler<NewToken> {

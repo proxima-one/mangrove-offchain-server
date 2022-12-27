@@ -1,7 +1,7 @@
 import * as prismaModel from "@prisma/client";
 import assert from "assert";
 import { before, describe, it } from "mocha";
-import { MangroveOrderOperations } from "state/dbOperations/mangroveOrderOperations";
+import { MangroveOrderOperations } from "src/state/dbOperations/mangroveOrderOperations";
 import {
   AccountId,
   ChainId,
@@ -14,7 +14,7 @@ import {
   OfferListVersionId,
   OrderId,
   TokenId
-} from "state/model";
+} from "src/state/model";
 import { prisma } from "utils/test/mochaHooks";
 
 describe("Mangrove Order Operations Integration test suite", () => {

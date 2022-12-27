@@ -1,6 +1,6 @@
 import * as prisma from "@prisma/client";
 import _ from "lodash";
-import { MangroveId, MangroveVersionId } from "state/model";
+import { MangroveId, MangroveVersionId } from "src/state/model";
 import { DbOperations, toUpsert } from "./dbOperations";
 
 export class MangroveOperations extends DbOperations {

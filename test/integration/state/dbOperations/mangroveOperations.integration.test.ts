@@ -1,11 +1,11 @@
 import assert from "assert";
 import { before, describe, it } from "mocha";
-import { MangroveOperations } from "state/dbOperations/mangroveOperations";
+import { MangroveOperations } from "src/state/dbOperations/mangroveOperations";
 import {
   ChainId,
   MangroveId,
   MangroveVersionId,
-} from "state/model";
+} from "src/state/model";
 import { prisma } from "utils/test/mochaHooks";
 import { Mangrove, MangroveVersion } from "@prisma/client";
 

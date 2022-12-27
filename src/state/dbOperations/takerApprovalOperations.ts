@@ -4,7 +4,7 @@ import {
   OrderId,
   TakerApprovalId,
   TakerApprovalVersionId,
-} from "state/model";
+} from "src/state/model";
 import { DbOperations, toUpsert } from "./dbOperations";
 import * as _ from "lodash";
 import * as prisma from "@prisma/client";

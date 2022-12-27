@@ -1,7 +1,7 @@
 import assert from "assert";
 import { describe, it } from "mocha";
-import { AccountOperations } from "state/dbOperations/accountOperations";
-import { AccountId, ChainId } from "state/model";
+import { AccountOperations } from "src/state/dbOperations/accountOperations";
+import { AccountId, ChainId } from "src/state/model";
 import { prisma } from "utils/test/mochaHooks";
 
 describe("Account Operations Integration test suite", () => {

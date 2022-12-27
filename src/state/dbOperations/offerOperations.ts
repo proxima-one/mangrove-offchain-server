@@ -1,6 +1,6 @@
 import * as prisma from "@prisma/client";
 import * as _ from "lodash";
-import { AccountId, OfferId, OfferListId, OfferVersionId } from "state/model";
+import { AccountId, OfferId, OfferListId, OfferVersionId } from "src/state/model";
 import { DbOperations, toUpsert } from "./dbOperations";
 
 export class OfferOperations extends DbOperations {
