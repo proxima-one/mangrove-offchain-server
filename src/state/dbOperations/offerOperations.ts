@@ -23,7 +23,7 @@ export class OfferOperations extends DbOperations {
     let newVersion:prisma.OfferVersion;
     if (offer === null) {
       if(!initial){
-        throw new Error( "Can't create Offer without initial values for creation");
+        throw new Error( `Can't create Offer without initial values for creation: ${id.value}`);
       }
       const newVersionId = new OfferVersionId(id, 0);
       offer = {

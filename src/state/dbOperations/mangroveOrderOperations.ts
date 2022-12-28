@@ -91,7 +91,7 @@ export class MangroveOrderOperations extends DbOperations {
 
     if( mangroveOrder === null){
       if(!initial){
-        throw new Error( "Can't create MangroveOrder without initial values for creation");
+        throw new Error( `Can't create MangroveOrder without initial values for creation, id: ${id.value}`);
       }
       
       const newVersionId = new MangroveOrderVersionId({ mangroveOrderId: id, versionNumber:0});

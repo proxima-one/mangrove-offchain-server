@@ -24,7 +24,7 @@ export class MangroveOperations extends DbOperations {
 
     if( mangrove === null){
       if(!params.address){
-        throw new Error( "Can't create Mangrove without an address");
+        throw new Error( `Can't create Mangrove without an address, id:${params.id.value}`);
       }
       const newVersionId = new MangroveVersionId(params.id, 0);
       mangrove = {
