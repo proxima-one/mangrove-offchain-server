@@ -1,3 +1,3 @@
-export * from "./handlers/mangroveHandler/handler";
-export * from "./handlers/tokensHandler/handler";
-export * from "./handlers/stratsHandler/handler";
+export * from "./handlers/mangroveHandler/mangroveEventHandler";
+export * from "./handlers/tokensHandler/tokenEventHandler";
+export * from "./handlers/stratsHandler/stratEventHandler";
