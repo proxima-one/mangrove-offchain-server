@@ -1,7 +1,10 @@
 import { MangroveOrder } from "@prisma/client";
 
 export class Id<T extends string | number> {
-  public constructor(public readonly value: T) { }
+  public readonly value:T
+  public constructor(_value: T) {
+    this.value =  typeof _value === "string" ?  _value.toLowerCase() as T : _value;
+   }
 }
 
 export class AccountId extends Id<string> {
