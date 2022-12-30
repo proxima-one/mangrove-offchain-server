@@ -1,4 +1,4 @@
-import { MakerBalanceVersion } from "@prisma/client";
+import { MakerBalance, MakerBalanceVersion } from "@prisma/client";
 import assert from "assert";
 import { before, describe, it } from "mocha";
 import { MakerBalanceOperations } from "src/state/dbOperations/makerBalanceOperations";
@@ -17,19 +17,27 @@ describe("Maker Balance Operations Integration test suite", () => {
     makerBalanceOperations = new MakerBalanceOperations(prisma);
   });
 
+  const chainId = new ChainId(10);
+  const mangroveId = new MangroveId(chainId, "mangroveId");
+  const makerBalanceId = new MakerBalanceId(mangroveId, "makerId");
+  const makerBalanceVersionId = new MakerBalanceVersionId(makerBalanceId, 0);
+  const makerId = new AccountId(chainId, "makerId");
+  let makerBalance:MakerBalance;
+  let makerBalanceVersion:MakerBalanceVersion;
+
   beforeEach(async () => {
-    await prisma.makerBalance.create({
+    makerBalance = await prisma.makerBalance.create({
       data: {
-        id: "mangroveId-address",
-        mangroveId: "mangroveId",
-        makerId: "10-address",
-        currentVersionId: "mangroveId-address-0",
+        id: makerBalanceId.value,
+        mangroveId: mangroveId.value,
+        makerId: makerId.value,
+        currentVersionId: makerBalanceVersionId.value,
       },
     });
-    await prisma.makerBalanceVersion.create({
+    makerBalanceVersion = await prisma.makerBalanceVersion.create({
       data: {
-        id: "mangroveId-address-0",
-        makerBalanceId: "mangroveId-address",
+        id: makerBalanceVersionId.value,
+        makerBalanceId: makerBalanceId.value,
         txId: "txId",
         versionNumber: 0,
         prevVersionId: null,
@@ -88,10 +96,7 @@ describe("Maker Balance Operations Integration test suite", () => {
     });
 
     it("makerBalance!=null", async () => {
-      const makerBalanceId = new MakerBalanceId(
-        new MangroveId(new ChainId(10), "mangroveId"),
-        "address"
-      ); // matches the one from beforeEach
+
 
       assert.strictEqual(await prisma.makerBalance.count(), 1);
       await makerBalanceOperations.addVersionedMakerBalance(
@@ -110,8 +115,7 @@ describe("Maker Balance Operations Integration test suite", () => {
       );
       assert.strictEqual(
         makerBalance.makerId,
-        new AccountId(makerBalanceId.mangroveId.chainId, makerBalanceId.address)
-          .value
+        makerId.value
       );
       const makerBalanceVersionId = new MakerBalanceVersionId(
         makerBalanceId,
@@ -141,7 +145,7 @@ describe("Maker Balance Operations Integration test suite", () => {
 
   describe("getCurrentMakerBalanceVersion", () => {
     it("currentVersion not found", async () => {
-      const makerBalance = {
+      const noMatch = {
         id: "noMatch",
         mangroveId: "mangroveId",
         makerId: "10-address",
@@ -151,51 +155,34 @@ describe("Maker Balance Operations Integration test suite", () => {
       await assert.rejects(
         async () =>
           await makerBalanceOperations.getCurrentMakerBalanceVersion(
-            makerBalance
+            noMatch
           )
       );
     });
 
     it("currentVersion found", async () => {
-      const makerBalance = {
-        id: "mangroveId-address",
-        mangroveId: "mangroveId",
-        makerId: "10-address",
-        currentVersionId: "mangroveId-address-0",
-      };
 
       const currentVersion =
         await makerBalanceOperations.getCurrentMakerBalanceVersion(
           makerBalance
         );
-      const expected: MakerBalanceVersion = {
-        id: "mangroveId-address-0",
-        makerBalanceId: "mangroveId-address",
-        txId: "txId",
-        versionNumber: 0,
-        prevVersionId: null,
-        balance: "0",
-      };
-      assert.deepStrictEqual(expected, currentVersion);
+      assert.deepStrictEqual(makerBalanceVersion, currentVersion);
     });
   });
 
   describe("deleteLatestMakerBalanceVersion", () => {
     it("MakerBalance not found", async () => {
-      const makerBalanceId = new MakerBalanceId(
+      const noMatch = new MakerBalanceId(
         new MangroveId(new ChainId(10), "abcd"),
         "address"
       );
       await assert.rejects(
-        makerBalanceOperations.deleteLatestMakerBalanceVersion(makerBalanceId)
+        makerBalanceOperations.deleteLatestMakerBalanceVersion(noMatch)
       );
     });
 
     it("No prevVersion", async () => {
-      const makerBalanceId = new MakerBalanceId(
-        new MangroveId(new ChainId(10), "mangroveId"),
-        "address"
-      );
+
       assert.strictEqual(await prisma.makerBalance.count(), 1);
       assert.strictEqual(await prisma.makerBalanceVersion.count(), 1);
       await makerBalanceOperations.deleteLatestMakerBalanceVersion(
@@ -206,10 +193,7 @@ describe("Maker Balance Operations Integration test suite", () => {
     });
 
     it("Has prevVersion", async () => {
-      const makerBalanceId = new MakerBalanceId(
-        new MangroveId(new ChainId(10), "mangroveId"),
-        "address"
-      );
+
       await makerBalanceOperations.addVersionedMakerBalance(
         makerBalanceId,
         "txId",
@@ -218,9 +202,10 @@ describe("Maker Balance Operations Integration test suite", () => {
       const oldMakerBalance = await prisma.makerBalance.findUnique({
         where: { id: makerBalanceId.value },
       });
+      const oldVersionId = new MakerBalanceVersionId(makerBalanceId,1);
       assert.strictEqual(
         oldMakerBalance?.currentVersionId,
-        "mangroveId-address-1"
+        oldVersionId.value
       );
       assert.strictEqual(await prisma.makerBalance.count(), 1);
       assert.strictEqual(await prisma.makerBalanceVersion.count(), 2);
@@ -232,10 +217,11 @@ describe("Maker Balance Operations Integration test suite", () => {
       const newMakerBalance = await prisma.makerBalance.findUnique({
         where: { id: makerBalanceId.value },
       });
+      const newVersionId = new MakerBalanceVersionId(makerBalanceId,0);
       assert.notDeepStrictEqual(newMakerBalance, oldMakerBalance);
       assert.strictEqual(
         newMakerBalance?.currentVersionId,
-        "mangroveId-address-0"
+        newVersionId.value
       );
     });
   });

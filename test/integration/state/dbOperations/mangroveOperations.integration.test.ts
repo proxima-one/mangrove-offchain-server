@@ -27,7 +27,7 @@ describe("Mangrove Operations Integration test suite", () => {
         id: mangroveId.value,
         chainId: chainId.value,
         address: "address",
-        currentVersionId: "mangroveId-0",
+        currentVersionId: mangroveVersionId.value,
       },
     });
     mangroveVersion = await prisma.mangroveVersion.create({
@@ -142,8 +142,8 @@ describe("Mangrove Operations Integration test suite", () => {
         where: { id: newMangrove?.currentVersionId },
       });
       assert.notDeepStrictEqual(oldMangrove, newMangrove);
-      assert.strictEqual(oldMangrove?.currentVersionId, "mangroveId-0");
-      assert.strictEqual(newMangrove?.currentVersionId, "mangroveId-1");
+      assert.strictEqual(oldMangrove?.currentVersionId, "mangroveid-0");
+      assert.strictEqual(newMangrove?.currentVersionId, "mangroveid-1");
       assert.notDeepStrictEqual(oldMangroveVersion, newMangroveVersion);
       assert.strictEqual(oldMangroveVersion?.dead, false);
       assert.strictEqual(newMangroveVersion?.dead, true);
@@ -212,8 +212,8 @@ describe("Mangrove Operations Integration test suite", () => {
         where: { id: newMangrove?.currentVersionId },
       });
       assert.notDeepStrictEqual(oldMangrove, newMangrove);
-      assert.strictEqual(oldMangrove?.currentVersionId, "mangroveId-1");
-      assert.strictEqual(newMangrove?.currentVersionId, "mangroveId-0");
+      assert.strictEqual(oldMangrove?.currentVersionId, "mangroveid-1");
+      assert.strictEqual(newMangrove?.currentVersionId, "mangroveid-0");
       assert.notDeepStrictEqual(oldMangroveVersion, newMangroveVersion);
       assert.strictEqual(oldMangroveVersion?.dead, true);
       assert.strictEqual(newMangroveVersion?.dead, false);
