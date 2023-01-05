@@ -38,12 +38,12 @@ export class OrderEventLogic {
     const takerAccountId = new AccountId(chainId, order.taker);
     await db.accountOperations.ensureAccount(takerAccountId);
 
-    const offerListId = new OfferListingId(mangroveId, offerList);
+    const offerListingId = new OfferListingId(mangroveId, offerList);
 
     const tokens = await db.offerListOperations.getOfferListTokens({
-      id: offerListId,
+      id: offerListingId,
     });
-    const prismaOrder = this.createOrder(mangroveId, offerListId, tokens, order, takerAccountId, orderId, transaction!.id, parentOrderId);
+    const prismaOrder = this.createOrder(mangroveId, offerListingId, tokens, order, takerAccountId, orderId, transaction!.id, parentOrderId);
     const takenOffers: Omit<prisma.TakenOffer, "orderId">[] = await Promise.all(order.takenOffers.map((value) => this.mapTakenOffer(orderId, value, tokens, (o) => db.offerOperations.getOffer(o))));
 
     await db.orderOperations.createOrder(orderId, prismaOrder, takenOffers);
@@ -51,7 +51,7 @@ export class OrderEventLogic {
 
   createOrder(
     mangroveId: MangroveId,
-    offerListId: OfferListingId,
+    offerListingId: OfferListingId,
     tokens: { inboundToken: { decimals: number }, outboundToken: { decimals: number } },
     order: Omit<mangroveSchema.core.Order, "takenOffers" | "taker">,
     takerId: AccountId,
@@ -74,7 +74,7 @@ export class OrderEventLogic {
       txId: txId,
       proximaId: orderId.proximaId,
       parentOrderId: parentOrderId?.value ?? null,
-      offerListingId: offerListId.value,
+      offerListingId: offerListingId.value,
       mangroveId: mangroveId.value,
       takerId: takerId.value,
       // takerWants: order.takerWants,

@@ -3,7 +3,7 @@ import { Timestamp } from "@proximaone/stream-client-js";
 import assert from "assert";
 import { before, describe } from "mocha";
 import { OfferOperations } from "src/state/dbOperations/offerOperations";
-import { OrderBookUtils } from "src/state/dbOperations/orderBookUtils";
+import { OfferListingUtils } from "src/state/dbOperations/offerListingUtils";
 import { TransactionOperations } from "src/state/dbOperations/transactionOperations";
 import {
   AccountId,
@@ -21,11 +21,11 @@ import { prisma } from "utils/test/mochaHooks";
 describe("OfferList Operations Integration test suite", () => {
   let offerOperations:OfferOperations;
   let transactionOperations:TransactionOperations;
-  let orderBookUtils:OrderBookUtils;
+  let offerListingUtils:OfferListingUtils;
   before(() => {
     offerOperations = new OfferOperations(prisma);
     transactionOperations = new TransactionOperations(prisma);
-    orderBookUtils = new OrderBookUtils(prisma);
+    offerListingUtils = new OfferListingUtils(prisma);
   });
 
   const chainId = new ChainId(10);
@@ -113,28 +113,28 @@ describe("OfferList Operations Integration test suite", () => {
     })
 
 
-  it("orderBook", async () => {
+  it("offersAtTime", async () => {
     //This sould only return version 0 of offer1
-    let orderBook = await orderBookUtils.getMatchingOfferFromOfferListId(offerListingId,1672462800000 ) // Sat Dec 31 2022 06:00:00
-    assert.strictEqual(orderBook.length, 1);
-    assert.strictEqual(orderBook[0].offerId, offerId1.value)
-    assert.strictEqual(orderBook[0].versionNumber, 0)
+    let offersAtTime = await offerListingUtils.getMatchingOfferFromOfferListingId(offerListingId,1672462800000 ) // Sat Dec 31 2022 06:00:00
+    assert.strictEqual(offersAtTime.length, 1);
+    assert.strictEqual(offersAtTime[0].offerId, offerId1.value)
+    assert.strictEqual(offersAtTime[0].versionNumber, 0)
 
     //This sould only return version 1 of offer1 and version 0 of offer5
-    orderBook = await orderBookUtils.getMatchingOfferFromOfferListId(offerListingId,1672506000000 ) // Sat Dec 31 2022 18:00:00
-    assert.strictEqual(orderBook.length, 2);
-    assert.strictEqual(orderBook[0].offerId, offerId1.value)
-    assert.strictEqual(orderBook[0].versionNumber, 1)
-    assert.strictEqual(orderBook[1].offerId, offerId5.value)
-    assert.strictEqual(orderBook[1].versionNumber, 0)
+    offersAtTime = await offerListingUtils.getMatchingOfferFromOfferListingId(offerListingId,1672506000000 ) // Sat Dec 31 2022 18:00:00
+    assert.strictEqual(offersAtTime.length, 2);
+    assert.strictEqual(offersAtTime[0].offerId, offerId1.value)
+    assert.strictEqual(offersAtTime[0].versionNumber, 1)
+    assert.strictEqual(offersAtTime[1].offerId, offerId5.value)
+    assert.strictEqual(offersAtTime[1].versionNumber, 0)
 
     //This sould only return version 2 of offer1 and version 0 of offer5
-    orderBook = await orderBookUtils.getMatchingOfferFromOfferListId(offerListingId,1672614000000 ) // Mon Jan 02 2023 00:00:00
-    assert.strictEqual(orderBook.length, 2);
-    assert.strictEqual(orderBook[0].offerId, offerId1.value)
-    assert.strictEqual(orderBook[0].versionNumber, 2)
-    assert.strictEqual(orderBook[1].offerId, offerId5.value)
-    assert.strictEqual(orderBook[1].versionNumber, 0)
+    offersAtTime = await offerListingUtils.getMatchingOfferFromOfferListingId(offerListingId,1672614000000 ) // Mon Jan 02 2023 00:00:00
+    assert.strictEqual(offersAtTime.length, 2);
+    assert.strictEqual(offersAtTime[0].offerId, offerId1.value)
+    assert.strictEqual(offersAtTime[0].versionNumber, 2)
+    assert.strictEqual(offersAtTime[1].offerId, offerId5.value)
+    assert.strictEqual(offersAtTime[1].versionNumber, 0)
   });
 
 });

@@ -4,7 +4,7 @@ import { PrismaTx } from "./dbOperations";
 import { MakerBalanceOperations } from "./makerBalanceOperations";
 import { MangroveOperations } from "./mangroveOperations";
 import { MangroveOrderOperations } from "./mangroveOrderOperations";
-import { OfferListingOperations } from "./offerListOperations";
+import { OfferListingOperations } from "./offerListingOperations";
 import { OfferOperations } from "./offerOperations";
 import { OrderOperations } from "./orderOperations";
 import { TokenOperations } from "./tokenOperations";

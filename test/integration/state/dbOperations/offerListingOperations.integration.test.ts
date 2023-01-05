@@ -1,7 +1,7 @@
 import * as prismaModel from "@prisma/client";
 import assert from "assert";
 import { before, describe } from "mocha";
-import { OfferListingOperations } from "src/state/dbOperations/offerListOperations";
+import { OfferListingOperations } from "src/state/dbOperations/offerListingOperations";
 import {
   ChainId,
   MangroveId,
@@ -78,7 +78,7 @@ describe("OfferList Operations Integration test suite", () => {
   });
 
   describe("getOfferListTokens", () => {
-    it("No offerList with that Id, offerListId", async () => {
+    it("No offerList with that Id, offerListingId", async () => {
       offerListKey.inboundToken = "noMatch";
       const noMatch = new OfferListingId(mangroveId, offerListKey);
       await assert.rejects(
@@ -86,7 +86,7 @@ describe("OfferList Operations Integration test suite", () => {
       );
     });
 
-    it("get offerList, offerListId", async () => {
+    it("get offerList, offerLisingId", async () => {
       const tokens = await offerListingOperations.getOfferListTokens({
         id: offerListingId,
       });
@@ -115,24 +115,24 @@ describe("OfferList Operations Integration test suite", () => {
   describe("addVersionedOfferList", () => {
     it("Create new offerList and version", async () => {
       offerListKey.inboundToken = "newInbound";
-      const newOfferListId = new OfferListingId(mangroveId, offerListKey);
+      const newOfferListingId = new OfferListingId(mangroveId, offerListKey);
       assert.strictEqual(await prisma.offerListing.count(), 1);
       assert.strictEqual(await prisma.offerListingVersion.count(), 1);
       await offerListingOperations.addVersionedOfferList(
-        newOfferListId,
+        newOfferListingId,
         "txId",
         (o) => (o.active = true)
       );
       assert.strictEqual(await prisma.offerListing.count(), 2);
       assert.strictEqual(await prisma.offerListingVersion.count(), 2);
       const newOfferList = await prisma.offerListing.findUnique({
-        where: { id: newOfferListId.value },
+        where: { id: newOfferListingId.value },
       });
       assert.notDeepStrictEqual(newOfferList, null);
-      const newOfferListVersionId = new OfferListingVersionId(newOfferListId, 0);
+      const newOfferListVersionId = new OfferListingVersionId(newOfferListingId, 0);
       assert.deepStrictEqual(newOfferList, {
-        id: newOfferListId.value,
-        mangroveId: newOfferListId.mangroveId.value,
+        id: newOfferListingId.value,
+        mangroveId: newOfferListingId.mangroveId.value,
         outboundTokenId: outboundTokenId.value,
         inboundTokenId: new TokenId(chainId, offerListKey.inboundToken).value,
         currentVersionId: newOfferListVersionId.value,
@@ -143,7 +143,7 @@ describe("OfferList Operations Integration test suite", () => {
       assert.notDeepStrictEqual(newOfferListVersion, null);
       assert.deepStrictEqual(newOfferListVersion, {
         id: newOfferListVersionId.value,
-        offerListingId: newOfferListId.value,
+        offerListingId: newOfferListingId.value,
         txId: "txId",
         versionNumber: 0,
         prevVersionId: null,
@@ -239,8 +239,8 @@ describe("OfferList Operations Integration test suite", () => {
 
   describe("getCurrentOfferListVersion", async () => {
     it("Cant find offerListing", async () => {
-      const newOfferListId = new OfferListingId(mangroveId, { ...offerListKey, inboundToken:"noMatch" })
-      await assert.rejects( offerListingOperations.getCurrentOfferListVersion(newOfferListId))
+      const newOfferListingId = new OfferListingId(mangroveId, { ...offerListKey, inboundToken:"noMatch" })
+      await assert.rejects( offerListingOperations.getCurrentOfferListVersion(newOfferListingId))
     })
 
     it("Cant find offerListingVersion", async () => {

@@ -101,10 +101,10 @@ export class OfferListingId extends Id<string> {
 
 export class OfferListingVersionId extends Id<string> {
   public constructor(
-    public readonly offerListId: OfferListingId,
+    public readonly offerListingId: OfferListingId,
     public readonly versionNumber: number
   ) {
-    super(`${offerListId.value}-${versionNumber}`);
+    super(`${offerListingId.value}-${versionNumber}`);
   }
 }
 

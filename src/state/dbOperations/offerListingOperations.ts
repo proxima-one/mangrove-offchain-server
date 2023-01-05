@@ -107,12 +107,12 @@ export class OfferListingOperations extends DbOperations {
 
   async getCurrentOfferListVersion(idOrOfferListing: OfferListingId | prisma.OfferListing) {
     const id = "id" in idOrOfferListing ? idOrOfferListing.id : (idOrOfferListing as OfferListingId).value;
-    const offerList = await this.tx.offerListing.findUnique({where: {id: id}})
-    if(!offerList) {
-      throw new Error(`Could not find offerList form id: ${id}`)
+    const offerListing = await this.tx.offerListing.findUnique({where: {id: id}})
+    if(!offerListing) {
+      throw new Error(`Could not find offerListing form id: ${id}`)
     }
     const currentVersion = await this.tx.offerListingVersion.findUnique({
-      where: { id: offerList.currentVersionId },
+      where: { id: offerListing.currentVersionId },
     });
     if (currentVersion === null) {
       throw new Error(`Could not find Current offer listing version, id: ${currentVersion}`);

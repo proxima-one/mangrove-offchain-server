@@ -20,7 +20,7 @@ import { Arg, Ctx, FieldResolver, Resolver, Root } from "type-graphql";
 
 // At most re-fetch once per 1000 ms for each token
 import { fetchBuilder, MemoryCache } from "node-fetch-cache";
-import { OrderBookUtils } from "src/state/dbOperations/orderBookUtils";
+import { OfferListingUtils } from "src/state/dbOperations/offerListingUtils";
 import { ChainId, MangroveId, OfferListingId } from "src/state/model";
 import { mangrove } from "@proximaone/stream-schema-mangrove/dist/streams";
 const fetch = fetchBuilder.withCache(new MemoryCache({ ttl: 1000 }));
@@ -80,30 +80,30 @@ export class CustomMakerBalanceFieldsResolver {
 export class CustomOfferListingFieldsResolver {
   @FieldResolver((type) => OfferListingVersion, { nullable: true })
   async currentVersion(
-    @Root() offerList: OfferListing,
+    @Root() offerListing: OfferListing,
     @Ctx() ctx: Context
   ): Promise<OfferListingVersion | null> {
     return await ctx.prisma.offerListingVersion.findUnique({
-      where: { id: offerList.currentVersionId },
+      where: { id: offerListing.currentVersionId },
     });
   }
 
   @FieldResolver((type) => [OfferVersion], { nullable: true })
   async offersAtTime(
     @Arg("time") time:number,
-    @Root() offerList: OfferListing,
+    @Root() offerListing: OfferListing,
     @Ctx() ctx: Context
   ): Promise<OfferVersion[] | null> {
-    const mangrove = await ctx.prisma.mangrove.findUnique({where: {id: offerList.mangroveId}})
-    const inboundToken = await ctx.prisma.token.findUnique({where: {id: offerList.inboundTokenId}})
-    const outboundToken = await ctx.prisma.token.findUnique({where: {id: offerList.outboundTokenId}})
+    const mangrove = await ctx.prisma.mangrove.findUnique({where: {id: offerListing.mangroveId}})
+    const inboundToken = await ctx.prisma.token.findUnique({where: {id: offerListing.inboundTokenId}})
+    const outboundToken = await ctx.prisma.token.findUnique({where: {id: offerListing.outboundTokenId}})
     if(!mangrove || !inboundToken || !outboundToken){
       return null;
     }
     const chainId = new ChainId( mangrove.chainId );
-    const mangroveId = new MangroveId(chainId, offerList.mangroveId);
-    const offerListId =  new OfferListingId(mangroveId, { inboundToken: inboundToken.address, outboundToken: outboundToken.address } )
-    return await new OrderBookUtils(ctx.prisma).getMatchingOfferFromOfferListId(offerListId, time);
+    const mangroveId = new MangroveId(chainId, offerListing.mangroveId);
+    const offerListingId =  new OfferListingId(mangroveId, { inboundToken: inboundToken.address, outboundToken: outboundToken.address } )
+    return await new OfferListingUtils(ctx.prisma).getMatchingOfferFromOfferListingId(offerListingId, time);
 
   }
 }

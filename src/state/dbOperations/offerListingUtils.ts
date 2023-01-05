@@ -1,15 +1,11 @@
 import { Offer, OfferVersion, PrismaClient } from "@prisma/client";
 import { OfferId, OfferListingId, OfferVersionId } from "src/state/model";
-import { OfferListingOperations } from "./offerListOperations";
+import { OfferListingOperations } from "./offerListingOperations";
 import { OfferOperations } from "./offerOperations";
 import { TokenOperations } from "./tokenOperations";
 
 
-type Context = {
-    prisma: PrismaClient;
-};
-
-export class OrderBookUtils {
+export class OfferListingUtils {
 
     tokenOperations: TokenOperations;
     offerListOperations: OfferListingOperations;
@@ -22,12 +18,12 @@ export class OrderBookUtils {
     }
 
 
-    public async getMatchingOfferFromOfferListId(offerListId: OfferListingId, time: number) {
-        const offers = await this.prisma.offer.findMany({ where: { offerListingId: offerListId.value } });
+    public async getMatchingOfferFromOfferListingId(offerListingId: OfferListingId, time: number) {
+        const offers = await this.prisma.offer.findMany({ where: { offerListingId: offerListingId.value } });
         const matchingOffers: OfferVersion[] = [];
         for (const index in offers) {
             const offer = offers[index];
-            const offerId = new OfferId(offerListId.mangroveId, offerListId.offerListKey, offer.offerNumber);
+            const offerId = new OfferId(offerListingId.mangroveId, offerListingId.offerListKey, offer.offerNumber);
             const match = await this.findVersionMatchingTime(time, offer, offerId);
             if (match) {
                 matchingOffers.push(match);

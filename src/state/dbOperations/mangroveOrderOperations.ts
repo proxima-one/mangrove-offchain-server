@@ -10,14 +10,14 @@ import {
   StratId
 } from "src/state/model";
 import { DbOperations, PrismaTx, toUpsert } from "./dbOperations";
-import { OfferListingOperations } from "./offerListOperations";
+import { OfferListingOperations } from "./offerListingOperations";
 
 export type MangroveOrderIds = {
   mangroveOrderId: string;
   txId: string;
   mangroveId: string;
   stratId: string;
-  offerListId: string;
+  offerListingId: string;
   takerId: string;
   // orderId: string;
   currentVersionId: string;

@@ -69,7 +69,7 @@ export class MangroveOrderEventsLogic {
       new TokenId(chainId, offerList.inboundToken)
     );
     const mangroveId = new MangroveId(chainId, e.mangroveId);
-    const offerListId = new OfferListingId(mangroveId, offerList);
+    const offerListingId = new OfferListingId(mangroveId, offerList);
     const mangroveOrderId = new MangroveOrderId(
       mangroveId,
       offerList,
@@ -83,7 +83,7 @@ export class MangroveOrderEventsLogic {
     const restingOrderId = new OfferId(mangroveId, offerList, e.restingOrderId);
 
     const { outboundToken, inboundToken } = await db.offerListOperations.getOfferListTokens({
-      id:offerListId
+      id:offerListingId
   });
     const takerGaveNumber = getNumber({
       value: e.takerGave,
