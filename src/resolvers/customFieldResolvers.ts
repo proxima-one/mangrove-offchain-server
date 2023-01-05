@@ -89,7 +89,7 @@ export class CustomOfferListingFieldsResolver {
   }
 
   @FieldResolver((type) => [OfferVersion], { nullable: true })
-  async offers(
+  async offersAtTime(
     @Arg("time") time:number,
     @Root() offerList: OfferListing,
     @Ctx() ctx: Context
