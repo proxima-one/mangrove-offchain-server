@@ -16,8 +16,6 @@ import {
   ApolloServerPluginLandingPageProductionDefault,
 } from "@apollo/server/plugin/landingPage/default";
 import {
-  CustomMakerBalanceFieldsResolver,
-  CustomMangroveFieldsResolver,
   CustomOfferFieldsResolver,
   CustomOfferListingFieldsResolver,
   CustomOfferVersionFieldsResolver,
@@ -25,7 +23,6 @@ import {
   CustomMangroveOrderFieldsResolver,
   CustomMangroveOrderVersionFieldsResolver,
   CustomTakenOfferFieldsResolver,
-  CustomTakerApprovalFieldsResolver,
   CustomTokenFieldsResolver,
 } from "src/resolvers/customFieldResolvers";
 import { AddressInfo } from "net";
@@ -136,8 +133,6 @@ async function main() {
       graphql.TokenRelationsResolver,
       graphql.TransactionRelationsResolver,
 
-      CustomMakerBalanceFieldsResolver,
-      CustomMangroveFieldsResolver,
       CustomOfferFieldsResolver,
       CustomOfferListingFieldsResolver,
       CustomOfferVersionFieldsResolver,
@@ -145,7 +140,6 @@ async function main() {
       CustomMangroveOrderFieldsResolver,
       CustomMangroveOrderVersionFieldsResolver,
       CustomTakenOfferFieldsResolver,
-      CustomTakerApprovalFieldsResolver,
       CustomTokenFieldsResolver,
     ],
     validate: false,
