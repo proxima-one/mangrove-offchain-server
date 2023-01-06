@@ -337,6 +337,18 @@ export class CustomMangroveOrderFieldsResolver {
       ctx
     );
   }
+
+
+  @FieldResolver((type) => MangroveOrderVersion, { nullable: true })
+  async currentVersion(
+    @Root() mangroveOrder: MangroveOrder,
+    @Ctx() ctx: Context
+  ): Promise<MangroveOrderVersion | null> {
+    return await ctx.prisma.mangroveOrderVersion.findUnique({
+      where: { id: mangroveOrder.currentVersionId },
+    });
+  }
+
 }
 
 @Resolver((of) => MangroveOrderVersion)
