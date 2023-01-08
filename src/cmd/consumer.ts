@@ -86,8 +86,12 @@ async function consumeStream(handler: StreamEventHandler, toHeight?: bigint) {
   );
   let eventStream = await streamClient.streamEvents(stream, currentOffset);
 
-  if (toHeight != undefined)
-    eventStream = eventStream.pipe(takeWhile(x => x.offset.height <= toHeight));
+  if (toHeight != undefined) {
+    if (currentOffset.height >= toHeight)
+      return;
+
+    eventStream = eventStream.pipe(takeWhile(x => x.offset.height < toHeight, true));
+  }
 
   const reader = BufferedStreamReader.fromStream(eventStream);
 
