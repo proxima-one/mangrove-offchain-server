@@ -1,5 +1,10 @@
+import { MangroveOrder } from "@prisma/client";
+
 export class Id<T extends string | number> {
-  public constructor(public readonly value: T) {}
+  public readonly value:T
+  public constructor(_value: T) {
+    this.value =  typeof _value === "string" ?  _value.toLowerCase() as T : _value;
+   }
 }
 
 export class AccountId extends Id<string> {
@@ -85,7 +90,7 @@ export class OfferVersionId extends Id<string> {
   }
 }
 
-export class OfferListId extends Id<string> {
+export class OfferListingId extends Id<string> {
   public constructor(
     public readonly mangroveId: MangroveId,
     public readonly offerListKey: OfferListKey
@@ -94,12 +99,12 @@ export class OfferListId extends Id<string> {
   }
 }
 
-export class OfferListVersionId extends Id<string> {
+export class OfferListingVersionId extends Id<string> {
   public constructor(
-    public readonly offerListId: OfferListId,
+    public readonly offerListingId: OfferListingId,
     public readonly versionNumber: number
   ) {
-    super(`${offerListId.value}-${versionNumber}`);
+    super(`${offerListingId.value}-${versionNumber}`);
   }
 }
 
@@ -149,9 +154,9 @@ export class OrderId extends Id<string> {
   public constructor(
     public readonly mangroveId: MangroveId,
     public readonly offerListKey: OfferListKey,
-    public readonly order: string
+    public readonly proximaId: string
   ) {
-    super(`${mangroveId.value}-${offerListKeyShortStr(offerListKey)}-${order}`);
+    super(`${mangroveId.value}-${offerListKeyShortStr(offerListKey)}-${proximaId}`);
   }
 }
 
@@ -176,16 +181,33 @@ export interface OfferListKey {
   outboundToken: string;
 }
 
-export class OrderSummaryId extends Id<string> {
+export class MangroveOrderId extends Id<string> {
   public constructor(
     public readonly mangroveId: MangroveId,
     public readonly offerListKey: OfferListKey,
-    public readonly orderSummaryId: string
+    public readonly proximaId: string,
   ) {
     super(
-      `${mangroveId.value}-${offerListKeyShortStr(
-        offerListKey
-      )}-${orderSummaryId}`
+      `${mangroveId.value}-${offerListKeyShortStr(offerListKey)}-${proximaId}`
+    );
+  }
+}
+
+export class MangroveOrderVersionId extends Id<string> {
+  public constructor(
+    public readonly params: (
+      | {
+        mangroveOrderId: MangroveOrderId;
+      }
+      | { mangroveOrder: MangroveOrder }
+    ) & {
+      versionNumber: number;
+    }
+  ) {
+    super(
+      "mangroveOrderId" in params
+        ? `${params.mangroveOrderId.value}-${params.versionNumber}`
+        : `${params.mangroveOrder.id}-${params.versionNumber}`
     );
   }
 }

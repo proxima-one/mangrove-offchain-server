@@ -1,8 +1,7 @@
-import { StreamEventHandler } from "./stateTransitionHandler";
-import { PrismaClient } from "@prisma/client";
-import { Offset, Timestamp, StreamEvent } from "@proximaone/stream-client-js";
 import * as prisma from "@prisma/client";
-import { ChainId } from "../state/model";
+import { PrismaClient } from "@prisma/client";
+import { Offset, StreamEvent, Timestamp } from "@proximaone/stream-client-js";
+import { StreamEventHandler } from "./stateTransitionHandler";
 
 export class PrismaStreamEventHandler<TEventPayload>
   implements StreamEventHandler

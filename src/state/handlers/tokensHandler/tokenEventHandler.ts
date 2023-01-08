@@ -2,9 +2,9 @@ import {
   PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
-} from "../../common";
+} from "src/common";
 
-import { ChainId, TokenId } from "../model";
+import { ChainId, TokenId } from "src/state/model";
 import { PrismaClient } from "@prisma/client";
 
 export class TokenEventHandler extends PrismaStreamEventHandler<NewToken> {
@@ -23,12 +23,11 @@ export class TokenEventHandler extends PrismaStreamEventHandler<NewToken> {
     const commands: Promise<any>[] = [];
     // ensure all chains exist
     for (const [chainName, chainId] of Object.entries(chains)) {
-      // FIXME: There's a bug that will cause this to occasionally fail, see https://github.com/prisma/prisma/issues/11191
-      // tx.chain.upsert({
-      //   where: { id: chainId },
-      //   create: { id: chainId, name: chainName },
-      //   update: { id: chainId, name: chainName },
-      // })
+      await tx.chain.upsert({
+        where: { id: chainId },
+        create: { id: chainId, name: chainName },
+        update: { id: chainId, name: chainName },
+      });
       commands.push(
         tx.chain.findUnique({ where: { id: chainId } }).then((chain) => {
           if (chain === null) {
@@ -44,7 +43,7 @@ export class TokenEventHandler extends PrismaStreamEventHandler<NewToken> {
 
     // handle
     for (const event of events) {
-      const { undo, timestamp, payload } = event;
+      const { undo, payload } = event;
       // Skip tokens with malformed data
       if (!isValidToken(payload)) {
         continue;

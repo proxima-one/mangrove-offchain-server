@@ -1,24 +1,23 @@
-import { Ctx, FieldResolver, Resolver, Root } from "type-graphql";
 import {
   MakerBalance,
   MakerBalanceVersion,
-  Mangrove,
-  MangroveVersion,
+  MangroveOrder,
+  MangroveOrderVersion,
   Offer,
-  OfferList,
-  OfferListVersion,
+  OfferListing,
+  OfferListingVersion,
   OfferVersion,
   Order,
-  OrderSummary,
   TakenOffer,
-  TakerApproval,
-  TakerApprovalVersion,
-  Token,
+  Token
 } from "@generated/type-graphql";
 import { PrismaClient } from "@prisma/client";
+import { Arg, Ctx, FieldResolver, Resolver, Root } from "type-graphql";
 
 // At most re-fetch once per 1000 ms for each token
-import { fetchBuilder, MemoryCache } from "node-fetch-cache";
+import { MemoryCache, fetchBuilder } from "node-fetch-cache";
+import { OfferListingUtils } from "src/state/dbOperations/offerListingUtils";
+import { ChainId, MangroveId, OfferListingId } from "src/state/model";
 const fetch = fetchBuilder.withCache(new MemoryCache({ ttl: 1000 }));
 async function fetchTokenPriceInUsd(token: Token) {
   return (await fetch(
@@ -33,55 +32,27 @@ type Context = {
   prisma: PrismaClient;
 };
 
-@Resolver((of) => Mangrove)
-export class CustomMangroveFieldsResolver {
-  @FieldResolver((type) => MangroveVersion, { nullable: true })
-  async currentVersion(
-    @Root() mangrove: Mangrove,
-    @Ctx() ctx: Context
-  ): Promise<MangroveVersion | null> {
-    return await ctx.prisma.mangroveVersion.findUnique({
-      where: { id: mangrove.currentVersionId },
-    });
-  }
-}
 
-@Resolver((of) => TakerApproval)
-export class CustomTakerApprovalFieldsResolver {
-  @FieldResolver((type) => TakerApprovalVersion, { nullable: true })
-  async currentVersion(
-    @Root() takerApproval: TakerApproval,
-    @Ctx() ctx: Context
-  ): Promise<TakerApprovalVersion | null> {
-    return await ctx.prisma.takerApprovalVersion.findUnique({
-      where: { id: takerApproval.currentVersionId },
-    });
-  }
-}
+@Resolver((of) => OfferListing)
+export class CustomOfferListingFieldsResolver {
 
-@Resolver((of) => MakerBalance)
-export class CustomMakerBalanceFieldsResolver {
-  @FieldResolver((type) => MakerBalanceVersion, { nullable: true })
-  async currentVersion(
-    @Root() makerBalance: MakerBalance,
+  @FieldResolver((type) => [OfferVersion], { nullable: true })
+  async offersAtTime(
+    @Arg("time") time:number,
+    @Root() offerListing: OfferListing,
     @Ctx() ctx: Context
-  ): Promise<MakerBalanceVersion | null> {
-    return await ctx.prisma.makerBalanceVersion.findUnique({
-      where: { id: makerBalance.currentVersionId },
-    });
-  }
-}
+  ): Promise<OfferVersion[] | null> {
+    const mangrove = await ctx.prisma.mangrove.findUnique({where: {id: offerListing.mangroveId}})
+    const inboundToken = await ctx.prisma.token.findUnique({where: {id: offerListing.inboundTokenId}})
+    const outboundToken = await ctx.prisma.token.findUnique({where: {id: offerListing.outboundTokenId}})
+    if(!mangrove || !inboundToken || !outboundToken){
+      return null;
+    }
+    const chainId = new ChainId( mangrove.chainId );
+    const mangroveId = new MangroveId(chainId, offerListing.mangroveId);
+    const offerListingId =  new OfferListingId(mangroveId, { inboundToken: inboundToken.address, outboundToken: outboundToken.address } )
+    return await new OfferListingUtils(ctx.prisma).getMatchingOfferFromOfferListingId(offerListingId, time);
 
-@Resolver((of) => OfferList)
-export class CustomOfferListFieldsResolver {
-  @FieldResolver((type) => OfferListVersion, { nullable: true })
-  async currentVersion(
-    @Root() offerList: OfferList,
-    @Ctx() ctx: Context
-  ): Promise<OfferListVersion | null> {
-    return await ctx.prisma.offerListVersion.findUnique({
-      where: { id: offerList.currentVersionId },
-    });
   }
 }
 
@@ -222,95 +193,149 @@ export class CustomOrderFieldsResolver {
 @Resolver((of) => TakenOffer)
 export class CustomTakenOfferFieldsResolver {
   @FieldResolver((type) => Number, { nullable: true })
-  async takerWantsInUsd(
-    @Root() takenOffer: TakenOffer,
-    @Ctx() ctx: Context
-  ): Promise<number | undefined> {
-    return amountFieldToUsd(
-      takenOffer,
-      takenOffer.takerWantsNumber,
-      findOutboundTokenFromTakenOfferOrFail,
-      ctx
-    );
-  }
-
-  @FieldResolver((type) => Number, { nullable: true })
-  async takerGivesInUsd(
-    @Root() takenOffer: TakenOffer,
-    @Ctx() ctx: Context
-  ): Promise<number | undefined> {
-    return amountFieldToUsd(
-      takenOffer,
-      takenOffer.takerGivesNumber,
-      findInboundTokenFromTakenOfferOrFail,
-      ctx
-    );
-  }
-
-  @FieldResolver((type) => Number, { nullable: true })
-  async takerPaysPriceInUsd(
-    @Root() takenOffer: TakenOffer,
-    @Ctx() ctx: Context
-  ): Promise<number | undefined> {
-    return amountFieldToUsd(
-      takenOffer,
-      takenOffer.takerPaysPrice,
-      findInboundTokenFromTakenOfferOrFail,
-      ctx
-    );
-  }
-
-  @FieldResolver((type) => Number, { nullable: true })
-  async makerPaysPriceInUsd(
-    @Root() takenOffer: TakenOffer,
-    @Ctx() ctx: Context
-  ): Promise<number | undefined> {
-    return amountFieldToUsd(
-      takenOffer,
-      takenOffer.makerPaysPrice,
-      findOutboundTokenFromTakenOfferOrFail,
-      ctx
-    );
-  }
-}
-
-@Resolver((of) => OrderSummary)
-export class CustomOrderSummaryFieldsResolver {
-  @FieldResolver((type) => Number, { nullable: true })
   async takerGotInUsd(
-    @Root() order: OrderSummary,
+    @Root() takenOffer: TakenOffer,
     @Ctx() ctx: Context
   ): Promise<number | undefined> {
     return amountFieldToUsd(
-      order,
-      order.takerGotNumber,
-      findOutboundTokenFromOrderSummaryOrFail,
+      takenOffer,
+      takenOffer.takerGotNumber,
+      findOutboundTokenFromTakenOfferOrFail,
       ctx
     );
   }
 
   @FieldResolver((type) => Number, { nullable: true })
   async takerGaveInUsd(
-    @Root() order: OrderSummary,
+    @Root() takenOffer: TakenOffer,
     @Ctx() ctx: Context
   ): Promise<number | undefined> {
     return amountFieldToUsd(
-      order,
-      order.takerGaveNumber,
-      findInboundTokenFromOrderSummaryOrFail,
+      takenOffer,
+      takenOffer.takerGaveNumber,
+      findInboundTokenFromTakenOfferOrFail,
       ctx
     );
   }
 
   @FieldResolver((type) => Number, { nullable: true })
-  async priceInUsd(
-    @Root() order: OrderSummary,
+  async takerPaidPriceInUsd(
+    @Root() takenOffer: TakenOffer,
+    @Ctx() ctx: Context
+  ): Promise<number | undefined> {
+    return amountFieldToUsd(
+      takenOffer,
+      takenOffer.takerPaidPrice,
+      findInboundTokenFromTakenOfferOrFail,
+      ctx
+    );
+  }
+
+  @FieldResolver((type) => Number, { nullable: true })
+  async makerPaidPriceInUsd(
+    @Root() takenOffer: TakenOffer,
+    @Ctx() ctx: Context
+  ): Promise<number | undefined> {
+    return amountFieldToUsd(
+      takenOffer,
+      takenOffer.makerPaidPrice,
+      findOutboundTokenFromTakenOfferOrFail,
+      ctx
+    );
+  }
+}
+
+@Resolver((of) => MangroveOrder)
+export class CustomMangroveOrderFieldsResolver {
+  @FieldResolver((type) => Number, { nullable: true })
+  async takerWantsInUsd(
+    @Root() order: MangroveOrder,
     @Ctx() ctx: Context
   ): Promise<number | undefined> {
     return amountFieldToUsd(
       order,
+      order.takerWantsNumber,
+      findOutboundTokenFromMangroveOrderOrFail,
+      ctx
+    );
+  }
+
+  @FieldResolver((type) => Number, { nullable: true })
+  async takerGivesInUsd(
+    @Root() order: MangroveOrder,
+    @Ctx() ctx: Context
+  ): Promise<number | undefined> {
+    return amountFieldToUsd(
+      order,
+      order.takerGivesNumber,
+      findInboundTokenFromMangroveOrderOrFail,
+      ctx
+    );
+  }
+
+  @FieldResolver((type) => Number, { nullable: true })
+  async totalFeeInUsd(
+    @Root() order: MangroveOrder,
+    @Ctx() ctx: Context
+  ): Promise<number | undefined> {
+    return amountFieldToUsd(
+      order,
+      order.totalFeeNumber,
+      findOutboundTokenFromMangroveOrderOrFail,
+      ctx
+    );
+  }
+
+
+  @FieldResolver((type) => MangroveOrderVersion, { nullable: true })
+  async currentVersion(
+    @Root() mangroveOrder: MangroveOrder,
+    @Ctx() ctx: Context
+  ): Promise<MangroveOrderVersion | null> {
+    return await ctx.prisma.mangroveOrderVersion.findUnique({
+      where: { id: mangroveOrder.currentVersionId },
+    });
+  }
+
+}
+
+@Resolver((of) => MangroveOrderVersion)
+export class CustomMangroveOrderVersionFieldsResolver {
+  @FieldResolver((type) => Number, { nullable: true })
+  async takerGotInUsd(
+    @Root() order: MangroveOrderVersion,
+    @Ctx() ctx: Context
+  ): Promise<number | undefined> {
+    return amountFieldToUsd(
+      await findMangroveOrderFromMangroveOrderVersion(order, ctx.prisma),
+      order.takerGotNumber,
+      findOutboundTokenFromMangroveOrderOrFail,
+      ctx
+    );
+  }
+
+  @FieldResolver((type) => Number, { nullable: true })
+  async takerGaveInUsd(
+    @Root() order: MangroveOrderVersion,
+    @Ctx() ctx: Context
+  ): Promise<number | undefined> {
+    return amountFieldToUsd(
+      await findMangroveOrderFromMangroveOrderVersion(order, ctx.prisma),
+      order.takerGaveNumber,
+      findInboundTokenFromMangroveOrderOrFail,
+      ctx
+    );
+  }
+
+  @FieldResolver((type) => Number, { nullable: true })
+  async priceInclFeeInUsd(
+    @Root() order: MangroveOrderVersion,
+    @Ctx() ctx: Context
+  ): Promise<number | undefined> {
+    return amountFieldToUsd(
+      await findMangroveOrderFromMangroveOrderVersion(order, ctx.prisma),
       order.price,
-      findInboundTokenFromOrderSummaryOrFail,
+      findInboundTokenFromMangroveOrderOrFail,
       ctx
     );
   }
@@ -329,6 +354,21 @@ async function amountFieldToUsd<Entity>(
   return amount * tokenPriceInUsd;
 }
 
+async function findMangroveOrderFromMangroveOrderVersion(
+  mangroveOrderVersion: MangroveOrderVersion,
+  prisma: PrismaClient
+): Promise<MangroveOrder> {
+  const mangroveOrder = await prisma.mangroveOrder.findUnique({
+    where: { id: mangroveOrderVersion.mangroveOrderId },
+  });
+  if (!mangroveOrder) {
+    throw Error(
+      `Cannot find MangroveOrder from the MangroveOrder id '${mangroveOrderVersion.mangroveOrderId}`
+    );
+  }
+  return mangroveOrder;
+}
+
 async function findOutboundTokenFromOfferVersionOrFail(
   offerVersion: OfferVersion,
   prisma: PrismaClient
@@ -337,7 +377,7 @@ async function findOutboundTokenFromOfferVersionOrFail(
     .findUnique({
       where: { id: offerVersion.offerId },
     })
-    .offerList()
+    .offerListing()
     .outboundToken();
   if (!outboundToken)
     throw Error(`Cannot find outbound token from offer '${offerVersion.id}'`);
@@ -352,7 +392,7 @@ async function findInboundTokenFromOfferVersionOrFail(
     .findUnique({
       where: { id: offerVersion.offerId },
     })
-    .offerList()
+    .offerListing()
     .inboundToken();
   if (!inboundToken)
     throw Error(`Cannot find inbound token from offer '${offerVersion.id}'`);
@@ -367,7 +407,7 @@ async function findOutboundTokenFromOrderOrFail(
     .findUnique({
       where: { id: order.id },
     })
-    .offerList()
+    .offerListing()
     .outboundToken();
   if (!outboundToken)
     throw Error(`Cannot find outbound token from order '${order.id}'`);
@@ -382,7 +422,7 @@ async function findInboundTokenFromOrderOrFail(
     .findUnique({
       where: { id: order.id },
     })
-    .offerList()
+    .offerListing()
     .inboundToken();
   if (!inboundToken)
     throw Error(`Cannot find inbound token from order '${order.id}'`);
@@ -398,7 +438,7 @@ async function findOutboundTokenFromTakenOfferOrFail(
       where: { id: takenOffer.id },
     })
     .order()
-    .offerList()
+    .offerListing()
     .outboundToken();
   if (!outboundToken)
     throw Error(
@@ -416,43 +456,43 @@ async function findInboundTokenFromTakenOfferOrFail(
       where: { id: takenOffer.id },
     })
     .order()
-    .offerList()
+    .offerListing()
     .inboundToken();
   if (!inboundToken)
     throw Error(`Cannot find inbound token from takenOffer '${takenOffer.id}'`);
   return inboundToken;
 }
 
-async function findOutboundTokenFromOrderSummaryOrFail(
-  orderSummary: OrderSummary,
+async function findOutboundTokenFromMangroveOrderOrFail(
+  mangroveOrder: MangroveOrder,
   prisma: PrismaClient
 ): Promise<Token> {
-  const outboundToken = await prisma.orderSummary
+  const outboundToken = await prisma.mangroveOrder
     .findUnique({
-      where: { id: orderSummary.id },
+      where: { id: mangroveOrder.id },
     })
-    .offerList()
+    .offerListing()
     .outboundToken();
   if (!outboundToken)
     throw Error(
-      `Cannot find outbound token from orderSummary '${orderSummary.id}'`
+      `Cannot find outbound token from mangroveOrder '${mangroveOrder.id}'`
     );
   return outboundToken;
 }
 
-async function findInboundTokenFromOrderSummaryOrFail(
-  orderSummary: OrderSummary,
+async function findInboundTokenFromMangroveOrderOrFail(
+  mangroveOrder: MangroveOrder,
   prisma: PrismaClient
 ): Promise<Token> {
-  const inboundToken = await prisma.orderSummary
+  const inboundToken = await prisma.mangroveOrder
     .findUnique({
-      where: { id: orderSummary.id },
+      where: { id: mangroveOrder.id },
     })
-    .offerList()
+    .offerListing()
     .inboundToken();
   if (!inboundToken)
     throw Error(
-      `Cannot find inbound token from orderSummary '${orderSummary.id}'`
+      `Cannot find inbound token from mangroveOrder '${mangroveOrder.id}'`
     );
   return inboundToken;
 }
