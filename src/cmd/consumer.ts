@@ -119,7 +119,8 @@ async function consumeStream(params:{handler: StreamEventHandler, toHeight?: big
   }
 
   
-  const reader = BufferedStreamReader.fromStream(eventStream, 1000);
+  const READER_BUFFER_SIZE = process.env.READER_BUFFER_SIZE;
+  const reader = BufferedStreamReader.fromStream(eventStream, READER_BUFFER_SIZE ? parseInt( READER_BUFFER_SIZE ) : undefined);
   while (!stopped) {
     const events = await reader.read(batchSize);
     if (events === undefined) {
@@ -135,7 +136,7 @@ async function consumeStream(params:{handler: StreamEventHandler, toHeight?: big
     }
 
     logger.info(
-      `handled ${stream}: ${events[events.length - 1].offset.toString()}`
+      `handled ${stream}: ${events[events.length - 1].offset.toString()}, bufferSize: ${reader.buffer.length}`
     );
   }
 
