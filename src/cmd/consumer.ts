@@ -118,8 +118,8 @@ async function consumeStream(params:{handler: StreamEventHandler, toHeight?: big
     eventStream = eventStream.pipe(takeWhile(x => x.offset.height < (params.toHeight ?? BigInt(0)), true));
   }
 
-  const reader = BufferedStreamReader.fromStream(eventStream);
-
+  
+  const reader = BufferedStreamReader.fromStream(eventStream, 1000);
   while (!stopped) {
     const events = await reader.read(batchSize);
     if (events === undefined) {
