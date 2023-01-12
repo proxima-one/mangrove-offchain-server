@@ -61,16 +61,24 @@ export class TokenEventHandler extends PrismaStreamEventHandler<NewToken> {
       } else {
         commands.push(
           tx.token
-            .create({
-              data: {
+            .upsert({
+              where: { id: tokenId.value},
+              update: {
+                chainId: this.chainId.chainlistId,
+                address: payload.address,
+                symbol: payload.symbol,
+                name: payload.name,
+                decimals: payload.decimals ?? 0,
+            },
+            create: {
                 id: tokenId.value,
                 chainId: this.chainId.chainlistId,
                 address: payload.address,
                 symbol: payload.symbol,
                 name: payload.name,
                 decimals: payload.decimals ?? 0,
-              },
-            })
+              }
+            } )
             .catch((err) => {
               console.error(
                 `Token ${tokenId.value} failed to be created`,
