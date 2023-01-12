@@ -50,6 +50,7 @@ async function main() {
       graphql.FindManyStratResolver,
       graphql.FindManyStreamsResolver,
       graphql.FindManyTakerApprovalResolver,
+      graphql.FindManyTakenOfferResolver,
       graphql.FindManyTakerApprovalVersionResolver,
       graphql.FindManyTokenResolver,
       graphql.FindManyTransactionResolver,
@@ -70,6 +71,7 @@ async function main() {
       graphql.AggregateStratResolver,
       graphql.AggregateStreamsResolver,
       graphql.AggregateTakerApprovalResolver,
+      graphql.AggregateTakenOfferResolver,
       graphql.AggregateTakerApprovalVersionResolver,
       graphql.AggregateTokenResolver,
       graphql.AggregateTransactionResolver,
@@ -91,6 +93,7 @@ async function main() {
       graphql.GroupByStreamsResolver,
       graphql.GroupByTakerApprovalResolver,
       graphql.GroupByTakerApprovalVersionResolver,
+      graphql.GroupByTakenOfferResolver,
       graphql.GroupByTokenResolver,
       graphql.GroupByTransactionResolver,
 
@@ -111,6 +114,7 @@ async function main() {
       graphql.FindUniqueStreamsResolver,
       graphql.FindUniqueTakerApprovalResolver,
       graphql.FindUniqueTakerApprovalVersionResolver,
+      graphql.FindUniqueTakenOfferResolver,
       graphql.FindUniqueTokenResolver,
       graphql.FindUniqueTransactionResolver,
 
@@ -130,6 +134,7 @@ async function main() {
       graphql.StratRelationsResolver,
       graphql.TakerApprovalRelationsResolver,
       graphql.TakerApprovalVersionRelationsResolver,
+      graphql.TakenOfferRelationsResolver,
       graphql.TokenRelationsResolver,
       graphql.TransactionRelationsResolver,
 
