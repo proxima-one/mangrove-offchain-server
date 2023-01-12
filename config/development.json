@@ -15,13 +15,15 @@
       "id": "80001",
       "streams": {
         "mangrove": [
-            "proxima.mangrove.polygon-mumbai.domain-events.0_5"
+            "proxima.mangrove.polygon-mumbai.0xf3e3.domain-events.0_1",
+            "proxima.mangrove.polygon-mumbai.0x8237.domain-events.0_1"
         ],
         "strats": [
            "proxima.mangrove.polygon-mumbai.strategies.0_4"
         ],
         "tokens": [
-          "proxima.mangrove.polygon-mumbai.tokens.0_2" 
+          "proxima.mangrove.polygon-mumbai.0xf3e3.tokens.0_1",
+          "proxima.mangrove.polygon-mumbai.0x8237.tokens.0_1"
         ]
       }
     }
