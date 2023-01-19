@@ -164,8 +164,8 @@ export class MangroveOrderEventsLogic {
     });
     newVersion.filled = this.getFilled({ ...mangroveOrder, ...newVersion, fee: mangroveOrder.totalFee }, tokens.outboundToken);
     newVersion.price = getPrice({
-      over: newVersion.takerGaveNumber,
-      under: newVersion.takerGotNumber
+      over: mangroveOrder.fillWants ? newVersion.takerGaveNumber : newVersion.takerGotNumber,
+      under: mangroveOrder.fillWants ? newVersion.takerGotNumber : newVersion.takerGaveNumber
     }
     ) ?? 0;
 
