@@ -98,7 +98,7 @@ export class MangroveOrderEventsLogic {
       version.takerGotNumber = takerGotNumber;
       version.takerGave = e.takerGave;
       version.takerGaveNumber = takerGaveNumber;
-      version.price = getPrice({ over: takerGaveNumber, under: takerGotNumber }) ?? 0;
+      version.price = getPrice({ over: e.fillWants.valueOf() ? takerGaveNumber : takerGotNumber, under: e.fillWants.valueOf() ? takerGotNumber : takerGaveNumber }) ?? 0;
       version.expiryDate = new Date(e.expiryDate * 1000);
     }
 
@@ -168,7 +168,6 @@ export class MangroveOrderEventsLogic {
       under: mangroveOrder.fillWants ? newVersion.takerGotNumber : newVersion.takerGaveNumber
     }
     ) ?? 0;
-
   }
 
   getFilled(event: { fillWants: boolean, takerWants: string, takerGives: string, fee: string, takerGave: string, takerGot: string }, outboundToken: { decimals: number }) {
