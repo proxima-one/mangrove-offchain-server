@@ -19,7 +19,7 @@
             "proxima.mangrove.polygon-mumbai.0x8237.domain-events.0_1"
         ],
         "strats": [
-           "proxima.mangrove.polygon-mumbai.strategies.0_4"
+           "proxima.mangrove.polygon-mumbai.strategies.0_5"
         ],
         "tokens": [
           "proxima.mangrove.polygon-mumbai.0xf3e3.tokens.0_1",
