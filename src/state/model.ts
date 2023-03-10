@@ -1,4 +1,5 @@
-import { MangroveOrder } from "@prisma/client";
+import { Kandel, MangroveOrder, Reserve } from "@prisma/client";
+import { add } from "lodash";
 
 export class Id<T extends string | number> {
   public readonly value:T
@@ -208,6 +209,80 @@ export class MangroveOrderVersionId extends Id<string> {
       "mangroveOrderId" in params
         ? `${params.mangroveOrderId.value}-${params.versionNumber}`
         : `${params.mangroveOrder.id}-${params.versionNumber}`
+    );
+  }
+}
+
+export class ReserveId extends AccountId {
+
+}
+export class DepositWithdrawalStatusId extends Id<string> {
+  public constructor(
+    public readonly params: (
+      | {
+        reserveId: ReserveId;
+      }
+      | { reserve: Reserve }
+    ) & {
+      tokenId: string;
+      versionNumber: number;
+    }
+  ) {
+    super(
+      "reserveId" in params
+        ? `${params.reserveId.value}-${params.tokenId}-${params.versionNumber}`
+        : `${params.reserve.id}-${params.tokenId}-${params.versionNumber}`
+    );
+  }
+}
+
+export class ReserveVersionId extends Id<string> {
+  public constructor(
+    public readonly params: (
+      | {
+        reserveId: ReserveId;
+      }
+      | { reserve: Reserve }
+    ) & {
+      versionNumber: number;
+    }
+  ) {
+    super(
+      "reserveId" in params
+        ? `${params.reserveId.value}-${params.versionNumber}`
+        : `${params.reserve.id}-${params.versionNumber}`
+    );
+  }
+}
+
+export class KandelId extends Id<string> {
+  public constructor(
+    public readonly mangroveId: MangroveId,
+    public readonly offerListKey: OfferListKey,
+    public readonly reserveId: ReserveId,
+    public readonly proximaId: string,
+  ) {
+    super(
+      `${mangroveId.value}-${offerListKeyShortStr(offerListKey)}-${reserveId.value}-${proximaId}`
+    );
+  }
+}
+
+export class KandelVersionId extends Id<string> {
+  public constructor(
+    public readonly params: (
+      | {
+        kandelId: KandelId;
+      }
+      | { kandel: Kandel }
+    ) & {
+      versionNumber: number;
+    }
+  ) {
+    super(
+      "kandelId" in params
+        ? `${params.kandelId.value}-${params.versionNumber}`
+        : `${params.kandel.id}-${params.versionNumber}`
     );
   }
 }
