@@ -4,37 +4,83 @@ import _ from "lodash";
 import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
 import { KandelOperations } from "src/state/dbOperations/kandelOperations";
 
-import { KandelId, OfferListingId, TokenId } from "src/state/model";
+import { AccountId, ChainId, KandelId, MangroveId, OfferListingId, ReserveId, StratId, TokenId } from "src/state/model";
+import { Credit, Debit, KandelCreated, KandelParamsUpdated } from "src/temp/kandelEvents";
 
 
 export type KandelParams = {
-    compoundRateBase: number,
-    compoundRateQuote: number,
-    gasPrice: number,
-    gasReq: number,
-    spread: number,
-    ratio: number,
+    compoundRateBase: string,
+    compoundRateQuote: string,
+    gasPrice: string,
+    gasReq: string,
+    spread: string,
+    ratio: string,
     length: number,
-    trigger: string
+    trigger: string,
+    admin: string,
+    router: string
 }
 
 export class KandelEventsLogic {
 
-    //Handle new Kandel
+    async handleKandelCreated(
+        undo: boolean,
+        chainId: ChainId,
+        event: KandelCreated,
+        transaction: prisma.Transaction | undefined,
+        db: AllDbOperations) {
+        const mangroveId =new MangroveId(chainId, event.mangroveId);
+
+        const reserveId = new ReserveId(mangroveId.chainId, event.reserve);
+        const kandelId = new KandelId(chainId, event.address);
+        if (undo) {
+            await db.kandelOperations.deleteLatestKandelVersion(kandelId);
+            return;
+        }
+        const newConfiguration = await db.kandelOperations.createNewKandelConfiguration(event.kandelParams);
+        const reserveVersionId = await db.reserveOperations.getOrCreateCurrentReserveVersion(reserveId);
+        const adminId = new AccountId(mangroveId.chainId, event.kandelParams.admin).value;
+        const baseToken = new TokenId(mangroveId.chainId, event.base);
+        const quoteToken = new TokenId(mangroveId.chainId, event.quote);
+
+        await db.kandelOperations.addVersionedKandel({
+            id: kandelId,
+            txId: transaction!.id,
+            updateFunc: (model) => {
+                _.merge(model, {
+                    adminId: adminId,
+                    reserveVersionId: reserveVersionId,
+                    routerAddress: event.kandelParams.router,
+                    congigurationId: newConfiguration.id,
+                    trigger: event.kandelType
+                });
+            },
+            constParams: {
+                reserveId: reserveId,
+                mangroveId: mangroveId,
+                base: baseToken,
+                quote: quoteToken,
+                type: event.kandelType
+
+            }
+        })
+
+    }
 
     async handleKandelParamsUpdated(
         undo: boolean,
         kandelId: KandelId,
-        params: KandelParams,
+        event: KandelParamsUpdated,
         transaction: prisma.Transaction | undefined,
         db: KandelOperations
     ) {
+
         if (undo) {
             await db.deleteLatestKandelVersion(kandelId);
             return;
         }
 
-        const newConfiguration = await db.createNewKandelConfiguration(params);
+        const newConfiguration = await db.createNewKandelConfiguration(event.kandelParams);
 
         await db.addVersionedKandel({
             id: kandelId,
@@ -42,7 +88,7 @@ export class KandelEventsLogic {
             updateFunc: (model) => {
                 _.merge(model, {
                     congigurationId: newConfiguration.id,
-                    trigger: params.trigger
+                    trigger: event.kandelParams.trigger
                 });
             },
         });
@@ -52,31 +98,31 @@ export class KandelEventsLogic {
     async handleDepositWithdrawal(
         undo: boolean,
         kandelId: KandelId,
-        tokenId: TokenId,
-        type: "deposit" | "withdrawal",
-        amount: string,
+        event: Debit | Credit,
         transaction: prisma.Transaction | undefined,
         db: AllDbOperations) {
         if (undo) {
             await db.kandelOperations.deleteLatestKandelVersion(kandelId);
             return;
         }
-        // let currentBalance = currency == "base" ? currentVersion.baseBalance : currentVersion.quoteBalance;
-        // //TODO: subtract or add to correct balance
-        // currentVersion.reserveVersionI
-        
+
+        const tokenId = new TokenId(kandelId.chainId, event.token);
+
         let reserveVersion = await db.kandelOperations.getCurrentReserveVersion(kandelId);
         const status = await db.reserveOperations.getDepositWithdrawalStatusForToken(reserveVersion, tokenId);
-        const balance = type==="deposit" ? new BigNumber(status.deposit) :new BigNumber(status.withdrawal)
-        const newAmount = new BigNumber(balance).plus(new BigNumber(amount)).toString()
+        const balance = event.type == "Credit" ? new BigNumber(status.deposit) : new BigNumber(status.withdrawal)
+        const newAmount = new BigNumber(balance).plus(new BigNumber(event.amount)).toString()
+
+        const reserveAddress = await db.kandelOperations.getReserveAddress(kandelId);
+        
 
         const newReserveVersion = await db.reserveOperations.addVersionedReserve({
-            id: kandelId.reserveId,
+            id: new ReserveId(kandelId.chainId, reserveAddress ),
             txId: transaction!.id,
             updateFunc: (model) => {
                 _.merge(model, {
-                    withdrawal: type==="deposit" ? status.withdrawal : newAmount,
-                    deposit: type==="deposit" ? newAmount : status.deposit,
+                    withdrawal: event.type == "Debit" ? newAmount : status.withdrawal,
+                    deposit: event.type == "Credit" ? newAmount : status.deposit,
                 })
             }
         })
@@ -88,7 +134,7 @@ export class KandelEventsLogic {
             updateFunc: (model) => {
                 _.merge(model, {
                     reserveVersionId: newReserveVersion.id,
-                    trigger: type
+                    trigger: event.type
                 });
             },
         });
@@ -96,9 +142,6 @@ export class KandelEventsLogic {
 
     // Handle rebalance
 
-    // Handle offer taken, 
-
-    // unallocated???
 
 
 }

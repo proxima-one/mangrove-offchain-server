@@ -214,7 +214,12 @@ export class MangroveOrderVersionId extends Id<string> {
 }
 
 export class ReserveId extends AccountId {
-
+  public constructor(
+    public readonly chainId: ChainId,
+    public readonly address: string
+  ) {
+    super(chainId, address);
+  }
 }
 export class DepositWithdrawalStatusId extends Id<string> {
   public constructor(
@@ -255,16 +260,12 @@ export class ReserveVersionId extends Id<string> {
   }
 }
 
-export class KandelId extends Id<string> {
+export class KandelId extends StratId {
   public constructor(
-    public readonly mangroveId: MangroveId,
-    public readonly offerListKey: OfferListKey,
-    public readonly reserveId: ReserveId,
-    public readonly proximaId: string,
+    public readonly chainId: ChainId,
+    public readonly address: string
   ) {
-    super(
-      `${mangroveId.value}-${offerListKeyShortStr(offerListKey)}-${reserveId.value}-${proximaId}`
-    );
+    super(chainId, address);
   }
 }
 

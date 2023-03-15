@@ -1,5 +1,5 @@
 import * as prisma from "@prisma/client";
-import { KandelId, KandelVersionId, OfferListingId, StratId } from "../model";
+import { AccountId, KandelId, KandelVersionId, MangroveId, OfferListingId, ReserveId, StratId, TokenId } from "../model";
 import { DbOperations, toUpsert } from "./dbOperations";
 import _ from "lodash";
 import { ReserveOperations } from "./reserveOperations";
@@ -15,7 +15,11 @@ export class KandelOperations extends DbOperations {
         txId: string,
         updateFunc?: (model: Omit< prisma.KandelVersion, "id" | "kandelId" | "versionNumber" | "prevVersionId">) => void,
         constParams?: {
-          reserveId?: string
+          reserveId?: ReserveId
+          mangroveId: MangroveId,
+          base: TokenId,
+          quote: TokenId,
+          type: "AaveKandel" | "Kandel"
         }
       }) {
         let kandel: prisma.Kandel | null = await this.tx.kandel.findUnique({
@@ -29,19 +33,23 @@ export class KandelOperations extends DbOperations {
         let newVersion: prisma.KandelVersion;
     
         if( kandel === null){
-          if(!params.constParams?.reserveId){
+          if( !params.constParams?.type){
+            throw new Error( `Can't create Kandel without a type, id:${params.id.value}`);
+          }
+          if( params.constParams?.type == "AaveKandel" && !params.constParams?.reserveId?.value){
             throw new Error( `Can't create Kandel without an reserveId, id:${params.id.value}`);
           }
           const newVersionId = new KandelVersionId({ kandelId: params.id, versionNumber: 0 });
           kandel = {
               id: params.id.value,
-              mangroveId: params.id.mangroveId.value,
-              stratId: new StratId(params.id.mangroveId.chainId, params.id.reserveId.address).value,
-              offerListingId: new OfferListingId(params.id.mangroveId, params.id.offerListKey).value,
-              reserveId: params.constParams.reserveId,
-              accountId: params.id.reserveId.value,
-              proximaId: params.id.proximaId,
+              mangroveId: params.constParams.mangroveId.value,
+              stratId: new StratId(params.constParams.mangroveId.chainId, params.id.address).value,
+              baseId: params.constParams.base.value,
+              quoteId: params.constParams.quote.value,
+              reserveId: params.constParams.reserveId?.value ?? new ReserveId(params.constParams.mangroveId.chainId, params.id.address).value,
+              accountId: new AccountId(params.constParams.mangroveId.chainId, params.id.address).value,
               currentVersionId: newVersionId.value,
+              type: params.constParams.type
             };
           newVersion= {
               id: newVersionId.value,
@@ -49,6 +57,8 @@ export class KandelOperations extends DbOperations {
               txId: params.txId,
               reserveVersionId:"",
               congigurationId:"",
+              adminId:"",
+              routerAddress:"",
               trigger: "NewKandel",
               versionNumber: 0,
               prevVersionId: null
@@ -118,6 +128,7 @@ export class KandelOperations extends DbOperations {
     getId(idOrKandel: KandelId | prisma.Kandel  ) {
         return "id" in idOrKandel ? idOrKandel.id : (idOrKandel as KandelId).value;
       }
+    
 
     public async deleteLatestKandelVersion(id: KandelId) {
         const kandel = await this.tx.kandel.findUnique({
@@ -130,7 +141,7 @@ export class KandelOperations extends DbOperations {
         const kandelVersion = await this.tx.kandelVersion.findUnique({
           where: { id: kandel.currentVersionId },
         });
-        
+        const reserveAddress = await this.getReserveAddress(id);
         
         if (kandelVersion!.prevVersionId === null) {
           await this.tx.kandel.update({
@@ -139,6 +150,7 @@ export class KandelOperations extends DbOperations {
               currentVersionId: "",
              }, 
           });
+
           await this.tx.kandelVersion.delete({
             where: { id: kandel.currentVersionId },
           });
@@ -154,8 +166,43 @@ export class KandelOperations extends DbOperations {
             where: { id: kandel.currentVersionId },
           });
         }
-        
-    
+        await this.deleteReserveVersionIfNotUsed(new ReserveId(id.chainId, reserveAddress));
+        await this.deleteKandelConfigIfNotUsed(kandelVersion!.congigurationId)
       }
+
+  async deleteReserveVersionIfNotUsed(id:ReserveId){
+    const reserveVersions = await this.tx.reserveVersion.findMany({where: { id: id.value}})
+    if( reserveVersions.length == 0) {
+      await this.reserveOperations.deleteLatestReserveVersion(id);
+      return true;
+    }
+    return false;
+  }
+
+  async deleteKandelConfigIfNotUsed(id:string){
+    const kandels = await this.tx.kandelVersion.findMany({where: { congigurationId: id}})
+    if( kandels.length == 0) {
+      await this.tx.kandelConfiguration.delete({where:{id:id}});
+      return true;
+    }
+    return false;
+    
+  }
+
+  async getReserveAddress(kandelId:KandelId){
+    const kandel = await this.tx.kandel.findUniqueOrThrow({where: {id: kandelId.value}});
+    if(!kandel){
+      throw new Error(`Cannot find kandel instance from kandel id: ${kandelId.value}`)
+    }
+    const reserve = await this.tx.reserve.findUnique({where: {id: kandel.reserveId}})
+    if(!reserve) {
+      throw new Error(`Cannot find reserve from kandel id: ${kandelId.value}, with reserveId: ${kandel.reserveId}`)
+    }
+    const account = await this.tx.account.findUnique({where: {id: reserve.accountId}})
+    if(!account) {
+      throw new Error(`Cannot find reserve account from kandel id: ${kandelId.value}, reserveId: ${kandel.reserveId} and accountId: ${reserve.accountId}`)
+    }
+    return account.address;
+  }
 
 }

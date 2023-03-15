@@ -1,6 +1,6 @@
 import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
 import { allDbOperations } from "src/state/dbOperations/allDbOperations";
-
+import { KandelEvent } from "src/temp/kandelEvents";
 import { PrismaClient } from "@prisma/client";
 import {
   PrismaStreamEventHandler,
@@ -9,12 +9,14 @@ import {
 } from "src/common";
 import {
   ChainId,
+  KandelId,
+  MangroveId,
   TransactionId
 } from "src/state/model";
 import { createPatternMatcher } from "src/utils/discriminatedUnion";
-import { MangroveOrderEventsLogic } from "./mangroveOrderEventsLogic";
+import { KandelEventsLogic } from "./kandelEventsLogic";
 
-export class IKandelLogicEventHandler extends PrismaStreamEventHandler<mangroveSchema.strategyEvents.StrategyEvent> {
+export class IKandelLogicEventHandler extends PrismaStreamEventHandler<KandelEvent> {
   public constructor(
     prisma: PrismaClient,
     stream: string,
@@ -23,10 +25,10 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<mangroveS
     super(prisma, stream);
   }
 
-  mangroveOrderEventsLogic = new MangroveOrderEventsLogic();
+  kandelEventsLogic = new KandelEventsLogic();
 
   protected async handleParsedEvents(
-    events: TypedEvent<mangroveSchema.strategyEvents.StrategyEvent>[],
+    events: TypedEvent<KandelEvent>[],
     tx: PrismaTransaction
   ): Promise<void> {
     const allDbOperation = allDbOperations(tx);
@@ -34,7 +36,6 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<mangroveS
       const { payload, undo, timestamp } = event;
       const chainId = new ChainId(payload.chainId);
       
-
       const txRef = payload.tx;
       const txId = new TransactionId(chainId, txRef.txHash);
 
@@ -46,15 +47,21 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<mangroveS
         blockNumber: txRef.blockNumber,
         blockHash: txRef.blockHash
     });
-
       await eventMatcher({
-        LogIncident: async (e) => {},
-        NewOwnedOffer: async (e) => {},
-        OrderSummary: async (e) => {
-          await this.mangroveOrderEventsLogic.handleOrderSummary(allDbOperation, chainId, e, undo, transaction)
+        KandelCreated: async (e) => {
+          await this.kandelEventsLogic.handleKandelCreated(undo, chainId, e, transaction, allDbOperation)
         },
-        SetExpiry: async (e) => {
-          await this.mangroveOrderEventsLogic.handleSetExpiry(allDbOperation, chainId, transaction.id, e )
+        KandelParamsUpdated: async (e) => {
+          await this.kandelEventsLogic.handleKandelParamsUpdated(undo, new KandelId(chainId, payload.address), e, transaction, allDbOperation.kandelOperations );
+        },
+        Debit: async (e) => {
+          await this.kandelEventsLogic.handleDepositWithdrawal(undo, new KandelId(chainId, payload.address), e, transaction, allDbOperation)
+        },
+        Credit: async (e) => {
+        },
+        Populate: async (e) => {
+        },
+        OfferIndex: async (e) => {
         }
       })(payload);
     }
@@ -62,10 +69,10 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<mangroveS
 
   protected deserialize(
     payload: Buffer
-  ): mangroveSchema.strategyEvents.StrategyEvent {
-    return mangroveSchema.streams.strategies.serdes.deserialize(payload);
+  ): KandelEvent {
+    return mangroveSchema.streams.kandels.serdes.deserialize(payload);
   }
 }
 
 const eventMatcher =
-  createPatternMatcher<mangroveSchema.strategyEvents.StrategyEvent>();
+  createPatternMatcher<KandelEvent>();

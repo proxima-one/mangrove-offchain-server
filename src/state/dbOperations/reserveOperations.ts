@@ -1,5 +1,5 @@
 import * as prisma from "@prisma/client";
-import _ from "lodash";
+import _, { add } from "lodash";
 import { ReserveVersionId, ReserveId, TokenId, AccountId } from "../model";
 import { DbOperations, toUpsert } from "./dbOperations";
 
@@ -79,6 +79,19 @@ export class ReserveOperations extends DbOperations {
     );
 
     return await this.tx.reserveVersion.create({ data: newReserveVersion });
+  }
+
+  async getOrCreateCurrentReserveVersion( id: ReserveId, txId?: string, address?: string ){
+    const reserve = await this.tx.reserve.findUnique({ where: { id: id.value } })
+    if (!reserve) {
+      if(!txId){
+        throw new Error( `Cannot create new reserve without txId, reserveId: ${id.value}` )
+      }
+      return await this.addVersionedReserve({id, txId, address:address })
+    }
+
+    return await this.getCurrentReserveVersion(reserve);
+
   }
 
 
@@ -164,8 +177,14 @@ export class ReserveOperations extends DbOperations {
         where: { id: reserve.currentVersionId },
       });
     }
+  }
 
-
+  async getReserve(reserveId:ReserveId){
+    const reserve = await this.tx.reserve.findUnique({where: {id: reserveId.value}});
+    if(!reserve){
+      throw new Error(`Cannot find reserve instance from reserve id: ${reserveId.value}`)
+    }
+    return reserve;
   }
 
 }

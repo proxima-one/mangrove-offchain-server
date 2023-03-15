@@ -8,8 +8,7 @@ datasource db {
 }
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["referentialIntegrity"]
+  provider = "prisma-client-js"
 }
 
 generator typegraphql {
@@ -69,6 +68,8 @@ model Token {
   offerListingsWhereInbound  OfferListing[]            @relation("OfferListingsByInboundToken")
   offerListingsWhereOutbound OfferListing[]            @relation("OfferListingsByOutboundToken")
   DepositWithdrawalStatus    DepositWithdrawalStatus[]
+  kandelBase                 Kandel[]                  @relation("base")
+  kandelQuote                Kandel[]                  @relation("quote")
 }
 
 // Few mangrove instances, no extra index needed
@@ -140,6 +141,7 @@ model Account {
   MangroveOrder MangroveOrder[]
   Kandel        Kandel?
   Reserve       Reserve?
+  kandelOwner   KandelVersion?  @relation("admin")
 }
 
 // Problably few strats, no extra indexes needed.
@@ -254,7 +256,6 @@ model OfferListing {
   currentVersionId     String                @unique @db.VarChar(255)
   currentVersion       OfferListingVersion?  @relation("currentVersion", fields: [currentVersionId], references: [id])
   offerListingVersions OfferListingVersion[] @relation("offerListingVersion")
-  Kandel               Kandel[]
 }
 
 // few offerlist, will have some versions, but not enough for it to need extra indexes
@@ -531,25 +532,26 @@ model DepositWithdrawalStatus {
 }
 
 model Kandel {
-  id             String @id @db.VarChar(255)
-  mangroveId     String @unique @db.VarChar(255)
-  stratId        String @unique @db.VarChar(255)
-  offerListingId String @unique @db.VarChar(255)
-  proximaId      String @db.VarChar(255) // Maybe not neccesary, depends on proxima
-  accountId      String @unique @db.VarChar(255)
-  reserveId      String @unique @db.VarChar(255) // create reserve object
+  id         String  @id @db.VarChar(255)
+  mangroveId String  @unique @db.VarChar(255)
+  stratId    String  @unique @db.VarChar(255)
+  baseId     String  @unique @db.VarChar(255)
+  quoteId    String  @unique @db.VarChar(255)
+  accountId  String  @unique @db.VarChar(255)
+  reserveId  String  @unique @db.VarChar(255) // create reserve object
+  type       String
 
-  reserve          Reserve?       @relation("reserveId", fields: [reserveId], references: [id])
   // Events are not allowed to overwrite/delete data, as it might have to be restored on undo.
   // Instead, we create new versions which makes undo easy.
-  currentVersionId String         @unique @db.VarChar(255)
-  currentVersion   KandelVersion? @relation("currentVersion", fields: [currentVersionId], references: [id])
-
-  mangrove      Mangrove        @relation(fields: [mangroveId], references: [id])
-  account       Account         @relation(fields: [accountId], references: [id])
-  strat         Strat           @relation(fields: [stratId], references: [id])
-  offerListing  OfferListing    @relation(fields: [offerListingId], references: [id])
-  kandelVersion KandelVersion[] @relation("kandelVersion")
+  currentVersionId String          @unique @db.VarChar(255)
+  currentVersion   KandelVersion?  @relation("currentVersion", fields: [currentVersionId], references: [id])
+  baseToken        Token           @relation("base", fields: [baseId], references: [id])
+  quoteToken       Token           @relation("quote", fields: [quoteId], references: [id])
+  mangrove         Mangrove        @relation(fields: [mangroveId], references: [id])
+  account          Account         @relation(fields: [accountId], references: [id])
+  strat            Strat           @relation(fields: [stratId], references: [id])
+  reserve          Reserve?        @relation("reserveId", fields: [reserveId], references: [id])
+  kandelVersion    KandelVersion[] @relation("kandelVersion")
 }
 
 model KandelVersion {
@@ -557,10 +559,13 @@ model KandelVersion {
   kandelId        String @unique @db.VarChar(255)
   txId            String @unique @db.VarChar(255)
   congigurationId String @unique @db.VarChar(255)
+  adminId         String @unique @db.VarChar(255)
+  routerAddress   String @db.VarChar(255)
   trigger         String // what triggered the new version.
 
   tx            Transaction         @relation(fields: [txId], references: [id])
   configuration KandelConfiguration @relation(fields: [congigurationId], references: [id], onDelete: Cascade)
+  admin  Account             @relation("admin", fields: [adminId], references: [id])
 
   // The following fields are bookkeeping to support undo of events.
   versionNumber  Int
@@ -576,12 +581,12 @@ model KandelVersion {
 
 model KandelConfiguration {
   id                String          @id @default(uuid())
-  compoundRateBase  Int // Are these big numbers?
-  compoundRateQuote Int // Are these big numbers?
-  gasPrice          Int
-  gasReq            Int
-  spread            Int
-  ratio             Int
+  compoundRateBase  String // Are these big numbers?
+  compoundRateQuote String // Are these big numbers?
+  gasPrice          String
+  gasReq            String
+  spread            String
+  ratio             String
   length            Int
   KandelVersion     KandelVersion[]
 }
