@@ -15,6 +15,7 @@ import {
 } from "src/state/model";
 import { createPatternMatcher } from "src/utils/discriminatedUnion";
 import { KandelEventsLogic } from "./kandelEventsLogic";
+import c from "config";
 
 export class IKandelLogicEventHandler extends PrismaStreamEventHandler<KandelEvent> {
   public constructor(
@@ -58,10 +59,13 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<KandelEve
           await this.kandelEventsLogic.handleDepositWithdrawal(undo, new KandelId(chainId, payload.address), e, transaction, allDbOperation)
         },
         Credit: async (e) => {
+          await this.kandelEventsLogic.handleDepositWithdrawal(undo, new KandelId(chainId, payload.address), e, transaction, allDbOperation)
         },
         Populate: async (e) => {
+          await this.kandelEventsLogic.handlePopulate(undo, new KandelId(chainId, payload.address), e, transaction, allDbOperation.kandelOperations)
         },
         OfferIndex: async (e) => {
+          await this.kandelEventsLogic.handleOfferIndex(undo, new KandelId(chainId, payload.address), e, transaction, allDbOperation.kandelOperations)
         }
       })(payload);
     }

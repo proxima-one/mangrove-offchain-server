@@ -4,8 +4,8 @@ import _ from "lodash";
 import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
 import { KandelOperations } from "src/state/dbOperations/kandelOperations";
 
-import { AccountId, ChainId, KandelId, MangroveId, OfferListingId, ReserveId, StratId, TokenId } from "src/state/model";
-import { Credit, Debit, KandelCreated, KandelParamsUpdated } from "src/temp/kandelEvents";
+import { AccountId, ChainId, KandelId, MangroveId, OfferId, OfferListingId, ReserveId, StratId, TokenId } from "src/state/model";
+import { Credit, Debit, KandelCreated, KandelParamsUpdated, OfferIndex, Populate } from "src/temp/kandelEvents";
 
 
 export type KandelParams = {
@@ -140,7 +140,53 @@ export class KandelEventsLogic {
         });
     }
 
-    // Handle rebalance
+    async handlePopulate(
+        undo: boolean,
+        kandelId: KandelId,
+        event: Populate,
+        transaction: prisma.Transaction | undefined,
+        db: KandelOperations
+    ) {
+        if (undo) {
+            await db.deleteLatestKandelVersion(kandelId);
+            return;
+        }
+        await db.addVersionedKandel({ 
+            id:kandelId, 
+            txId: transaction!.id,
+            updateFunc: (model) => {
+                _.merge(model, {
+                    trigger: event.type
+                });
+            },
+         } )
+    }
+
+    async handleOfferIndex(
+        undo: boolean,
+        kandelId: KandelId,
+        event: OfferIndex,
+        transaction: prisma.Transaction | undefined,
+        db: KandelOperations
+        ) {
+        const kandel = await db.getKandel(kandelId);
+        const base = await db.getToken(kandelId, "baseId");
+        const quote = await db.getToken(kandelId, "quoteId");
+        const offerId = new OfferId(new MangroveId(kandelId.chainId, kandel.mangroveId), {
+            outboundToken: event.ba === "ask" ? base.address : quote.address,
+            inboundToken: event.ba === "ask" ? quote.address : base.address,
+          }, event.offerId);
+        
+          if (undo) {
+            await db.deleteOfferIndex(kandelId, offerId, event.ba);
+            return;
+        }
+        
+        
+        await db.createOfferIndex(kandelId, transaction!.id, offerId, event.index, event.ba);
+
+    }
+
 
 
 

@@ -52,6 +52,7 @@ model Transaction {
   KandelVersion           KandelVersion[]
   ReserveVersion          ReserveVersion[]
   DepositWithdrawalStatus DepositWithdrawalStatus[]
+  KandelOfferIndex        KandelOfferIndex?
 }
 
 // probably have few tokens, so no extra index needed
@@ -296,9 +297,10 @@ model Offer {
   offerListing  OfferListing    @relation(fields: [offerListingId], references: [id])
   maker         Account         @relation(fields: [makerId], references: [id])
 
-  currentVersionId String         @unique @db.VarChar(255)
-  currentVersion   OfferVersion?  @relation("currentVersion", fields: [currentVersionId], references: [id])
-  offerVersions    OfferVersion[] @relation("offerVersion")
+  currentVersionId   String             @unique @db.VarChar(255)
+  currentVersion     OfferVersion?      @relation("currentVersion", fields: [currentVersionId], references: [id])
+  offerVersions      OfferVersion[]     @relation("offerVersion")
+  kandelOfferIndexes KandelOfferIndex[] @relation("offerIndex")
 }
 
 // Many offers, each having many version, we probably need indexes here.
@@ -532,26 +534,42 @@ model DepositWithdrawalStatus {
 }
 
 model Kandel {
-  id         String  @id @db.VarChar(255)
-  mangroveId String  @unique @db.VarChar(255)
-  stratId    String  @unique @db.VarChar(255)
-  baseId     String  @unique @db.VarChar(255)
-  quoteId    String  @unique @db.VarChar(255)
-  accountId  String  @unique @db.VarChar(255)
-  reserveId  String  @unique @db.VarChar(255) // create reserve object
+  id         String @id @db.VarChar(255)
+  mangroveId String @unique @db.VarChar(255)
+  stratId    String @unique @db.VarChar(255)
+  baseId     String @unique @db.VarChar(255)
+  quoteId    String @unique @db.VarChar(255)
+  accountId  String @unique @db.VarChar(255)
+  reserveId  String @unique @db.VarChar(255) // create reserve object
   type       String
 
   // Events are not allowed to overwrite/delete data, as it might have to be restored on undo.
   // Instead, we create new versions which makes undo easy.
-  currentVersionId String          @unique @db.VarChar(255)
-  currentVersion   KandelVersion?  @relation("currentVersion", fields: [currentVersionId], references: [id])
-  baseToken        Token           @relation("base", fields: [baseId], references: [id])
-  quoteToken       Token           @relation("quote", fields: [quoteId], references: [id])
-  mangrove         Mangrove        @relation(fields: [mangroveId], references: [id])
-  account          Account         @relation(fields: [accountId], references: [id])
-  strat            Strat           @relation(fields: [stratId], references: [id])
-  reserve          Reserve?        @relation("reserveId", fields: [reserveId], references: [id])
-  kandelVersion    KandelVersion[] @relation("kandelVersion")
+  currentVersionId   String             @unique @db.VarChar(255)
+  currentVersion     KandelVersion?     @relation("currentVersion", fields: [currentVersionId], references: [id])
+  baseToken          Token              @relation("base", fields: [baseId], references: [id])
+  quoteToken         Token              @relation("quote", fields: [quoteId], references: [id])
+  mangrove           Mangrove           @relation(fields: [mangroveId], references: [id])
+  account            Account            @relation(fields: [accountId], references: [id])
+  strat              Strat              @relation(fields: [stratId], references: [id])
+  reserve            Reserve?           @relation("reserveId", fields: [reserveId], references: [id])
+  kandelVersions     KandelVersion[]    @relation("kandelVersion")
+  kandelOfferIndexes KandelOfferIndex[] @relation("offerIndex")
+}
+
+model KandelOfferIndex {
+  offerId  String @unique @db.VarChar(255)
+  kandelId String @unique @db.VarChar(255)
+  txId     String @unique @db.VarChar(255)
+  index    Int
+  ba       String
+
+  offer  Offer       @relation("offerIndex", fields: [offerId], references: [id])
+  kandel Kandel      @relation("offerIndex", fields: [kandelId], references: [id])
+  tx     Transaction @relation(fields: [txId], references: [id])
+
+  @@id([offerId, kandelId, ba])
+  @@map("KandelOfferIndex")
 }
 
 model KandelVersion {
@@ -565,7 +583,7 @@ model KandelVersion {
 
   tx            Transaction         @relation(fields: [txId], references: [id])
   configuration KandelConfiguration @relation(fields: [congigurationId], references: [id], onDelete: Cascade)
-  admin  Account             @relation("admin", fields: [adminId], references: [id])
+  admin         Account             @relation("admin", fields: [adminId], references: [id])
 
   // The following fields are bookkeeping to support undo of events.
   versionNumber  Int

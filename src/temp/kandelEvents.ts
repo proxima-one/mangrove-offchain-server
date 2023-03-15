@@ -41,7 +41,7 @@ export interface OfferIndex {
     type: "OfferIndex";
     offerId: core.OfferId;
     index: number;
-    token: Address;
+    ba: "ask" | "bid";
 }
 
 interface KandelParams {

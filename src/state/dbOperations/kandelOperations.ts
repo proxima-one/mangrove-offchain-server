@@ -1,5 +1,5 @@
 import * as prisma from "@prisma/client";
-import { AccountId, KandelId, KandelVersionId, MangroveId, OfferListingId, ReserveId, StratId, TokenId } from "../model";
+import { AccountId, KandelId, KandelVersionId, MangroveId, OfferId, OfferListingId, ReserveId, StratId, TokenId } from "../model";
 import { DbOperations, toUpsert } from "./dbOperations";
 import _ from "lodash";
 import { ReserveOperations } from "./reserveOperations";
@@ -190,10 +190,7 @@ export class KandelOperations extends DbOperations {
   }
 
   async getReserveAddress(kandelId:KandelId){
-    const kandel = await this.tx.kandel.findUniqueOrThrow({where: {id: kandelId.value}});
-    if(!kandel){
-      throw new Error(`Cannot find kandel instance from kandel id: ${kandelId.value}`)
-    }
+    const kandel = await this.getKandel(kandelId);
     const reserve = await this.tx.reserve.findUnique({where: {id: kandel.reserveId}})
     if(!reserve) {
       throw new Error(`Cannot find reserve from kandel id: ${kandelId.value}, with reserveId: ${kandel.reserveId}`)
@@ -203,6 +200,45 @@ export class KandelOperations extends DbOperations {
       throw new Error(`Cannot find reserve account from kandel id: ${kandelId.value}, reserveId: ${kandel.reserveId} and accountId: ${reserve.accountId}`)
     }
     return account.address;
+  }
+
+
+  async getToken(kandelId:KandelId, baseOrQuote: "baseId"|"quoteId"){
+    const kandel = await this.getKandel(kandelId);
+    const token = await this.tx.token.findUnique({where: {id: kandel[baseOrQuote]}})
+    if(!token){
+      throw new Error(`Cannot find base token from kandelId: ${kandelId.value}, with ${baseOrQuote}: ${kandel[baseOrQuote]}`)
+    }
+    return token;
+  }
+
+  async getKandel(kandelId:KandelId){
+    const kandel = await this.tx.kandel.findUniqueOrThrow({where: {id: kandelId.value}});
+    if(!kandel){
+      throw new Error(`Cannot find kandel instance from kandel id: ${kandelId.value}`)
+    }
+    return kandel;
+  }
+
+  async createOfferIndex(kandelId: KandelId, txId:string, offerId:OfferId, index:number, ba:"ask"|"bid") {
+    await this.tx.kandelOfferIndex.create({
+      data: {
+        kandelId: kandelId.value,
+        txId: txId,
+        offerId: offerId.value,
+        index: index,
+        ba: ba
+    }})
+  }
+
+  async deleteOfferIndex(kandelId: KandelId, offerId:OfferId, ba:"ask"|"bid"){
+    await this.tx.kandelOfferIndex.delete({where: {
+      offerId_kandelId_ba: {
+        kandelId: kandelId.value,
+        offerId: offerId.value,
+        ba:ba
+      }
+    }})
   }
 
 }
