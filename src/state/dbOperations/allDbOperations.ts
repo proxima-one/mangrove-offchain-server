@@ -11,7 +11,7 @@ import { TokenOperations } from "./tokenOperations";
 import { TakerApprovalOperations } from "./takerApprovalOperations";
 import { TransactionOperations } from "./transactionOperations";
 import { KandelOperations } from "./kandelOperations";
-import { ReserveOperations } from "./reserveOperations";
+import { TokenBalanceOperations } from "./tokenBalanceOperations";
 
 export type AllDbOperations = {
   accountOperations: AccountOperations;
@@ -26,7 +26,7 @@ export type AllDbOperations = {
   tokenOperations: TokenOperations;
   transactionOperations: TransactionOperations;
   kandelOperations: KandelOperations;
-  reserveOperations: ReserveOperations;
+  tokenBalanceOperations: TokenBalanceOperations;
 };
 
 export function allDbOperations(tx: PrismaTx): AllDbOperations {
@@ -43,6 +43,6 @@ export function allDbOperations(tx: PrismaTx): AllDbOperations {
     tokenOperations: new TokenOperations(tx),
     transactionOperations: new TransactionOperations(tx),
     kandelOperations: new KandelOperations(tx),
-    reserveOperations: new ReserveOperations(tx),
+    tokenBalanceOperations: new TokenBalanceOperations(tx),
   };
 }

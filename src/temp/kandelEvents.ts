@@ -15,11 +15,28 @@ export interface KandelCreated {
     owner: Address;
     reserve: Address;
     address:Address;
-    kandelParams:KandelParams;
+    compoundRateBase: string;
+    compoundRateQuote: string;
+    gasPrice: string;
+    gasReq: string;
+    spread: string;
+    ratio: string;
+    length: number;
+    trigger: string;
+    admin: Address;
+    router: Address; 
 }
 export interface KandelParamsUpdated {
     type: "KandelParamsUpdated";
-    kandelParams: KandelParams,
+    compoundRateBase: string | undefined;
+    compoundRateQuote: string | undefined;
+    gasPrice: string | undefined;
+    gasReq: string | undefined;
+    spread: string | undefined;
+    ratio: string | undefined;
+    length: number | undefined;
+    admin: Address | undefined ;
+    router: Address | undefined; 
 }
 export interface Debit {
     type: "Debit";
@@ -44,15 +61,4 @@ export interface OfferIndex {
     ba: "ask" | "bid";
 }
 
-interface KandelParams {
-    compoundRateBase: string;
-    compoundRateQuote: string;
-    gasPrice: string;
-    gasReq: string;
-    spread: string;
-    ratio: string;
-    length: number;
-    trigger: string;
-    admin: Address;
-    router: Address; 
-}
+

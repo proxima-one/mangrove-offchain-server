@@ -1,4 +1,4 @@
-import { Kandel, MangroveOrder, Reserve } from "@prisma/client";
+import { Kandel, MangroveOrder, Reserve, TokenBalance } from "@prisma/client";
 import { add } from "lodash";
 
 export class Id<T extends string | number> {
@@ -221,7 +221,7 @@ export class ReserveId extends AccountId {
     super(chainId, address);
   }
 }
-export class DepositWithdrawalStatusId extends Id<string> {
+export class TokenBalanceId extends Id<string> {
   public constructor(
     public readonly params: (
       | {
@@ -229,33 +229,32 @@ export class DepositWithdrawalStatusId extends Id<string> {
       }
       | { reserve: Reserve }
     ) & {
-      tokenId: string;
-      versionNumber: number;
+      tokenId: TokenId;
     }
   ) {
     super(
       "reserveId" in params
-        ? `${params.reserveId.value}-${params.tokenId}-${params.versionNumber}`
-        : `${params.reserve.id}-${params.tokenId}-${params.versionNumber}`
+        ? `${params.reserveId.value}-${params.tokenId.value}`
+        : `${params.reserve.id}-${params.tokenId.value}`
     );
   }
 }
 
-export class ReserveVersionId extends Id<string> {
+export class TokenBalanceVersionId extends Id<string> {
   public constructor(
     public readonly params: (
       | {
-        reserveId: ReserveId;
+        tokenBalanceId: TokenBalanceId;
       }
-      | { reserve: Reserve }
+      | { tokenBalance: TokenBalance }
     ) & {
       versionNumber: number;
     }
   ) {
     super(
-      "reserveId" in params
-        ? `${params.reserveId.value}-${params.versionNumber}`
-        : `${params.reserve.id}-${params.versionNumber}`
+      "tokenBalanceId" in params
+        ? `${params.tokenBalanceId.value}-${params.versionNumber}`
+        : `${params.tokenBalance.id}-${params.versionNumber}`
     );
   }
 }

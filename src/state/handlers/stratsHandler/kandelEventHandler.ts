@@ -26,13 +26,14 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<KandelEve
     super(prisma, stream);
   }
 
-  kandelEventsLogic = new KandelEventsLogic();
+  
 
   protected async handleParsedEvents(
     events: TypedEvent<KandelEvent>[],
     tx: PrismaTransaction
   ): Promise<void> {
     const allDbOperation = allDbOperations(tx);
+    const kandelEventsLogic = new KandelEventsLogic(allDbOperation);
     for (const event of events) {
       const { payload, undo, timestamp } = event;
       const chainId = new ChainId(payload.chainId);
@@ -50,22 +51,22 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<KandelEve
     });
       await eventMatcher({
         KandelCreated: async (e) => {
-          await this.kandelEventsLogic.handleKandelCreated(undo, chainId, e, transaction, allDbOperation)
+          await kandelEventsLogic.handleKandelCreated(undo, chainId, e, transaction)
         },
         KandelParamsUpdated: async (e) => {
-          await this.kandelEventsLogic.handleKandelParamsUpdated(undo, new KandelId(chainId, payload.address), e, transaction, allDbOperation.kandelOperations );
+          await kandelEventsLogic.handleKandelParamsUpdated(undo, new KandelId(chainId, payload.address), e, transaction);
         },
         Debit: async (e) => {
-          await this.kandelEventsLogic.handleDepositWithdrawal(undo, new KandelId(chainId, payload.address), e, transaction, allDbOperation)
+          await kandelEventsLogic.handleDepositWithdrawal(undo, new KandelId(chainId, payload.address), e, transaction)
         },
         Credit: async (e) => {
-          await this.kandelEventsLogic.handleDepositWithdrawal(undo, new KandelId(chainId, payload.address), e, transaction, allDbOperation)
+          await kandelEventsLogic.handleDepositWithdrawal(undo, new KandelId(chainId, payload.address), e, transaction)
         },
         Populate: async (e) => {
-          await this.kandelEventsLogic.handlePopulate(undo, new KandelId(chainId, payload.address), e, transaction, allDbOperation.kandelOperations)
+          await kandelEventsLogic.handlePopulate(undo, new KandelId(chainId, payload.address), e, transaction);
         },
         OfferIndex: async (e) => {
-          await this.kandelEventsLogic.handleOfferIndex(undo, new KandelId(chainId, payload.address), e, transaction, allDbOperation.kandelOperations)
+          await kandelEventsLogic.handleOfferIndex(undo, new KandelId(chainId, payload.address), e, transaction);
         }
       })(payload);
     }
