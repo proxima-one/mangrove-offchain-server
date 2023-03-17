@@ -1,21 +1,18 @@
-import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
-import { allDbOperations } from "src/state/dbOperations/allDbOperations";
-import { KandelEvent } from "src/temp/kandelEvents";
 import { PrismaClient } from "@prisma/client";
 import {
   PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
 } from "src/common";
+import { allDbOperations } from "src/state/dbOperations/allDbOperations";
 import {
   ChainId,
   KandelId,
-  MangroveId,
   TransactionId
 } from "src/state/model";
+import { KandelEvent } from "src/temp/kandelEvents";
 import { createPatternMatcher } from "src/utils/discriminatedUnion";
 import { KandelEventsLogic } from "./kandelEventsLogic";
-import c from "config";
 
 export class IKandelLogicEventHandler extends PrismaStreamEventHandler<KandelEvent> {
   public constructor(
@@ -72,11 +69,11 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<KandelEve
     }
   }
 
-  protected deserialize(
-    payload: Buffer
-  ): KandelEvent {
-    return mangroveSchema.streams.kandels.serdes.deserialize(payload);
-  }
+  // protected deserialize( //TODO: when proxima comes with stream
+  //   payload: Buffer
+  // ): KandelEvent {
+  //   return mangroveSchema.streams.kandels.serdes.deserialize(payload);
+  // }
 }
 
 const eventMatcher =
