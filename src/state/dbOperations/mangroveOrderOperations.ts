@@ -9,7 +9,7 @@ import {
   OfferListingId,
   StratId
 } from "src/state/model";
-import { DbOperations, PrismaTx, toUpsert } from "./dbOperations";
+import { DbOperations, PrismaTx, toNewVersionUpsert } from "./dbOperations";
 import { OfferListingOperations } from "./offerListingOperations";
 
 export type MangroveOrderIds = {
@@ -142,11 +142,7 @@ export class MangroveOrderOperations extends DbOperations {
     }
     updateFunc(newVersion);
     await this.tx.mangroveOrder.upsert(
-      toUpsert(
-        _.merge(mangroveOrder, {
-          currentVersionId: newVersion.id,
-        })
-      )
+      toNewVersionUpsert(mangroveOrder, newVersion.id )
     );
     await this.tx.mangroveOrderVersion.create({ data: newVersion });
   }

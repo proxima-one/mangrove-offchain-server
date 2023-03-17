@@ -85,7 +85,7 @@ describe("Mangrove Operations Integration test suite", () => {
       assert.strictEqual(await prisma.mangroveVersion.count(), 2);
       await mangroveOperations.addVersionedMangrove({
         id:newMangroveId,
-        address:"address",
+        address:"address2",
         txId:"txId"
     });
       assert.strictEqual(await prisma.mangrove.count(), 2);
@@ -97,7 +97,7 @@ describe("Mangrove Operations Integration test suite", () => {
       assert.deepStrictEqual(newMangrove, {
         id: newMangroveId.value,
         chainId: chainId.value,
-        address: "address",
+        address: "address2",
         currentVersionId: newMangroveVersionId.value,
       });
       const newMangroveVersion = await prisma.mangroveVersion.findUnique({

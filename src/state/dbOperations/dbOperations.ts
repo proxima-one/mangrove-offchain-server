@@ -10,18 +10,19 @@ export type PrismaTx = Omit<
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$use"
 >;
 
-export function toUpsert<T extends { id: string | number }>(
-  entity: T
+export function toNewVersionUpsert<T extends { id: string | number }>(
+  createEntity: T,
+  updateCurrentVersion: string
 ): Upsert<T> {
   return {
-    where: { id: entity.id },
-    create: entity,
-    update: entity,
+    where: { id: createEntity.id },
+    create: createEntity,
+    update: { currentVersionId: updateCurrentVersion },
   };
 }
 
 export interface Upsert<T> {
   where: { id: any };
   create: T;
-  update: T;
+  update: { currentVersionId: string};
 }

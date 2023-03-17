@@ -1,5 +1,4 @@
-import { Kandel, MangroveOrder, Reserve, TokenBalance } from "@prisma/client";
-import { add } from "lodash";
+import { Account, Kandel, MangroveOrder, TokenBalance } from "@prisma/client";
 
 export class Id<T extends string | number> {
   public readonly value:T
@@ -213,29 +212,21 @@ export class MangroveOrderVersionId extends Id<string> {
   }
 }
 
-export class ReserveId extends AccountId {
-  public constructor(
-    public readonly chainId: ChainId,
-    public readonly address: string
-  ) {
-    super(chainId, address);
-  }
-}
 export class TokenBalanceId extends Id<string> {
   public constructor(
     public readonly params: (
       | {
-        reserveId: ReserveId;
+        accountId: AccountId;
       }
-      | { reserve: Reserve }
+      | { account: Account }
     ) & {
       tokenId: TokenId;
     }
   ) {
     super(
-      "reserveId" in params
-        ? `${params.reserveId.value}-${params.tokenId.value}`
-        : `${params.reserve.id}-${params.tokenId.value}`
+      "accountId" in params
+        ? `${params.accountId.value}-${params.tokenId.value}`
+        : `${params.account.id}-${params.tokenId.value}`
     );
   }
 }

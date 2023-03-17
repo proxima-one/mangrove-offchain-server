@@ -1,13 +1,11 @@
 import * as prisma from "@prisma/client";
-import { AccountId, KandelId, KandelVersionId, MangroveId, OfferId, OfferListingId, ReserveId, StratId, TokenId } from "../model";
-import { DbOperations, toUpsert } from "./dbOperations";
 import _ from "lodash";
-import { TokenBalanceOperations } from "./tokenBalanceOperations";
+import { AccountId, KandelId, KandelVersionId, MangroveId, OfferId, TokenId } from "../model";
+import { DbOperations, toNewVersionUpsert } from "./dbOperations";
 
 
 export class KandelOperations extends DbOperations {
 
-  reserveOperations = new TokenBalanceOperations(this.tx);
 
 
   public async addVersionedKandel(params: {
@@ -15,7 +13,7 @@ export class KandelOperations extends DbOperations {
     txId: string,
     updateFunc?: (model: Omit<prisma.KandelVersion, "id" | "kandelId" | "versionNumber" | "prevVersionId">) => void,
     constParams?: {
-      reserveId?: ReserveId
+      reserveId?: AccountId
       mangroveId: MangroveId,
       base: TokenId,
       quote: TokenId,
@@ -43,11 +41,9 @@ export class KandelOperations extends DbOperations {
       kandel = {
         id: params.id.value,
         mangroveId: params.constParams.mangroveId.value,
-        stratId: new StratId(params.constParams.mangroveId.chainId, params.id.address).value,
         baseId: params.constParams.base.value,
         quoteId: params.constParams.quote.value,
-        reserveId: params.constParams.reserveId?.value ?? new ReserveId(params.constParams.mangroveId.chainId, params.id.address).value,
-        accountId: new AccountId(params.constParams.mangroveId.chainId, params.id.address).value,
+        reserveId: params.constParams.reserveId?.value ?? new AccountId(params.constParams.mangroveId.chainId, params.id.address).value,
         currentVersionId: newVersionId.value,
         type: params.constParams.type
       };
@@ -82,11 +78,7 @@ export class KandelOperations extends DbOperations {
     }
 
     await this.tx.kandel.upsert(
-      toUpsert(
-        _.merge(kandel, {
-          currentVersionId: newVersion.id,
-        })
-      )
+      toNewVersionUpsert( kandel, newVersion.id )
     );
 
     return await this.tx.kandelVersion.create({ data: newVersion });
@@ -178,15 +170,12 @@ export class KandelOperations extends DbOperations {
   async getReserveAddress(params:{kandelId: KandelId}|{kandel:prisma.Kandel}) {
     const kandel = "kandelId" in  params ? await this.getKandel(params.kandelId) : params.kandel;
     const kandelId = kandel.id;
-    const reserve = await this.tx.reserve.findUnique({ where: { id: kandel.reserveId } })
+    const reserve = await this.tx.account.findUnique({ where: { id: kandel.reserveId } })
     if (!reserve) {
       throw new Error(`Cannot find reserve from kandel id: ${kandelId}, with reserveId: ${kandel.reserveId}`)
     }
-    const account = await this.tx.account.findUnique({ where: { id: reserve.accountId } })
-    if (!account) {
-      throw new Error(`Cannot find reserve account from kandel id: ${kandelId}, reserveId: ${kandel.reserveId} and accountId: ${reserve.accountId}`)
-    }
-    return account.address;
+
+    return reserve.address;
   }
 
   async getTokenBalance(kandelId: KandelId, tokenId:TokenId){
@@ -238,10 +227,20 @@ export class KandelOperations extends DbOperations {
     })
   }
 
-  async isOfferMakerKandel(offer:prisma.Offer){
-    const kandel = await this.tx.account.findUnique({where: {
+  async getKandelFromOffer(offer:prisma.Offer){
+    const account = await this.tx.account.findUnique({where: {
       id: offer.makerId
-    }}).Kandel()
+    }})
+    if(!account) {
+      throw new Error(`Cannot find maker of offer: ${offer.id}, with makerId: ${offer.makerId}`)
+    }
+    const kandel = await this.tx.kandel.findFirst({where: {
+      strat: {
+        account: {
+          address:account.address
+        }
+      }
+    }})
     return kandel 
   }
 

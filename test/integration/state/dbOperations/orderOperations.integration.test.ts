@@ -312,7 +312,7 @@ describe("Order Operations Integration test Suite", () => {
             
             await mangroveOrderOperations.addMangroveOrderVersion( new MangroveOrderId(mangroveId, offerListKey, "2"), "txId", (m) => m , {
                 stratId: new StratId(chainId, "mangroveOrder").value,
-                orderId: new OrderId(mangroveId, offerListKey, "proximaId").value,
+                orderId: new OrderId(mangroveId, offerListKey, "proximaId2").value,
                 takerId: takerId.value,
                 restingOrderId: offerId2.value,
                 restingOrder: true,

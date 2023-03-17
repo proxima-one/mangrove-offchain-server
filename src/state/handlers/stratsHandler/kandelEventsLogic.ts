@@ -2,9 +2,8 @@ import * as prisma from "@prisma/client";
 import BigNumber from "bignumber.js";
 import _ from "lodash";
 import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
-import { KandelOperations } from "src/state/dbOperations/kandelOperations";
 
-import { AccountId, ChainId, KandelId, MangroveId, OfferId, OfferListingId, ReserveId, StratId, TokenBalanceId, TokenId } from "src/state/model";
+import { AccountId, ChainId, KandelId, MangroveId, OfferId, TokenBalanceId, TokenId } from "src/state/model";
 import { Credit, Debit, KandelCreated, KandelParamsUpdated, OfferIndex, Populate } from "src/temp/kandelEvents";
 
 
@@ -22,7 +21,7 @@ export class KandelEventsLogic {
         transaction: prisma.Transaction | undefined) {
         const mangroveId = new MangroveId(chainId, event.mangroveId);
 
-        const reserveId = new ReserveId(mangroveId.chainId, event.reserve);
+        const reserveId = new AccountId(mangroveId.chainId, event.reserve);
         const kandelId = new KandelId(chainId, event.address);
         if (undo) {
             await this.db.kandelOperations.deleteLatestKandelVersion(kandelId);
@@ -129,9 +128,9 @@ export class KandelEventsLogic {
         transaction: prisma.Transaction | undefined) {
 
         const reserveAddress = await this.db.kandelOperations.getReserveAddress({kandelId});
-        const reserveId = new ReserveId(kandelId.chainId, reserveAddress);
+        const reserveId = new AccountId(kandelId.chainId, reserveAddress);
         const tokenId = new TokenId(kandelId.chainId, event.token);
-        const tokenBalanceId = new TokenBalanceId({ reserveId, tokenId: tokenId });
+        const tokenBalanceId = new TokenBalanceId({ accountId: reserveId, tokenId: tokenId });
 
         if (undo) {
             await this.db.kandelOperations.deleteLatestKandelVersion(kandelId);

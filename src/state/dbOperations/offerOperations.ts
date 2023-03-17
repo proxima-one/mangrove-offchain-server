@@ -1,7 +1,7 @@
 import * as prisma from "@prisma/client";
 import * as _ from "lodash";
 import { AccountId, OfferId, OfferListingId, OfferVersionId } from "src/state/model";
-import { DbOperations, toUpsert } from "./dbOperations";
+import { DbOperations, toNewVersionUpsert } from "./dbOperations";
 
 export class OfferOperations extends DbOperations {
 
@@ -75,11 +75,7 @@ export class OfferOperations extends DbOperations {
 
 
     await this.tx.offer.upsert(
-      toUpsert(
-        _.merge(offer, {
-          currentVersionId: newVersion.id,
-        })
-      )
+      toNewVersionUpsert( offer, newVersion.id )
     );
 
     await this.tx.offerVersion.create({ data: newVersion });

@@ -6,7 +6,7 @@ import {
   OfferListingVersionId,
   TokenId,
 } from "src/state/model";
-import { DbOperations, toUpsert } from "./dbOperations";
+import { DbOperations, toNewVersionUpsert } from "./dbOperations";
 
 export class OfferListingOperations extends DbOperations {
   public async getOfferListTokens(
@@ -96,11 +96,7 @@ export class OfferListingOperations extends DbOperations {
     updateFunc(newVersion);
 
     await this.tx.offerListing.upsert(
-      toUpsert(
-        _.merge(offerListing, {
-          currentVersionId: newVersion.id,
-        })
-      )
+      toNewVersionUpsert( offerListing, newVersion.id )
     );
     await this.tx.offerListingVersion.create({ data: newVersion });
   }

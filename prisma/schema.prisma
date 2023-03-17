@@ -33,7 +33,7 @@ model Chain {
 
 model Transaction {
   id          String   @id @db.VarChar(255)
-  chainId     Int      @unique @default(80001)
+  chainId     Int      @default(80001)
   txHash      String   @db.VarChar(80)
   from        String   @db.VarChar(80) // index?
   blockNumber Int
@@ -51,34 +51,38 @@ model Transaction {
   MangroveOrderVersion    MangroveOrderVersion[]
   KandelVersion           KandelVersion[]
   DepositWithdrawalStatus TokenBalance[]
-  KandelOfferIndex        KandelOfferIndex?
-  TokenBalanceVersion     TokenBalanceVersion?
+  KandelOfferIndex        KandelOfferIndex[]
+  TokenBalanceVersion     TokenBalanceVersion[]
+
+  @@unique([chainId, txHash])
 }
 
 // probably have few tokens, so no extra index needed
 
 model Token {
   id       String @id @db.VarChar(255)
-  chainId  Int    @unique
+  chainId  Int
   address  String @default("") @db.VarChar(80)
   symbol   String
   name     String
   decimals Int
 
-  chain                      Chain              @relation(fields: [chainId], references: [id])
-  offerListingsWhereInbound  OfferListing[]     @relation("OfferListingsByInboundToken")
-  offerListingsWhereOutbound OfferListing[]     @relation("OfferListingsByOutboundToken")
+  chain                      Chain               @relation(fields: [chainId], references: [id])
+  offerListingsWhereInbound  OfferListing[]      @relation("OfferListingsByInboundToken")
+  offerListingsWhereOutbound OfferListing[]      @relation("OfferListingsByOutboundToken")
   DepositWithdrawalStatus    TokenBalance[]
-  kandelBase                 Kandel[]           @relation("base")
-  kandelQuote                Kandel[]           @relation("quote")
-  TokenBalanceEvent          TokenBalanceEvent?
+  kandelBase                 Kandel[]            @relation("base")
+  kandelQuote                Kandel[]            @relation("quote")
+  TokenBalanceEvent          TokenBalanceEvent[]
+
+  @@unique([chainId, address])
 }
 
 // Few mangrove instances, no extra index needed
 
 model Mangrove {
   id      String @id @db.VarChar(255)
-  chainId Int    @unique @default(-1)
+  chainId Int    @default(-1)
   address String @default("") @db.VarChar(80)
 
   chain          Chain           @relation(fields: [chainId], references: [id])
@@ -92,16 +96,18 @@ model Mangrove {
   currentVersion   MangroveVersion? @relation("currentVersion", fields: [currentVersionId], references: [id])
 
   mangroveVersions MangroveVersion[] @relation("mangroveVersion")
-  MangroveOrder    MangroveOrder?
-  Kandel           Kandel?
+  MangroveOrder    MangroveOrder[]
+  Kandel           Kandel[]
+
+  @@unique([chainId, address])
 }
 
 // Few mangrove instances, no extra index needed
 
 model MangroveVersion {
-  id         String   @id @unique @db.VarChar(255)
-  mangroveId String   @unique @db.VarChar(255)
-  txId       String?  @unique @db.VarChar(255)
+  id         String   @id @db.VarChar(255)
+  mangroveId String   @db.VarChar(255)
+  txId       String?  @db.VarChar(255)
   governance String?
   monitor    String?
   vault      String?
@@ -119,13 +125,16 @@ model MangroveVersion {
   nextVersion    MangroveVersion? @relation("prevVersion")
   currentVersion Mangrove?        @relation("currentVersion")
   mangrove       Mangrove?        @relation("mangroveVersion", fields: [mangroveId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([mangroveId, versionNumber])
+  @@index([txId])
 }
 
 // could potentially have many accounts, maybe extra indexes are needed.
 
 model Account {
   id      String @id @db.VarChar(255)
-  chainId Int    @unique @default(80001)
+  chainId Int    @default(80001)
   address String @db.VarChar(80) //index? 
 
   chain Chain @relation(fields: [chainId], references: [id])
@@ -136,11 +145,14 @@ model Account {
   orders                Order[]
   makerBalances         MakerBalance[]
 
-  strat         Strat? // An account may be a strat contract
-  MangroveOrder MangroveOrder[]
-  Kandel        Kandel?
-  Reserve       Reserve?
-  kandelOwner   KandelVersion?  @relation("admin")
+  strat             Strat? // An account may be a strat contract
+  MangroveOrder     MangroveOrder[]
+  Kandel            Kandel[]            @relation("reserveId")
+  kandelOwner       KandelVersion[]     @relation("admin")
+  TokenBalance      TokenBalance[]      @relation("reserve")
+  TokenBalanceEvent TokenBalanceEvent[]
+
+  @@unique([chainId, address])
 }
 
 // Problably few strats, no extra indexes needed.
@@ -158,10 +170,10 @@ model Strat {
 
 model TakerApproval {
   id             String @id @db.VarChar(255)
-  mangroveId     String @unique @db.VarChar(255)
-  offerListingId String @unique @db.VarChar(255)
-  ownerId        String @unique @db.VarChar(255) // index?
-  spenderId      String @unique @db.VarChar(255) // index?
+  mangroveId     String @db.VarChar(255)
+  offerListingId String @db.VarChar(255)
+  ownerId        String @db.VarChar(255) // index?
+  spenderId      String @db.VarChar(255) // index?
 
   mangrove     Mangrove     @relation(fields: [mangroveId], references: [id])
   offerListing OfferListing @relation(fields: [offerListingId], references: [id])
@@ -172,15 +184,20 @@ model TakerApproval {
   currentVersion   TakerApprovalVersion? @relation("currentVersion", fields: [currentVersionId], references: [id])
 
   takerApprovalVersions TakerApprovalVersion[] @relation("takerApprovalVersion")
+
+  @@unique([mangroveId, offerListingId, ownerId, spenderId])
+  @@index([offerListingId])
+  @@index([ownerId])
+  @@index([spenderId])
 }
 
 // could potentially have many approvals, extra indexes might be needed.
 
 model TakerApprovalVersion {
   id              String  @id @db.VarChar(255)
-  takerApprovalId String  @unique @db.VarChar(255) // index?
-  txId            String  @unique @db.VarChar(255) // index?
-  parentOrderId   String? @unique @db.VarChar(255)
+  takerApprovalId String  @db.VarChar(255) // index?
+  txId            String  @db.VarChar(255) // index?
+  parentOrderId   String? @db.VarChar(255)
   value           String  @db.VarChar(80)
 
   tx          Transaction @relation(fields: [txId], references: [id])
@@ -192,14 +209,18 @@ model TakerApprovalVersion {
   nextVersion    TakerApprovalVersion? @relation("prevVersion")
   currentVersion TakerApproval?        @relation("currentVersion")
   takerApproval  TakerApproval         @relation("takerApprovalVersion", fields: [takerApprovalId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([takerApprovalId, versionNumber])
+  @@index([txId])
+  @@index([parentOrderId])
 }
 
 // could potentially have many makers, but extra indexes probably not needed
 
 model MakerBalance {
   id         String @id @db.VarChar(255)
-  mangroveId String @unique @db.VarChar(100)
-  makerId    String @unique @db.VarChar(255)
+  mangroveId String @db.VarChar(100)
+  makerId    String @db.VarChar(255)
 
   mangrove Mangrove @relation(fields: [mangroveId], references: [id])
   maker    Account  @relation(fields: [makerId], references: [id])
@@ -208,14 +229,17 @@ model MakerBalance {
   currentVersion   MakerBalanceVersion? @relation("currentVersion", fields: [currentVersionId], references: [id])
 
   makerBalanceVersions MakerBalanceVersion[] @relation("makerBalanceVersion")
+
+  @@unique([mangroveId, makerId])
+  @@index([makerId])
 }
 
 // Many makers with many versions, could need extra indexes.
 
 model MakerBalanceVersion {
   id             String @id @db.VarChar(255)
-  makerBalanceId String @unique @db.VarChar(255) // index?
-  txId           String @unique @db.VarChar(255) // index?
+  makerBalanceId String @db.VarChar(255) // index?
+  txId           String @db.VarChar(255) // index?
   balance        String @db.VarChar(80)
 
   tx Transaction @relation(fields: [txId], references: [id])
@@ -226,15 +250,18 @@ model MakerBalanceVersion {
   nextVersion    MakerBalanceVersion? @relation("prevVersion")
   currentVersion MakerBalance?        @relation("currentVersion")
   makerBalance   MakerBalance         @relation("makerBalanceVersion", fields: [makerBalanceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([makerBalanceId, versionNumber])
+  @@index([txId])
 }
 
 // probably very few offerlists, no extra indexes needed
 /// The name should be "OfferList" but Prisma will generate wrong queries if the name ends with "List"
 model OfferListing {
   id              String @id @db.VarChar(255)
-  mangroveId      String @unique @db.VarChar(255)
-  inboundTokenId  String @unique @db.VarChar(255)
-  outboundTokenId String @unique @db.VarChar(255)
+  mangroveId      String @db.VarChar(255)
+  inboundTokenId  String @db.VarChar(255)
+  outboundTokenId String @db.VarChar(255)
 
   mangrove       Mangrove        @relation(fields: [mangroveId], references: [id])
   inboundToken   Token           @relation(name: "OfferListingsByInboundToken", fields: [inboundTokenId], references: [id])
@@ -247,14 +274,18 @@ model OfferListing {
   currentVersionId     String                @unique @db.VarChar(255)
   currentVersion       OfferListingVersion?  @relation("currentVersion", fields: [currentVersionId], references: [id])
   offerListingVersions OfferListingVersion[] @relation("offerListingVersion")
+
+  @@unique([mangroveId, inboundTokenId, outboundTokenId])
+  @@index([inboundTokenId])
+  @@index([outboundTokenId])
 }
 
 // few offerlist, will have some versions, but not enough for it to need extra indexes
 
 model OfferListingVersion {
   id             String   @id @db.VarChar(255)
-  offerListingId String   @unique @db.VarChar(255)
-  txId           String   @unique @db.VarChar(255)
+  offerListingId String   @db.VarChar(255)
+  txId           String   @db.VarChar(255)
   active         Boolean?
   fee            String?  @db.VarChar(80)
   gasbase        Int?
@@ -268,15 +299,18 @@ model OfferListingVersion {
   nextVersion    OfferListingVersion? @relation("prevVersion")
   currentVersion OfferListing?        @relation("currentVersion")
   offerListing   OfferListing         @relation("offerListingVersion", fields: [offerListingId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([offerListingId, versionNumber])
+  @@index([txId])
 }
 
 // Could potentially have many offers, maybe extra indexes are needed.
 
 model Offer {
   id             String @id @db.VarChar(255)
-  mangroveId     String @unique @db.VarChar(255)
-  offerListingId String @unique @db.VarChar(255)
-  makerId        String @unique @db.VarChar(255) // index?
+  mangroveId     String @db.VarChar(255)
+  offerListingId String @db.VarChar(255)
+  makerId        String @db.VarChar(255) // index?
   offerNumber    Int
 
   // Instead, we create new versions or mark the offer as deleted, which makes undo easy.
@@ -286,19 +320,23 @@ model Offer {
   offerListing  OfferListing    @relation(fields: [offerListingId], references: [id])
   maker         Account         @relation(fields: [makerId], references: [id])
 
-  currentVersionId   String             @unique @db.VarChar(255)
-  currentVersion     OfferVersion?      @relation("currentVersion", fields: [currentVersionId], references: [id])
-  offerVersions      OfferVersion[]     @relation("offerVersion")
+  currentVersionId   String            @unique @db.VarChar(255)
+  currentVersion     OfferVersion?     @relation("currentVersion", fields: [currentVersionId], references: [id])
+  offerVersions      OfferVersion[]    @relation("offerVersion")
   kandelOfferIndexes KandelOfferIndex? @relation("offerIndex")
+
+  @@unique([mangroveId, offerListingId, offerNumber])
+  @@index([offerListingId])
+  @@index([makerId])
 }
 
 // Many offers, each having many version, we probably need indexes here.
 
 model OfferVersion {
   id             String  @id @db.VarChar(255)
-  offerId        String  @unique @db.VarChar(255) // index?
-  txId           String  @unique @db.VarChar(255)
-  parentOrderId  String? @unique @db.VarChar(255) // index?
+  offerId        String  @db.VarChar(255) // index?
+  txId           String  @db.VarChar(255)
+  parentOrderId  String? @db.VarChar(255) // index?
   prevOfferId    String? @db.VarChar(255) // what is this?
   deleted        Boolean @default(false) // The offer has been deleted
   wants          String  @db.VarChar(80)
@@ -323,17 +361,21 @@ model OfferVersion {
   offer          Offer         @relation("offerVersion", fields: [offerId], references: [id], onDelete: Restrict, onUpdate: Restrict) // This points to the older version that this version replaces, if any
 
   TakenOffer TakenOffer[]
+
+  @@index([txId])
+  @@index([offerId])
+  @@index([parentOrderId])
 }
 
 // could have many orders. probably needs extra indexes.
 
 model Order {
   id              String  @id @db.VarChar(255)
-  txId            String  @unique @db.VarChar(255) // index?
-  parentOrderId   String? @unique @db.VarChar(255)
-  mangroveId      String  @unique @db.VarChar(255)
-  offerListingId  String  @unique @db.VarChar(255) // maybe index?
-  takerId         String  @unique @db.VarChar(255) // index?
+  txId            String  @db.VarChar(255) // index?
+  parentOrderId   String? @db.VarChar(255)
+  mangroveId      String  @db.VarChar(255)
+  offerListingId  String  @db.VarChar(255) // maybe index?
+  takerId         String  @db.VarChar(255) // index?
   proximaId       String  @db.VarChar(255)
   // takerWants       String
   // takerWantsNumber Float
@@ -361,28 +403,37 @@ model Order {
   childTakerApprovalVersions TakerApprovalVersion[]
   childOfferVersions         OfferVersion[]
   MangroveOrder              MangroveOrder[]
+
+  @@index([txId])
+  @@index([parentOrderId])
+  @@index([mangroveId])
+  @@index([offerListingId])
+  @@index([takerId])
 }
 
 // With many offers and offer versions, we could have many takenOffers, this probably needs indexes
 // Why no reference to the actuall offer( and its version), that was taken?
 
 model TakenOffer {
-  id                  String  @id @db.VarChar(255)
-  orderId             String  @unique @db.VarChar(255) // index?
-  offerVersionId      String  @unique @db.VarChar(255)
-  takerGot            String
-  takerGotNumber      Float
-  takerGave           String
-  takerGaveNumber     Float
-  takerPaidPrice      Float?
-  makerPaidPrice      Float?
-  posthookFailed      Boolean
-  posthookData        String?
-  failReason          String?
+  id              String  @id @db.VarChar(255)
+  orderId         String  @db.VarChar(255) // index?
+  offerVersionId  String  @db.VarChar(255)
+  takerGot        String
+  takerGotNumber  Float
+  takerGave       String
+  takerGaveNumber Float
+  takerPaidPrice  Float?
+  makerPaidPrice  Float?
+  posthookFailed  Boolean
+  posthookData    String?
+  failReason      String?
 
-  order             Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  offerVersion      OfferVersion       @relation(fields: [offerVersionId], references: [id], onDelete: Cascade)
-  TokenBalanceEvent TokenBalanceEvent? 
+  order             Order               @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  offerVersion      OfferVersion        @relation(fields: [offerVersionId], references: [id], onDelete: Cascade)
+  TokenBalanceEvent TokenBalanceEvent[]
+
+  @@unique([orderId, offerVersionId])
+  @@index([offerVersionId])
 }
 
 // strats
@@ -400,13 +451,13 @@ model TakenOffer {
 model MangroveOrder {
   id String @id @db.VarChar(255)
 
-  mangroveId       String  @unique @db.VarChar(255)
-  stratId          String  @unique @db.VarChar(255)
-  offerListingId   String  @unique @db.VarChar(255)
-  takerId          String  @unique @db.VarChar(255)
-  proximaId        String  @unique @db.VarChar(255)
-  orderId          String  @unique @db.VarChar(255)
-  restingOrderId   String? @unique @db.VarChar(255) // maybe index?
+  mangroveId       String  @db.VarChar(255)
+  stratId          String  @db.VarChar(255)
+  offerListingId   String  @db.VarChar(255)
+  takerId          String  @db.VarChar(255)
+  proximaId        String  @db.VarChar(255)
+  orderId          String  @db.VarChar(255)
+  restingOrderId   String? @db.VarChar(255) // maybe index?
   restingOrder     Boolean
   fillOrKill       Boolean
   fillWants        Boolean
@@ -429,12 +480,19 @@ model MangroveOrder {
   order                Order                  @relation(fields: [orderId], references: [id])
   offer                Offer?                 @relation(fields: [restingOrderId], references: [id])
   MangroveOrderVersion MangroveOrderVersion[] @relation("mangroveOrderVersion")
+
+  @@unique([mangroveId, orderId])
+  @@index([stratId])
+  @@index([offerListingId])
+  @@index([takerId])
+  @@index([orderId])
+  @@index([restingOrderId])
 }
 
 model MangroveOrderVersion {
   id              String   @id @db.VarChar(255)
-  txId            String   @unique @db.VarChar(255)
-  mangroveOrderId String   @unique @db.VarChar(255)
+  txId            String   @db.VarChar(255)
+  mangroveOrderId String   @db.VarChar(255)
   filled          Boolean
   cancelled       Boolean  @default(false)
   failed          Boolean
@@ -456,50 +514,50 @@ model MangroveOrderVersion {
   nextVersion    MangroveOrderVersion? @relation("prevVersion")
   currentVersion MangroveOrder?        @relation("currentVersion")
   mangroveOrder  MangroveOrder         @relation("mangroveOrderVersion", fields: [mangroveOrderId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-}
 
-model Reserve {
-  id        String   @id @db.VarChar(255)
-  accountId String   @unique @db.VarChar(255)
-  account   Account  @relation(fields: [accountId], references: [id])
-  kandel    Kandel[] @relation("reserveId")
-
-  tokenBalances     TokenBalance[]      @relation("reserve")
-  TokenBalanceEvent TokenBalanceEvent[]
+  @@unique([mangroveOrderId, versionNumber])
+  @@index([txId])
 }
 
 model TokenBalance {
   id        String @id @db.VarChar(255)
-  txId      String @unique @db.VarChar(255)
-  reserveId String @unique @db.VarChar(255)
-  tokenId   String @unique @db.VarChar(255)
+  txId      String @db.VarChar(255)
+  reserveId String @db.VarChar(255)
+  tokenId   String @db.VarChar(255)
 
   currentVersionId String                @unique @db.VarChar(255)
   currentVersion   TokenBalanceVersion?  @relation("currentVersion", fields: [currentVersionId], references: [id])
   token            Token                 @relation(fields: [tokenId], references: [id])
-  reserve          Reserve               @relation("reserve", fields: [reserveId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reserve          Account               @relation("reserve", fields: [reserveId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   Transaction      Transaction?          @relation(fields: [txId], references: [id])
   allBalances      TokenBalanceVersion[] @relation("tokenBalance")
 
   @@unique([reserveId, tokenId])
+  @@index([tokenId])
+  @@index([txId])
 }
 
 model TokenBalanceEvent {
   id                    String  @id @default(uuid())
-  reserveId             String  @unique @db.VarChar(255)
-  kandelId              String? @unique @db.VarChar(255)
-  tokenId               String  @unique @db.VarChar(255)
+  reserveId             String  @db.VarChar(255)
+  kandelId              String? @db.VarChar(255)
+  tokenId               String  @db.VarChar(255)
   tokenBalanceVersionId String  @unique @db.VarChar(255)
-  takenOfferId String?  @unique @db.VarChar(255)
+  takenOfferId          String? @db.VarChar(255)
 
   tokenBalanceVersion TokenBalanceVersion @relation(fields: [tokenBalanceVersionId], references: [id], onDelete: Cascade)
   token               Token               @relation(fields: [tokenId], references: [id])
 
   kandel                      Kandel?                      @relation(fields: [kandelId], references: [id])
-  reserve                     Reserve                      @relation(fields: [reserveId], references: [id])
+  reserve                     Account                      @relation(fields: [reserveId], references: [id])
   TokenBalanceDepositEvent    TokenBalanceDepositEvent?
   TokenBalanceWithdrawalEvent TokenBalanceWithdrawalEvent?
   takenOffer                  TakenOffer?                  @relation(fields: [takenOfferId], references: [id], onDelete: Cascade)
+
+  @@index([tokenId])
+  @@index([kandelId])
+  @@index([reserveId])
+  @@index([takenOfferId])
 }
 
 model TokenBalanceDepositEvent {
@@ -525,8 +583,8 @@ enum TokenBalanceEventSource {
 
 model TokenBalanceVersion {
   id             String @id @db.VarChar(255)
-  txId           String @unique @db.VarChar(255)
-  tokenBalanceId String @unique @db.VarChar(255)
+  txId           String @db.VarChar(255)
+  tokenBalanceId String @db.VarChar(255)
   deposit        String
   withdrawal     String
   spent          String
@@ -544,16 +602,15 @@ model TokenBalanceVersion {
   TokenBalanceEvent TokenBalanceEvent?
 
   @@unique([tokenBalanceId, versionNumber])
+  @@index([txId])
 }
 
 model Kandel {
-  id         String @id @db.VarChar(255)
-  mangroveId String @unique @db.VarChar(255)
-  stratId    String @unique @db.VarChar(255)
-  baseId     String @unique @db.VarChar(255)
-  quoteId    String @unique @db.VarChar(255)
-  accountId  String @unique @db.VarChar(255)
-  reserveId  String @unique @db.VarChar(255) // create reserve object
+  id         String @id @unique @db.VarChar(255)
+  mangroveId String @db.VarChar(255)
+  baseId     String @db.VarChar(255)
+  quoteId    String @db.VarChar(255)
+  reserveId  String @db.VarChar(255)
   type       String
 
   currentVersionId   String              @unique @db.VarChar(255)
@@ -561,19 +618,23 @@ model Kandel {
   baseToken          Token               @relation("base", fields: [baseId], references: [id])
   quoteToken         Token               @relation("quote", fields: [quoteId], references: [id])
   mangrove           Mangrove            @relation(fields: [mangroveId], references: [id])
-  account            Account             @relation(fields: [accountId], references: [id])
-  strat              Strat               @relation(fields: [stratId], references: [id])
-  reserve            Reserve?            @relation("reserveId", fields: [reserveId], references: [id])
+  strat              Strat               @relation(fields: [id], references: [id])
+  reserve            Account             @relation("reserveId", fields: [reserveId], references: [id])
   kandelVersions     KandelVersion[]     @relation("kandelVersion")
   kandelOfferIndexes KandelOfferIndex[]  @relation("offerIndex")
   KandelEvent        KandelEvent[]
   TokenBalanceEvent  TokenBalanceEvent[]
+
+  @@index([baseId])
+  @@index([quoteId])
+  @@index([mangroveId])
+  @@index([reserveId])
 }
 
 model KandelOfferIndex {
   offerId  String @unique @db.VarChar(255)
-  kandelId String @unique @db.VarChar(255)
-  txId     String @unique @db.VarChar(255)
+  kandelId String @db.VarChar(255)
+  txId     String @db.VarChar(255)
   index    Int
   ba       String
 
@@ -582,12 +643,14 @@ model KandelOfferIndex {
   tx     Transaction @relation(fields: [txId], references: [id])
 
   @@id([offerId, kandelId, ba])
+  @@index([kandelId])
+  @@index([txId])
 }
 
 model KandelEvent {
   id              String @id @default(uuid())
   kandelVersionId String @unique @db.VarChar(255)
-  kandelId        String @unique @db.VarChar(255)
+  kandelId        String @db.VarChar(255)
 
   kandel                     Kandel                      @relation(fields: [kandelId], references: [id])
   KandelVersion              KandelVersion               @relation("kandelVersion", fields: [kandelVersionId], references: [id], onDelete: Cascade)
@@ -600,6 +663,8 @@ model KandelEvent {
   KandelRouterEvent          KandelRouterEvent?
   KandelPopulateEvent        KandelPopulateEvent?
   NewKandelEvent             NewKandelEvent?
+
+  @@index([kandelId])
 }
 
 model KandelCompoundRateEvent {
@@ -667,10 +732,10 @@ model KandelPopulateEvent {
 
 model KandelVersion {
   id              String @id @db.VarChar(255)
-  kandelId        String @unique @db.VarChar(255)
-  txId            String @unique @db.VarChar(255)
-  congigurationId String @unique @db.VarChar(255)
-  adminId         String @unique @db.VarChar(255)
+  kandelId        String @db.VarChar(255)
+  txId            String @db.VarChar(255)
+  congigurationId String @db.VarChar(255)
+  adminId         String @db.VarChar(255)
 
   routerAddress String @db.VarChar(255)
 
@@ -685,6 +750,11 @@ model KandelVersion {
   nextVersion    KandelVersion? @relation("prevVersion")
   currentVersion Kandel?        @relation("currentVersion")
   kandel         Kandel         @relation("kandelVersion", fields: [kandelId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  @@unique([kandelId, versionNumber])
+  @@index([txId])
+  @@index([congigurationId])
+  @@index([adminId])
 }
 
 model KandelConfiguration {

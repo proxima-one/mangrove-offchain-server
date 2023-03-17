@@ -9,7 +9,6 @@ import {
   OfferId,
   OfferListingId,
   OrderId,
-  ReserveId,
   TakenOfferId,
   TokenBalanceId,
   TokenId
@@ -20,6 +19,7 @@ import BigNumber from "bignumber.js";
 
 export class OrderEventLogic {
   db: AllDbOperations;
+  orderEventsLogicHelper = new OrderEventLogicHelper();
   constructor(db: AllDbOperations) {
       this.db = db;
   }
@@ -52,8 +52,8 @@ export class OrderEventLogic {
     const tokens = await this.db.offerListOperations.getOfferListTokens({
       id: offerListingId,
     });
-    const prismaOrder = this.createOrder(mangroveId, offerListingId, tokens, order, takerAccountId, orderId, transaction!.id, parentOrderId);
-    const takenOffersWithEvents = await Promise.all(order.takenOffers.map((value) => this.mapTakenOffer(orderId, value, tokens, (o) => this.db.offerOperations.getOffer(o))));
+    const prismaOrder = this.orderEventsLogicHelper.createOrder(mangroveId, offerListingId, tokens, order, takerAccountId, orderId, transaction!.id, parentOrderId);
+    const takenOffersWithEvents = await Promise.all(order.takenOffers.map((value) => this.orderEventsLogicHelper.mapTakenOffer(orderId, value, tokens, (o) => this.db.offerOperations.getOffer(o))));
     const takenOffers: Omit<prisma.TakenOffer, "orderId">[] = takenOffersWithEvents.map(value => value.takenOffer);
 
     await this.db.orderOperations.createOrder(orderId, prismaOrder, takenOffers);
@@ -62,13 +62,13 @@ export class OrderEventLogic {
       const { takenOffer, takenOfferEvent } = takenOffersWithEvents[i];
       const offer = await this.db.offerOperations.getOffer(new OfferId(mangroveId, offerList, takenOfferEvent.id));
       assert(offer);
-      const kandel = await this.db.kandelOperations.isOfferMakerKandel(offer)
+      const kandel = await this.db.kandelOperations.getKandelFromOffer(offer)
       if (!kandel) {
         continue
       }
       const { inboundToken, outboundToken } = await this.db.offerListOperations.getOfferListTokens({ id: offerListingId });
       const reserveAddress = await this.db.kandelOperations.getReserveAddress({ kandel })
-      const reserveId = new ReserveId(chainId, reserveAddress);
+      const reserveId = new AccountId(chainId, reserveAddress);
       const takenOfferId = new TakenOfferId(orderId, takenOfferEvent.id);
         
       await this.addNewInboundBalanceWithEvent(chainId, reserveId, inboundToken, transaction!.id, kandel, takenOfferId, takenOffer)
@@ -78,9 +78,9 @@ export class OrderEventLogic {
 
   }
 
-  async addNewInboundBalanceWithEvent(chainId:ChainId, reserveId:ReserveId, inboundToken:prisma.Token, txId:string, kandel:prisma.Kandel, takenOfferId:TakenOfferId, takenOffer:Omit<prisma.TakenOffer, "orderId">) {
+  async addNewInboundBalanceWithEvent(chainId:ChainId, reserveId:AccountId, inboundToken:prisma.Token, txId:string, kandel:prisma.Kandel, takenOfferId:TakenOfferId, takenOffer:Omit<prisma.TakenOffer, "orderId">) {
     const inboundTokenId = new TokenId(chainId, inboundToken.address);
-    const inboundTokenBalanceId = new TokenBalanceId({ reserveId, tokenId: inboundTokenId })
+    const inboundTokenBalanceId = new TokenBalanceId({ accountId: reserveId, tokenId: inboundTokenId })
     const newInboundBalance = await this.db.tokenBalanceOperations.addTokenBalanceVersion({
       reserveId,
       tokenBalanceId: inboundTokenBalanceId,
@@ -93,9 +93,9 @@ export class OrderEventLogic {
     await this. db.tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandel, inboundTokenId, newInboundBalance, takenOfferId)
   }
 
-  async addNewOutboundBalanceWithEvent(chainId:ChainId, reserveId:ReserveId, outboundToken:prisma.Token, txId:string, kandel:prisma.Kandel, takenOfferId:TakenOfferId, takenOffer:Omit<prisma.TakenOffer, "orderId">) {
+  async addNewOutboundBalanceWithEvent(chainId:ChainId, reserveId:AccountId, outboundToken:prisma.Token, txId:string, kandel:prisma.Kandel, takenOfferId:TakenOfferId, takenOffer:Omit<prisma.TakenOffer, "orderId">) {
     const outboundTokenId = new TokenId(chainId, outboundToken.address);
-    const outboundTokenBalanceId = new TokenBalanceId({ reserveId, tokenId: outboundTokenId })
+    const outboundTokenBalanceId = new TokenBalanceId({ accountId: reserveId, tokenId: outboundTokenId })
     const newInboundBalance = await this.db.tokenBalanceOperations.addTokenBalanceVersion({
       reserveId,
       tokenBalanceId: outboundTokenBalanceId,
@@ -107,6 +107,8 @@ export class OrderEventLogic {
     })
     await this. db.tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandel, outboundTokenId, newInboundBalance, takenOfferId)
   }
+}
+export class OrderEventLogicHelper {
 
   createOrder(
     mangroveId: MangroveId,
