@@ -81,8 +81,7 @@ export class OrderEventLogic {
   async addNewInboundBalanceWithEvent(chainId:ChainId, reserveId:AccountId, inboundToken:prisma.Token, txId:string, kandel:prisma.Kandel, takenOfferId:TakenOfferId, takenOffer:Omit<prisma.TakenOffer, "orderId">) {
     const inboundTokenId = new TokenId(chainId, inboundToken.address);
     const inboundTokenBalanceId = new TokenBalanceId({ accountId: reserveId, tokenId: inboundTokenId })
-    const newInboundBalance = await this.db.tokenBalanceOperations.addTokenBalanceVersion({
-      reserveId,
+    const { updatedOrNewTokenBalance, newVersion:newInboundBalance } = await this.db.tokenBalanceOperations.addTokenBalanceVersion({
       tokenBalanceId: inboundTokenBalanceId,
       txId: txId,
       updateFunc: (tokenBalanceVersion) => {
@@ -96,8 +95,7 @@ export class OrderEventLogic {
   async addNewOutboundBalanceWithEvent(chainId:ChainId, reserveId:AccountId, outboundToken:prisma.Token, txId:string, kandel:prisma.Kandel, takenOfferId:TakenOfferId, takenOffer:Omit<prisma.TakenOffer, "orderId">) {
     const outboundTokenId = new TokenId(chainId, outboundToken.address);
     const outboundTokenBalanceId = new TokenBalanceId({ accountId: reserveId, tokenId: outboundTokenId })
-    const newInboundBalance = await this.db.tokenBalanceOperations.addTokenBalanceVersion({
-      reserveId,
+    const { updatedOrNewTokenBalance, newVersion:newOutboundBalance } = await this.db.tokenBalanceOperations.addTokenBalanceVersion({
       tokenBalanceId: outboundTokenBalanceId,
       txId: txId,
       updateFunc: (tokenBalanceVersion) => {
@@ -105,7 +103,7 @@ export class OrderEventLogic {
         tokenBalanceVersion.balance = new BigNumber(takenOffer.takerGave).minus(tokenBalanceVersion.balance).toString();
       }
     })
-    await this. db.tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandel, outboundTokenId, newInboundBalance, takenOfferId)
+    await this. db.tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandel, outboundTokenId, newOutboundBalance, takenOfferId)
   }
 }
 export class OrderEventLogicHelper {

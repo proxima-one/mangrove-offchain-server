@@ -598,7 +598,7 @@ model TokenBalanceVersion {
   prevVersionId     String?              @unique @db.VarChar(255) // This points to the older version that this version replaces, if any
   prevVersion       TokenBalanceVersion? @relation("prevVersion", fields: [prevVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   nextVersion       TokenBalanceVersion? @relation("prevVersion")
-  curreVersion      TokenBalance?        @relation("currentVersion")
+  currentVersion      TokenBalance?        @relation("currentVersion")
   TokenBalanceEvent TokenBalanceEvent?
 
   @@unique([tokenBalanceId, versionNumber])

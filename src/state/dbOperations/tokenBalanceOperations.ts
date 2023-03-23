@@ -12,13 +12,12 @@ export class TokenBalanceOperations extends DbOperations {
   
 
   public async addTokenBalanceVersion(params: {
-    reserveId: AccountId,
     tokenBalanceId: TokenBalanceId,
     txId: string,
-    updateFunc: (model: Omit<prisma.TokenBalanceVersion, "id" | "tokenBalanceId" | "versionNumber" | "prevVersionId">) => void,
+    updateFunc?: (model: Omit<prisma.TokenBalanceVersion, "id" | "tokenBalanceId" | "versionNumber" | "prevVersionId">) => void,
   }) {
     let reserve: prisma.Account | null = await this.tx.account.findUnique({
-      where: { id: params.reserveId.value },
+      where: { id: "accountId" in params.tokenBalanceId.params ? params.tokenBalanceId.params.accountId.value: params.tokenBalanceId.params.account.id },
     });
 
     let tokenBalance: prisma.TokenBalance | null = await this.tx.tokenBalance.findUnique({
@@ -27,18 +26,22 @@ export class TokenBalanceOperations extends DbOperations {
       }
     })
 
-    let account: prisma.Account | undefined = undefined;
-
     let newTokenBalanceVersion: prisma.TokenBalanceVersion | undefined = undefined;
 
-    
-
     if (reserve === null) {
-      reserve = {
-        id: params.reserveId.value,
-        chainId: params.reserveId.chainId.value,
-        address: params.reserveId.address
-      };
+      if("accountId" in params.tokenBalanceId.params) {
+        reserve = {
+          id: params.tokenBalanceId.params.accountId.value,
+          chainId: params.tokenBalanceId.params.accountId.chainId.value,
+          address: params.tokenBalanceId.params.accountId.address
+        };
+      } else {
+        reserve = {
+          id: params.tokenBalanceId.params.account.id,
+          chainId: params.tokenBalanceId.params.account.chainId,
+          address: params.tokenBalanceId.params.account.address
+        };
+      }
 
      reserve = await this.tx.account.create( { data: {...reserve } }    );
     }
@@ -47,7 +50,7 @@ export class TokenBalanceOperations extends DbOperations {
       const newVersionId = new TokenBalanceVersionId({ tokenBalanceId: params.tokenBalanceId, versionNumber: 0 });
 
       tokenBalance = {
-        id: newVersionId.value,
+        id: params.tokenBalanceId.value,
         txId: params.txId,
         reserveId: reserve.id,
         tokenId: params.tokenBalanceId.params.tokenId.value,
@@ -86,11 +89,12 @@ export class TokenBalanceOperations extends DbOperations {
 
 
 
-    await this.tx.tokenBalance.upsert(
+    const updatedOrNewTokenBalance= await this.tx.tokenBalance.upsert(
       toNewVersionUpsert( tokenBalance, newTokenBalanceVersion.id)
     );
 
-    return await this.tx.tokenBalanceVersion.create({ data: newTokenBalanceVersion });
+    const newVersion = await this.tx.tokenBalanceVersion.create({ data: newTokenBalanceVersion });
+    return {updatedOrNewTokenBalance, newVersion}
   }
 
   async getTokenBalanceFromKandel(kandelId:KandelId, tokenId: TokenId){
@@ -111,12 +115,7 @@ export class TokenBalanceOperations extends DbOperations {
     return await this.getCurrentTokenBalanceVersion(tokenBalance);
   }
 
-  async getCurrentTokenBalanceVersion(idOrTokenBalance: TokenBalanceId | prisma.TokenBalance): Promise<prisma.TokenBalanceVersion> {
-    const id = this.getTokenBalanceId(idOrTokenBalance);
-    const tokenBalance = await this.tx.tokenBalance.findUnique({ where: { id: id } })
-    if (!tokenBalance) {
-      throw new Error(`Could not find tokenBalance from id: ${id}`);
-    }
+  async getCurrentTokenBalanceVersion(tokenBalance: prisma.TokenBalance): Promise<prisma.TokenBalanceVersion> {
     const currentTokenBalanceVersion = await this.tx.tokenBalanceVersion.findUnique({
       where: { id: tokenBalance.currentVersionId },
     });
