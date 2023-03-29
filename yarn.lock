@@ -1103,12 +1103,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@proximaone/stream-schema-mangrove@npm:^0.3.6":
-  version: 0.3.6
-  resolution: "@proximaone/stream-schema-mangrove@npm:0.3.6"
+"@proximaone/stream-schema-mangrove@npm:^0.3.7":
+  version: 0.3.7
+  resolution: "@proximaone/stream-schema-mangrove@npm:0.3.7"
   dependencies:
     "@proximaone/stream-schema-base": ^0.3.2
-  checksum: 3bf7509dcd717426190623dc213a1120b62c555ab216fad4eb4b3bfc838aec43aa9d80d5be9629a7d752bcea9b1aed564bdb46eba349e62392d0dcf4c8c1049f
+  checksum: 2e8142b7908add3e7ab810530c766edadf393026de3d8c3a429eff78dadb30da956a29c15aa029c4af5332d6a35a7dff65757afea28817aa0b18e87395bbb24a
   languageName: node
   linkType: hard
 
@@ -4606,7 +4606,7 @@ __metadata:
     "@mangrovedao/commonlib.js": ^1.0.0
     "@prisma/client": ^4.11.0
     "@proximaone/stream-client-js": ^1.2.1
-    "@proximaone/stream-schema-mangrove": ^0.3.6
+    "@proximaone/stream-schema-mangrove": ^0.3.7
     "@types/async-retry": ^1.4.3
     "@types/commander": ^2.12.2
     "@types/config": ^3.3.0

@@ -670,8 +670,8 @@ model KandelEvent {
 model KandelCompoundRateEvent {
   id                String      @id @default(uuid())
   eventId           String      @unique @db.VarChar(255)
-  compoundRateBase  String
-  compoundRateQuote String
+  compoundRateBase  Float
+  compoundRateQuote Float
   event             KandelEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
@@ -692,8 +692,8 @@ model KandelGasReqEvent {
 model KandelGeometricParamsEvent {
   id      String      @id @default(uuid())
   eventId String      @unique @db.VarChar(255)
-  ratio   String
-  spread  String
+  ratio   Float
+  spread  Float
   event   KandelEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
 
@@ -759,12 +759,12 @@ model KandelVersion {
 
 model KandelConfiguration {
   id                String          @id @default(uuid())
-  compoundRateBase  String // Are these big numbers?
-  compoundRateQuote String // Are these big numbers?
+  compoundRateBase  Float // Are these big numbers?
+  compoundRateQuote Float // Are these big numbers?
   gasPrice          String
   gasReq            String
-  spread            String
-  ratio             String
+  spread            Float
+  ratio             Float
   length            Int
   KandelVersion     KandelVersion[]
 }

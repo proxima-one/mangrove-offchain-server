@@ -17,7 +17,7 @@ export class KandelOperations extends DbOperations {
       mangroveId: MangroveId,
       base: TokenId,
       quote: TokenId,
-      type: "AaveKandel" | "Kandel"
+      type: "NewKandel" | "NewAaveKandel"
     }
   }) {
     let kandel: prisma.Kandel | null = await this.tx.kandel.findUnique({
@@ -34,7 +34,7 @@ export class KandelOperations extends DbOperations {
       if (!params.constParams?.type) {
         throw new Error(`Can't create Kandel without a type, id:${params.id.value}`);
       }
-      if (params.constParams?.type == "AaveKandel" && !params.constParams?.reserveId?.value) {
+      if (params.constParams?.type == "NewAaveKandel" && !params.constParams?.reserveId?.value) {
         throw new Error(`Can't create Kandel without an reserveId, id:${params.id.value}`);
       }
       const newVersionId = new KandelVersionId({ kandelId: params.id, versionNumber: 0 });
@@ -296,7 +296,7 @@ export class KandelOperations extends DbOperations {
     }})
   }
 
-  async createKandelGeometricParamsEvent( kandelEvent: prisma.KandelEvent, ratio:string, spread: string  ){
+  async createKandelGeometricParamsEvent( kandelEvent: prisma.KandelEvent, ratio:number, spread: number  ){
     return this.tx.kandelGeometricParamsEvent.create({data: {
       eventId:kandelEvent.id,
       ratio:ratio,
@@ -304,7 +304,7 @@ export class KandelOperations extends DbOperations {
     }})
   }
 
-  async createKandelCompoundRateEvent( kandelEvent: prisma.KandelEvent, base:string, quote: string  ){
+  async createKandelCompoundRateEvent( kandelEvent: prisma.KandelEvent, base:number, quote: number  ){
     return this.tx.kandelCompoundRateEvent.create({data: {
       eventId:kandelEvent.id,
       compoundRateBase:base,
