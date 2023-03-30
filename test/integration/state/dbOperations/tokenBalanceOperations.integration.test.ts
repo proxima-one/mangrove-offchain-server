@@ -1,10 +1,16 @@
-import { Account, Token, TokenBalance, TokenBalanceVersion, Transaction } from "@prisma/client";
+import { Account, Kandel, Token, TokenBalance, TokenBalanceEventSource, TokenBalanceVersion, Transaction } from "@prisma/client";
 import assert from "assert";
 import { before, describe } from "mocha";
+import { KandelOperations } from "src/state/dbOperations/kandelOperations";
 import { TokenBalanceOperations } from "src/state/dbOperations/tokenBalanceOperations";
 import {
   AccountId,
   ChainId,
+  KandelId,
+  MangroveId,
+  OfferListKey,
+  OrderId,
+  TakenOfferId,
   TokenBalanceId,
   TokenBalanceVersionId,
   TokenId
@@ -13,18 +19,31 @@ import { prisma } from "utils/test/mochaHooks";
 
 describe("Token Balance Operations Integration test suite", () => {
   let tokenBalanceOperations: TokenBalanceOperations;
+  let kandelOperations: KandelOperations;
+
   before(() => {
     tokenBalanceOperations = new TokenBalanceOperations(prisma);
+    kandelOperations = new KandelOperations(prisma);
   });
 
   const chainId = new ChainId(10);
   const tokenId = new TokenId(chainId, "token");
   const reserveId = new AccountId(chainId, "reserveAddress");
+  const baseId = new TokenId(chainId,"baseAddress");
+  const quoteId = new TokenId(chainId,"quoteAddress");
   const tokenBalanceId = new TokenBalanceId({accountId:reserveId, tokenId});
   const tokenBalanceVersionId = new TokenBalanceVersionId({tokenBalanceId, versionNumber:0})
+  const mangroveId = new MangroveId(chainId, "mangroveAddress");
+  const kandelId = new KandelId(chainId, "kandelAddress");
+  const offerListKey: OfferListKey = {
+    outboundToken: baseId.tokenAddress,
+    inboundToken: quoteId.tokenAddress,
+  };
+  
   let tx:Transaction;
   let token:Token;
   let reserve:Account;
+  let kandel:Kandel;
   let tokenBalance:TokenBalance;
   let tokenBalanceVersion:TokenBalanceVersion;
 
@@ -61,6 +80,18 @@ describe("Token Balance Operations Integration test suite", () => {
       }
     })
 
+    kandel = await prisma.kandel.create( {
+      data: {
+        id: kandelId.value,
+        mangroveId: mangroveId.value,
+        baseId: baseId.value,
+        quoteId: quoteId.value,
+        reserveId: reserveId.value,
+        type: "Kandel",
+        currentVersionId: ""
+      }
+    })
+
     tokenBalance = await prisma.tokenBalance.create( {
       data: {
         id: tokenBalanceId.value,
@@ -76,11 +107,11 @@ describe("Token Balance Operations Integration test suite", () => {
         id: tokenBalanceVersionId.value,
         txId: tx.id,
         tokenBalanceId: tokenBalanceId.value,
-        deposit: "0",
-        withdrawal: "0",
+        deposit: "20",
+        withdrawal: "10",
         spent: "0",
-        earned: "0",
-        balance: "0",
+        earned: "1",
+        balance: "11",
         versionNumber: 0
       }
     })
@@ -89,11 +120,7 @@ describe("Token Balance Operations Integration test suite", () => {
   });
 
 
-  describe("addTokenBalanceVersion", () => {
-    // has  reserve
-    // no reserve
-    // has existing token balance
-    // no existing token balance
+  describe(TokenBalanceOperations.prototype.addTokenBalanceVersion.name, () => {
     it("Has existing reserve account + has existing token balance  ", async () => {
       assert.strictEqual(await prisma.tokenBalance.count(), 1);
       assert.strictEqual(await prisma.tokenBalanceVersion.count(), 1);
@@ -180,38 +207,112 @@ describe("Token Balance Operations Integration test suite", () => {
    
   });
 
-  describe("getTokenBalanceFromKandel",  () => {
-    // no kandel
-    // has kandel, but not token balance
-    // has kandel and token balance
+  describe(TokenBalanceOperations.prototype.getTokenBalanceFromKandel.name,  () => {
+    it("Cant find reserve", async () => {
+      const newKandelId =  new KandelId(chainId, "newKandel");
+      kandelOperations.addVersionedKandel({ id: newKandelId, txId: "txId", constParams: { mangroveId: mangroveId, base:baseId, quote:quoteId, type: "NewKandel" }});
+      await assert.rejects( tokenBalanceOperations.getTokenBalanceFromKandel(newKandelId, baseId) );
+    })
+
+    it("Cant find tokenBalance", async () => {
+      await assert.rejects( tokenBalanceOperations.getTokenBalanceFromKandel(kandelId, baseId) );
+    })
+
+    it("Has token balance", async () => {
+      const thisTokenBalance = await tokenBalanceOperations.getTokenBalanceFromKandel(kandelId, tokenId);
+      assert.deepStrictEqual( tokenBalanceVersion, thisTokenBalance )
+    })
   })
 
-  describe("getCurrentTokenBalanceVersion",  () => {
-    // no current version
-    // has current version
+  describe(TokenBalanceOperations.prototype.getCurrentTokenBalanceVersion.name,  () => {
+    it("No current version", async () => {
+      await assert.rejects( tokenBalanceOperations.getCurrentTokenBalanceVersion({ ...tokenBalance, currentVersionId: "noMatch"}) );
+    })
+
+    it("Has current version", async () => {
+      const thisTokenBalance =  await tokenBalanceOperations.getCurrentTokenBalanceVersion( tokenBalance);
+      assert.deepStrictEqual( tokenBalanceVersion, thisTokenBalance )
+    })
   })
 
-  describe("getTokenBalanceId", () => {
-    // with id
-    // with token balance
+  describe(TokenBalanceOperations.prototype.getTokenBalanceId.name, () => {
+    it("With id", () => {
+      const id =  tokenBalanceOperations.getTokenBalanceId( tokenBalanceId);
+      assert.strictEqual(tokenBalanceId.value, id)
+    })
+    it("With TokenBalance", () => {
+      const id =  tokenBalanceOperations.getTokenBalanceId( tokenBalance);
+      assert.strictEqual(tokenBalance.id, id)
+    })
   })
 
-  describe("deleteLatestTokenBalanceVersion",  () => {
-    // no token balance
-    // no prev
-    // has prev
+  describe(TokenBalanceOperations.prototype.deleteLatestTokenBalanceVersion.name,  () => {
+    it("No token balance", async () => {
+
+      await assert.rejects( tokenBalanceOperations.deleteLatestTokenBalanceVersion( new TokenBalanceId({ accountId: new AccountId(chainId, "noMatch"), tokenId:tokenId})) );
+    })
+    it("No prevVersion", async () => {
+      assert.strictEqual(await prisma.tokenBalance.count(), 1);
+      assert.strictEqual(await prisma.tokenBalanceVersion.count(), 1);
+      await tokenBalanceOperations.deleteLatestTokenBalanceVersion( tokenBalanceId );
+      assert.strictEqual(await prisma.tokenBalance.count(), 0);
+      assert.strictEqual(await prisma.tokenBalanceVersion.count(), 0);
+    })
+
+    it("Has prevVersion", async () => {
+      await tokenBalanceOperations.addTokenBalanceVersion({ tokenBalanceId: tokenBalanceId, txId: "txId2", updateFunc: (v) => {v.deposit="10"; v.balance= "30"; } })
+      assert.strictEqual(await prisma.tokenBalance.count(), 1);
+      assert.strictEqual(await prisma.tokenBalanceVersion.count(), 2);
+      await tokenBalanceOperations.deleteLatestTokenBalanceVersion( tokenBalanceId );
+      assert.strictEqual(await prisma.tokenBalance.count(), 1);
+      assert.strictEqual(await prisma.tokenBalanceVersion.count(), 1);
+    })
   })
 
-  it("createTokenBalanceEvent", async () => {
+  describe(TokenBalanceOperations.prototype.createTokenBalanceEvent.name, async () => {
+    it( "With kandelId and taken offerId", async () => {
+      assert.strictEqual(await prisma.tokenBalanceEvent.count(), 0);
+      const takenOfferId = new TakenOfferId( new OrderId(mangroveId, offerListKey, "proximaId"), 2);
+      const event = await tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandelId, tokenId, tokenBalanceVersion, takenOfferId)
+      assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
+      const eventInDb = await prisma.tokenBalanceEvent.findUnique({where: { id: event.id}})
+      assert.deepStrictEqual( event, eventInDb )
+      assert.strictEqual(event.takenOfferId, takenOfferId.value)
 
+    } )
+
+    it( "With kandel and no taken offerId", async () => {
+      assert.strictEqual(await prisma.tokenBalanceEvent.count(), 0);
+      const event = await tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandel, tokenId, tokenBalanceVersion )
+      assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
+      const eventInDb = await prisma.tokenBalanceEvent.findUnique({where: { id: event.id}})
+      assert.deepStrictEqual( event, eventInDb )
+      assert.strictEqual( event.takenOfferId, null)
+
+    } )
   })
 
-  it("createTokenBalanceDepositEvent", async () => {
+  it(TokenBalanceOperations.prototype.createTokenBalanceDepositEvent.name, async () => {
+    const tokenBalanceEvent = await tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandelId, tokenId, tokenBalanceVersion)
+    assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
+    assert.strictEqual(await prisma.tokenBalanceDepositEvent.count(), 0);
+    const depositEvent = await tokenBalanceOperations.createTokenBalanceDepositEvent( tokenBalanceEvent, "100", TokenBalanceEventSource.KANDEL );
+    assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
+    assert.strictEqual(await prisma.tokenBalanceDepositEvent.count(), 1);
+    const eventInDb = await prisma.tokenBalanceDepositEvent.findUnique({where: { id: depositEvent.id}})
+    assert.deepStrictEqual( depositEvent, eventInDb )
     
   })
 
-  it("createTokenBalanceWithdrawalEvent", async () => {
-    
+  it(TokenBalanceOperations.prototype.createTokenBalanceWithdrawalEvent.name, async () => {
+    const tokenBalanceEvent = await tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandelId, tokenId, tokenBalanceVersion)
+    assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
+    assert.strictEqual(await prisma.tokenBalanceWithdrawalEvent.count(), 0);
+    const withdrawEvent = await tokenBalanceOperations.createTokenBalanceWithdrawalEvent( tokenBalanceEvent, "100", TokenBalanceEventSource.KANDEL );
+    assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
+    assert.strictEqual(await prisma.tokenBalanceWithdrawalEvent.count(), 1);
+    const eventInDb = await prisma.tokenBalanceWithdrawalEvent.findUnique({where: { id: withdrawEvent.id}})
+    assert.deepStrictEqual( withdrawEvent, eventInDb )
   })
 
 });
