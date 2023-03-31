@@ -124,8 +124,8 @@ CREATE TABLE "KandelEvent" (
 CREATE TABLE "KandelCompoundRateEvent" (
     "id" TEXT NOT NULL,
     "eventId" VARCHAR(255) NOT NULL,
-    "compoundRateBase" TEXT NOT NULL,
-    "compoundRateQuote" TEXT NOT NULL,
+    "compoundRateBase" DOUBLE PRECISION NOT NULL,
+    "compoundRateQuote" DOUBLE PRECISION NOT NULL,
 
     CONSTRAINT "KandelCompoundRateEvent_pkey" PRIMARY KEY ("id")
 );
@@ -152,8 +152,8 @@ CREATE TABLE "KandelGasReqEvent" (
 CREATE TABLE "KandelGeometricParamsEvent" (
     "id" TEXT NOT NULL,
     "eventId" VARCHAR(255) NOT NULL,
-    "ratio" TEXT NOT NULL,
-    "spread" TEXT NOT NULL,
+    "ratio" DOUBLE PRECISION NOT NULL,
+    "spread" DOUBLE PRECISION NOT NULL,
 
     CONSTRAINT "KandelGeometricParamsEvent_pkey" PRIMARY KEY ("id")
 );
@@ -218,12 +218,12 @@ CREATE TABLE "KandelVersion" (
 -- CreateTable
 CREATE TABLE "KandelConfiguration" (
     "id" TEXT NOT NULL,
-    "compoundRateBase" TEXT NOT NULL,
-    "compoundRateQuote" TEXT NOT NULL,
+    "compoundRateBase" DOUBLE PRECISION NOT NULL,
+    "compoundRateQuote" DOUBLE PRECISION NOT NULL,
     "gasPrice" TEXT NOT NULL,
     "gasReq" TEXT NOT NULL,
-    "spread" TEXT NOT NULL,
-    "ratio" TEXT NOT NULL,
+    "spread" DOUBLE PRECISION NOT NULL,
+    "ratio" DOUBLE PRECISION NOT NULL,
     "length" INTEGER NOT NULL,
 
     CONSTRAINT "KandelConfiguration_pkey" PRIMARY KEY ("id")

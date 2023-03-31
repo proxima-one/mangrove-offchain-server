@@ -7,7 +7,6 @@ import { DbOperations, toNewVersionUpsert } from "./dbOperations";
 export class KandelOperations extends DbOperations {
 
 
-
   public async addVersionedKandel(params: {
     id: KandelId,
     txId: string,
@@ -57,6 +56,21 @@ export class KandelOperations extends DbOperations {
         versionNumber: 0,
         prevVersionId: null
       };
+      await this.tx.strat.create({ data:{
+        id: params.id.value
+      } });
+      await this.tx.account.create({ data: {
+        id: params.id.value,
+        chainId: params.id.chainId.value,
+        address: params.id.address
+      } });
+      if( params.constParams.reserveId && await this.tx.account.findUnique({where: {id:params.constParams.reserveId.value}}) ==null ){
+        await this.tx.account.create({ data: {
+          id: params.constParams.reserveId.value,
+          chainId: params.constParams.reserveId.chainId.value,
+          address: params.constParams.reserveId.address
+        } });
+      }
 
       const kandelEvent = await this.createKandelEvent(kandel, newVersion);
       await this.createNewKandelEvent(kandelEvent);
@@ -78,7 +92,7 @@ export class KandelOperations extends DbOperations {
     }
 
     await this.tx.kandel.upsert(
-      toNewVersionUpsert( kandel, newVersion.id )
+      toNewVersionUpsert(kandel, newVersion.id)
     );
 
     return await this.tx.kandelVersion.create({ data: newVersion });
@@ -96,7 +110,6 @@ export class KandelOperations extends DbOperations {
     }
     return config;
   }
-
 
   async getCurrentKandelVersion(idOrKandel: KandelId | prisma.Kandel): Promise<prisma.KandelVersion> {
     const id = this.getId(idOrKandel);
@@ -117,7 +130,6 @@ export class KandelOperations extends DbOperations {
     return "id" in idOrKandel ? idOrKandel.id : (idOrKandel as KandelId).value;
   }
 
-
   public async deleteLatestKandelVersion(id: KandelId) {
     const kandel = await this.tx.kandel.findUnique({
       where: { id: id.value },
@@ -129,7 +141,6 @@ export class KandelOperations extends DbOperations {
     const kandelVersion = await this.tx.kandelVersion.findUnique({
       where: { id: kandel.currentVersionId },
     });
-    const reserveAddress = await this.getReserveAddress({kandelId:id});
 
     if (kandelVersion!.prevVersionId === null) {
       await this.tx.kandel.update({
@@ -167,24 +178,15 @@ export class KandelOperations extends DbOperations {
 
   }
 
-  async getReserveAddress(params:{kandelId: KandelId}|{kandel:prisma.Kandel}) {
-    const kandel = "kandelId" in  params ? await this.getKandel(params.kandelId) : params.kandel;
-    const kandelId = kandel.id;
+  async getReserveAddress(params: { kandelId: KandelId } | { kandel: prisma.Kandel }) {
+    const kandel = "kandelId" in params ? await this.getKandel(params.kandelId) : params.kandel;
     const reserve = await this.tx.account.findUnique({ where: { id: kandel.reserveId } })
     if (!reserve) {
-      throw new Error(`Cannot find reserve from kandel id: ${kandelId}, with reserveId: ${kandel.reserveId}`)
+      throw new Error(`Cannot find reserve from kandel id: ${kandel.id}, with reserveId: ${kandel.reserveId}`)
     }
 
     return reserve.address;
   }
-
-  async getTokenBalance(kandelId: KandelId, tokenId:TokenId){
-    const kandel = await this.getKandel(kandelId)
-
-
-    
-  }
-
 
   async getToken(kandelId: KandelId, baseOrQuote: "baseId" | "quoteId") {
     const kandel = await this.getKandel(kandelId);
@@ -204,7 +206,7 @@ export class KandelOperations extends DbOperations {
   }
 
   async createOfferIndex(kandelId: KandelId, txId: string, offerId: OfferId, index: number, ba: "ask" | "bid") {
-    await this.tx.kandelOfferIndex.create({
+    return await this.tx.kandelOfferIndex.create({
       data: {
         kandelId: kandelId.value,
         txId: txId,
@@ -227,24 +229,28 @@ export class KandelOperations extends DbOperations {
     })
   }
 
-  async getKandelFromOffer(offer:prisma.Offer){
-    const account = await this.tx.account.findUnique({where: {
-      id: offer.makerId
-    }})
-    if(!account) {
+  async getKandelFromOffer(offer: prisma.Offer) {
+    const account = await this.tx.account.findUnique({
+      where: {
+        id: offer.makerId
+      }
+    })
+    if (!account) {
       throw new Error(`Cannot find maker of offer: ${offer.id}, with makerId: ${offer.makerId}`)
     }
-    const kandel = await this.tx.kandel.findFirst({where: {
-      strat: {
-        account: {
-          address:account.address
+    const kandel = await this.tx.kandel.findFirst({
+      where: {
+        strat: {
+          account: {
+            address: account.address
+          }
         }
       }
-    }})
-    return kandel 
+    })
+    return kandel
   }
 
-  async createKandelEvent(kandelId:KandelId | prisma.Kandel, kandelVersionId:KandelVersionId |prisma.KandelVersion) {
+  async createKandelEvent(kandelId: KandelId | prisma.Kandel, kandelVersionId: KandelVersionId | prisma.KandelVersion) {
     return await this.tx.kandelEvent.create({
       data: {
         kandelId: "id" in kandelId ? kandelId.id : kandelId.value,
@@ -253,7 +259,7 @@ export class KandelOperations extends DbOperations {
     })
   }
 
-  async createNewKandelEvent( kandelEvent: prisma.KandelEvent ){
+  async createNewKandelEvent(kandelEvent: prisma.KandelEvent) {
     return await this.tx.newKandelEvent.create({
       data: {
         eventId: kandelEvent.id
@@ -261,55 +267,69 @@ export class KandelOperations extends DbOperations {
     })
   }
 
-  async createKandelAdminEvent( kandelEvent: prisma.KandelEvent, admin:string  ){
-    return this.tx.kandelAdminEvent.create({data: {
-      eventId:kandelEvent.id,
-      admin:admin
-    }})
+  async createKandelAdminEvent(kandelEvent: prisma.KandelEvent, admin: string) {
+    return this.tx.kandelAdminEvent.create({
+      data: {
+        eventId: kandelEvent.id,
+        admin: admin
+      }
+    })
   }
 
-  async createKandelRouterEvent( kandelEvent: prisma.KandelEvent, router:string  ){
-    return this.tx.kandelRouterEvent.create({data: {
-      eventId:kandelEvent.id,
-      router:router
-    }})
+  async createKandelRouterEvent(kandelEvent: prisma.KandelEvent, router: string) {
+    return this.tx.kandelRouterEvent.create({
+      data: {
+        eventId: kandelEvent.id,
+        router: router
+      }
+    })
   }
 
-  async createKandelGasReqEvent( kandelEvent: prisma.KandelEvent, gasReq:string  ){
-    return this.tx.kandelGasReqEvent.create({data: {
-      eventId:kandelEvent.id,
-      gasReq:gasReq
-    }})
+  async createKandelGasReqEvent(kandelEvent: prisma.KandelEvent, gasReq: string) {
+    return this.tx.kandelGasReqEvent.create({
+      data: {
+        eventId: kandelEvent.id,
+        gasReq: gasReq
+      }
+    })
   }
 
-  async createKandelGasPriceEvent( kandelEvent: prisma.KandelEvent, gasPrice:string  ){
-    return this.tx.kandelGasPriceEvent.create({data: {
-      eventId:kandelEvent.id,
-      gasPrice:gasPrice
-    }})
+  async createKandelGasPriceEvent(kandelEvent: prisma.KandelEvent, gasPrice: string) {
+    return this.tx.kandelGasPriceEvent.create({
+      data: {
+        eventId: kandelEvent.id,
+        gasPrice: gasPrice
+      }
+    })
   }
 
-  async createKandelLengthEvent( kandelEvent: prisma.KandelEvent, length:number  ){
-    return this.tx.kandelLengthEvent.create({data: {
-      eventId:kandelEvent.id,
-      length:length
-    }})
+  async createKandelLengthEvent(kandelEvent: prisma.KandelEvent, length: number) {
+    return this.tx.kandelLengthEvent.create({
+      data: {
+        eventId: kandelEvent.id,
+        length: length
+      }
+    })
   }
 
-  async createKandelGeometricParamsEvent( kandelEvent: prisma.KandelEvent, ratio:number, spread: number  ){
-    return this.tx.kandelGeometricParamsEvent.create({data: {
-      eventId:kandelEvent.id,
-      ratio:ratio,
-      spread:spread
-    }})
+  async createKandelGeometricParamsEvent(kandelEvent: prisma.KandelEvent, ratio: number, spread: number) {
+    return this.tx.kandelGeometricParamsEvent.create({
+      data: {
+        eventId: kandelEvent.id,
+        ratio: ratio,
+        spread: spread
+      }
+    })
   }
 
-  async createKandelCompoundRateEvent( kandelEvent: prisma.KandelEvent, base:number, quote: number  ){
-    return this.tx.kandelCompoundRateEvent.create({data: {
-      eventId:kandelEvent.id,
-      compoundRateBase:base,
-      compoundRateQuote:quote
-    }})
+  async createKandelCompoundRateEvent(kandelEvent: prisma.KandelEvent, base: number, quote: number) {
+    return this.tx.kandelCompoundRateEvent.create({
+      data: {
+        eventId: kandelEvent.id,
+        compoundRateBase: base,
+        compoundRateQuote: quote
+      }
+    })
   }
 
 }
