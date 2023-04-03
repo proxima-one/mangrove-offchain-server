@@ -123,7 +123,9 @@ describe("Offer Operations Integration test suite", () => {
         live: false,
         deprovisioned: false,
         versionNumber: 0,
-        prevVersionId: null
+        prevVersionId: null,
+        kandelPopulateEventId: null,
+        kandelRetractEventId: null,
       });
     })
 

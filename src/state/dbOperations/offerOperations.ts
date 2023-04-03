@@ -40,6 +40,8 @@ export class OfferOperations extends DbOperations {
         txId: txId,
         parentOrderId: null,
         prevOfferId: null,
+        kandelPopulateEventId: null,
+        kandelRetractEventId: null,
         deleted: false,
         wants: "0",
         wantsNumber: 0,

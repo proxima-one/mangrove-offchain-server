@@ -27,7 +27,9 @@ describe("Offer Events Logic Unit Test Suite", () => {
                 gasprice: 0,
                 gasreq: 0,
                 live: false,
-                deprovisioned: true
+                deprovisioned: true,
+                kandelPopulateEventId: null,
+                kandelRetractEventId: null,
             }
             const offer: mangroveSchema.core.Offer = {
                 id: 1,
@@ -54,7 +56,9 @@ describe("Offer Events Logic Unit Test Suite", () => {
                 gasprice: 1,
                 gasreq: 1,
                 live: true,
-                deprovisioned: false
+                deprovisioned: false,
+                kandelPopulateEventId: null,
+                kandelRetractEventId: null,
             })
         })
     })

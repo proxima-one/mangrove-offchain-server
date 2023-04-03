@@ -333,38 +333,43 @@ model Offer {
 // Many offers, each having many version, we probably need indexes here.
 
 model OfferVersion {
-  id             String  @id @db.VarChar(255)
-  offerId        String  @db.VarChar(255) // index?
-  txId           String  @db.VarChar(255)
-  parentOrderId  String? @db.VarChar(255) // index?
-  prevOfferId    String? @db.VarChar(255) // what is this?
-  deleted        Boolean @default(false) // The offer has been deleted
-  wants          String  @db.VarChar(80)
-  wantsNumber    Float
-  gives          String  @db.VarChar(80)
-  givesNumber    Float
-  takerPaysPrice Float?
-  makerPaysPrice Float?
-  gasprice       Int
-  gasreq         Int
-  live           Boolean
-  deprovisioned  Boolean
+  id              String  @id @db.VarChar(255)
+  offerId         String  @db.VarChar(255) // index?
+  txId            String  @db.VarChar(255)
+  parentOrderId   String? @db.VarChar(255) // index?
+  prevOfferId     String? @db.VarChar(255) // what is this?
+  deleted         Boolean @default(false) // The offer has been deleted
+  wants           String  @db.VarChar(80)
+  wantsNumber     Float
+  gives           String  @db.VarChar(80)
+  givesNumber     Float
+  takerPaysPrice  Float?
+  makerPaysPrice  Float?
+  gasprice        Int
+  gasreq          Int
+  live            Boolean
+  deprovisioned   Boolean
+  kandelPopulateEventId String? @db.VarChar(255)
+  kandelRetractEventId String?
 
   tx          Transaction @relation(fields: [txId], references: [id])
   parentOrder Order?      @relation(fields: [parentOrderId], references: [id])
 
-  versionNumber  Int
-  prevVersionId  String?       @unique @db.VarChar(255) // This points to the older version that this version replaces, if any
-  prevVersion    OfferVersion? @relation("prevVersion", fields: [prevVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  nextVersion    OfferVersion? @relation("prevVersion")
-  currentVersion Offer?        @relation("currentVersion")
-  offer          Offer         @relation("offerVersion", fields: [offerId], references: [id], onDelete: Restrict, onUpdate: Restrict) // This points to the older version that this version replaces, if any
-
-  TakenOffer TakenOffer[]
+  versionNumber        Int
+  prevVersionId        String?              @unique @db.VarChar(255) // This points to the older version that this version replaces, if any
+  prevVersion          OfferVersion?        @relation("prevVersion", fields: [prevVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  nextVersion          OfferVersion?        @relation("prevVersion")
+  currentVersion       Offer?               @relation("currentVersion")
+  offer                Offer                @relation("offerVersion", fields: [offerId], references: [id], onDelete: Restrict, onUpdate: Restrict) // This points to the older version that this version replaces, if any
+  populateEvent        KandelPopulateEvent? @relation(fields: [kandelPopulateEventId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  TakenOffer           TakenOffer[]
+  KandelRetractEvent   KandelRetractEvent?  @relation(fields: [kandelRetractEventId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   @@index([txId])
   @@index([offerId])
   @@index([parentOrderId])
+  @@index([kandelPopulateEventId])
+  @@index([kandelRetractEventId])
 }
 
 // could have many orders. probably needs extra indexes.
@@ -598,7 +603,7 @@ model TokenBalanceVersion {
   prevVersionId     String?              @unique @db.VarChar(255) // This points to the older version that this version replaces, if any
   prevVersion       TokenBalanceVersion? @relation("prevVersion", fields: [prevVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   nextVersion       TokenBalanceVersion? @relation("prevVersion")
-  currentVersion      TokenBalance?        @relation("currentVersion")
+  currentVersion    TokenBalance?        @relation("currentVersion")
   TokenBalanceEvent TokenBalanceEvent?
 
   @@unique([tokenBalanceId, versionNumber])
@@ -663,6 +668,7 @@ model KandelEvent {
   KandelRouterEvent          KandelRouterEvent?
   KandelPopulateEvent        KandelPopulateEvent?
   NewKandelEvent             NewKandelEvent?
+  KandelRetractEvent         KandelRetractEvent?
 
   @@index([kandelId])
 }
@@ -725,9 +731,17 @@ model NewKandelEvent {
 }
 
 model KandelPopulateEvent {
-  id      String      @id @default(uuid())
-  eventId String      @unique @db.VarChar(255)
-  event   KandelEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id           String         @id @default(uuid())
+  eventId      String         @unique @db.VarChar(255)
+  event        KandelEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  OfferVersion OfferVersion[]
+}
+
+model KandelRetractEvent {
+  id           String         @id @default(uuid())
+  eventId      String         @unique @db.VarChar(255)
+  event        KandelEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  OfferVersion OfferVersion[]
 }
 
 model KandelVersion {

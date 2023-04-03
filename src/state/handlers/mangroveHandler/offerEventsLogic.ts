@@ -82,6 +82,7 @@ export class OfferEventsLogic {
     tokens: { inboundToken: {address:string, decimals: number}, outboundToken: {address:string, decimals: number} },
     txId: string,
     parentOrderId?: OrderId) {
+      
     const givesBigNumber = getBigNumber({ value: offer.gives, token: tokens.outboundToken });
     const wantsBigNumber = getBigNumber({ value: offer.wants, token: tokens.inboundToken });
     offerVersion.txId = txId;

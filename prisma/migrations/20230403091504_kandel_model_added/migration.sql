@@ -26,6 +26,10 @@ CREATE TYPE "TokenBalanceEventSource" AS ENUM ('KANDEL', 'OTHER');
 DROP INDEX "MangroveVersion_id_key";
 
 -- AlterTable
+ALTER TABLE "OfferVersion" ADD COLUMN     "kandelPopulateEventId" VARCHAR(255),
+ADD COLUMN     "kandelRetractEventId" TEXT;
+
+-- AlterTable
 ALTER TABLE "TakenOffer" ALTER COLUMN "takerGot" SET DATA TYPE TEXT;
 
 -- CreateTable
@@ -202,6 +206,14 @@ CREATE TABLE "KandelPopulateEvent" (
 );
 
 -- CreateTable
+CREATE TABLE "KandelRetractEvent" (
+    "id" TEXT NOT NULL,
+    "eventId" VARCHAR(255) NOT NULL,
+
+    CONSTRAINT "KandelRetractEvent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "KandelVersion" (
     "id" VARCHAR(255) NOT NULL,
     "kandelId" VARCHAR(255) NOT NULL,
@@ -332,6 +344,9 @@ CREATE UNIQUE INDEX "NewKandelEvent_eventId_key" ON "NewKandelEvent"("eventId");
 CREATE UNIQUE INDEX "KandelPopulateEvent_eventId_key" ON "KandelPopulateEvent"("eventId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "KandelRetractEvent_eventId_key" ON "KandelRetractEvent"("eventId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "KandelVersion_prevVersionId_key" ON "KandelVersion"("prevVersionId");
 
 -- CreateIndex
@@ -426,6 +441,12 @@ CREATE INDEX "OfferVersion_offerId_idx" ON "OfferVersion"("offerId");
 
 -- CreateIndex
 CREATE INDEX "OfferVersion_parentOrderId_idx" ON "OfferVersion"("parentOrderId");
+
+-- CreateIndex
+CREATE INDEX "OfferVersion_kandelPopulateEventId_idx" ON "OfferVersion"("kandelPopulateEventId");
+
+-- CreateIndex
+CREATE INDEX "OfferVersion_kandelRetractEventId_idx" ON "OfferVersion"("kandelRetractEventId");
 
 -- CreateIndex
 CREATE INDEX "Order_txId_idx" ON "Order"("txId");

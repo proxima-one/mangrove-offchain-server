@@ -146,4 +146,5 @@ export class OfferListingOperations extends DbOperations {
       });
     }
   }
+  
 }

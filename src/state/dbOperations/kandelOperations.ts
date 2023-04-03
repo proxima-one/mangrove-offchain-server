@@ -91,11 +91,12 @@ export class KandelOperations extends DbOperations {
       params.updateFunc(newVersion);
     }
 
-    await this.tx.kandel.upsert(
+    const updatedKandel = await this.tx.kandel.upsert(
       toNewVersionUpsert(kandel, newVersion.id)
     );
 
-    return await this.tx.kandelVersion.create({ data: newVersion });
+    const newKandelVersion = await this.tx.kandelVersion.create({ data: newVersion });
+    return {kandel:updatedKandel, kandelVersion:newKandelVersion }
   }
 
   async createNewKandelConfiguration(configuration: Omit<prisma.KandelConfiguration, "id">) {
@@ -332,4 +333,19 @@ export class KandelOperations extends DbOperations {
     })
   }
 
+  async createKandelPopulateEvent(kandelEvent: prisma.KandelEvent) {
+    return this.tx.kandelPopulateEvent.create({
+      data: {
+        eventId: kandelEvent.id,
+      }
+    })
+  }
+
+  async createKandelRetractEvent(kandelEvent: prisma.KandelEvent) {
+    return this.tx.kandelRetractEvent.create({
+      data: {
+        eventId: kandelEvent.id,
+      }
+    })
+  }
 }

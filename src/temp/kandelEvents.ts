@@ -1,42 +1,41 @@
 import { Address, TxRef } from "@proximaone/stream-schema-base";
 import { core } from "@proximaone/stream-schema-mangrove";
-export declare type KandelEvent = (KandelCreated | KandelParamsUpdated | Debit | Credit | Populate | OfferIndex) & {
+import { OfferRetracted, OfferWritten } from "@proximaone/stream-schema-mangrove/dist/events";
+export declare type KandelEvent = (NewKandel | SetParams | Debit | Credit | Populate | Retract | SetIndexMapping | SetAdmin | SetRouter) & {
     tx: TxRef;
     id: string;
     chainId: number;
     address: Address;
 };
-export interface KandelCreated {
-    type: "KandelCreated";
+export interface NewKandel {
+    type: "NewKandel";
+    kandelType: "Kandel" | "AaveKandel";
     mangroveId: core.MangroveId;
     base: Address;
     quote: Address;
-    kandelType: "Kandel" | "AaveKandel";
     owner: Address;
     reserve: Address;
     address:Address;
-    compoundRateBase: string;
-    compoundRateQuote: string;
+    compoundRates?: {
+        base: number;
+        quote: number;
+    };
     gasPrice: string;
     gasReq: string;
-    spread: string;
-    ratio: string;
-    length: number;
-    trigger: string;
-    admin: Address;
-    router: Address; 
 }
-export interface KandelParamsUpdated {
-    type: "KandelParamsUpdated";
-    compoundRateBase: string | undefined;
-    compoundRateQuote: string | undefined;
-    gasPrice: string | undefined;
-    gasReq: string | undefined;
-    spread: string | undefined;
-    ratio: string | undefined;
-    length: number | undefined;
-    admin: Address | undefined ;
-    router: Address | undefined; 
+export interface SetParams {
+    type: "SetParams";
+    compoundRates?: {
+        base: number;
+        quote: number;
+    };
+    geometric?: {
+        spread: number;
+        ratio: number;
+    };
+    gasPrice?: string;
+    gasReq?: string;
+    length?: number;
 }
 export interface Debit {
     type: "Debit";
@@ -50,15 +49,33 @@ export interface Credit {
     token: Address;
 }
 
+export interface Retract {
+    type: "Retract";
+    kandelAddress: Address;
+    offers: OfferRetracted[];
+}
+
 export interface Populate {
     type: "Populate";
+    kandelAddress: Address;
+    offers: OfferWritten[];
+    indexMapping: SetIndexMapping[];
 }
 
-export interface OfferIndex {
-    type: "OfferIndex";
-    offerId: core.OfferId;
+export interface SetIndexMapping {
+    type: "SetIndexMapping";
+    ba: 0 | 1;
     index: number;
-    ba: "ask" | "bid";
+    offerId: number;
 }
 
+export interface SetAdmin {
+    type: "SetAdmin";
+    admin: Address;
+}
+
+export interface SetRouter {
+    type: "SetRouter"
+    router: Address;
+}
 

@@ -11,7 +11,7 @@ export class AccountOperations extends DbOperations {
         chainId: id.chainId.value,
         address: id.address,
       };
-      await this.tx.account.create({ data: account });
+      return await this.tx.account.create({ data: account });
     }
     return account;
   }
