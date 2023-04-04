@@ -95,7 +95,6 @@ describe("Token Balance Operations Integration test suite", () => {
     tokenBalance = await prisma.tokenBalance.create( {
       data: {
         id: tokenBalanceId.value,
-        txId: tx.id,
         reserveId: reserveId.value,
         tokenId: tokenId.value,
         currentVersionId: tokenBalanceVersionId.value
@@ -167,7 +166,6 @@ describe("Token Balance Operations Integration test suite", () => {
        }, newVersion )
        assert.deepStrictEqual({
         id: newTokenBalanceId.value,
-        txId: tx.id,
         reserveId: newReserveId.value,
         tokenId: tokenId.value,
         currentVersionId: new TokenBalanceVersionId({tokenBalanceId:newTokenBalanceId, versionNumber:0}).value
@@ -198,7 +196,6 @@ describe("Token Balance Operations Integration test suite", () => {
        }, newVersion )
        assert.deepStrictEqual({
         id: newTokenBalanceId.value,
-        txId: tx.id,
         reserveId: reserveId.value,
         tokenId: newTokenId.value,
         currentVersionId: new TokenBalanceVersionId({tokenBalanceId:newTokenBalanceId, versionNumber:0}).value
@@ -207,20 +204,16 @@ describe("Token Balance Operations Integration test suite", () => {
    
   });
 
-  describe(TokenBalanceOperations.prototype.getTokenBalanceFromKandel.name,  () => {
-    it("Cant find reserve", async () => {
-      const newKandelId =  new KandelId(chainId, "newKandel");
-      kandelOperations.addVersionedKandel({ id: newKandelId, txId: "txId", constParams: { mangroveId: mangroveId, base:baseId, quote:quoteId, type: "NewKandel" }});
-      await assert.rejects( tokenBalanceOperations.getTokenBalanceFromKandel(newKandelId, baseId) );
-    })
-
+  describe(TokenBalanceOperations.prototype.getTokenBalance.name,  () => {
     it("Cant find tokenBalance", async () => {
-      await assert.rejects( tokenBalanceOperations.getTokenBalanceFromKandel(kandelId, baseId) );
+      const tokenBalanceId = new TokenBalanceId({accountId:kandelId, tokenId:baseId});
+      await assert.rejects( tokenBalanceOperations.getTokenBalance( tokenBalanceId) );
     })
 
     it("Has token balance", async () => {
-      const thisTokenBalance = await tokenBalanceOperations.getTokenBalanceFromKandel(kandelId, tokenId);
-      assert.deepStrictEqual( tokenBalanceVersion, thisTokenBalance )
+      const tokenBalanceId = new TokenBalanceId({accountId:reserveId, tokenId:tokenId});
+      const thisTokenBalance = await tokenBalanceOperations.getTokenBalance( tokenBalanceId );
+      assert.deepStrictEqual( tokenBalance, thisTokenBalance )
     })
   })
 

@@ -35,7 +35,6 @@ ALTER TABLE "TakenOffer" ALTER COLUMN "takerGot" SET DATA TYPE TEXT;
 -- CreateTable
 CREATE TABLE "TokenBalance" (
     "id" VARCHAR(255) NOT NULL,
-    "txId" VARCHAR(255) NOT NULL,
     "reserveId" VARCHAR(255) NOT NULL,
     "tokenId" VARCHAR(255) NOT NULL,
     "currentVersionId" VARCHAR(255) NOT NULL,
@@ -118,7 +117,7 @@ CREATE TABLE "KandelOfferIndex" (
 -- CreateTable
 CREATE TABLE "KandelEvent" (
     "id" TEXT NOT NULL,
-    "kandelVersionId" VARCHAR(255) NOT NULL,
+    "kandelVersionId" VARCHAR(255),
     "kandelId" VARCHAR(255) NOT NULL,
 
     CONSTRAINT "KandelEvent_pkey" PRIMARY KEY ("id")
@@ -246,9 +245,6 @@ CREATE UNIQUE INDEX "TokenBalance_currentVersionId_key" ON "TokenBalance"("curre
 
 -- CreateIndex
 CREATE INDEX "TokenBalance_tokenId_idx" ON "TokenBalance"("tokenId");
-
--- CreateIndex
-CREATE INDEX "TokenBalance_txId_idx" ON "TokenBalance"("txId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "TokenBalance_reserveId_tokenId_key" ON "TokenBalance"("reserveId", "tokenId");

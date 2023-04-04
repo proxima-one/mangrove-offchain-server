@@ -50,7 +50,6 @@ model Transaction {
   orders                  Order[]
   MangroveOrderVersion    MangroveOrderVersion[]
   KandelVersion           KandelVersion[]
-  DepositWithdrawalStatus TokenBalance[]
   KandelOfferIndex        KandelOfferIndex[]
   TokenBalanceVersion     TokenBalanceVersion[]
 
@@ -160,7 +159,7 @@ model Account {
 model Strat {
   id String @id @unique @db.VarChar(255)
 
-  account Account @relation(fields: [id], references: [id])
+  account Account @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: Cascade )
 
   MangroveOrder MangroveOrder[]
   Kandel        Kandel[]
@@ -526,7 +525,6 @@ model MangroveOrderVersion {
 
 model TokenBalance {
   id        String @id @db.VarChar(255)
-  txId      String @db.VarChar(255)
   reserveId String @db.VarChar(255)
   tokenId   String @db.VarChar(255)
 
@@ -534,12 +532,10 @@ model TokenBalance {
   currentVersion   TokenBalanceVersion?  @relation("currentVersion", fields: [currentVersionId], references: [id])
   token            Token                 @relation(fields: [tokenId], references: [id])
   reserve          Account               @relation("reserve", fields: [reserveId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  Transaction      Transaction?          @relation(fields: [txId], references: [id])
   allBalances      TokenBalanceVersion[] @relation("tokenBalance")
 
   @@unique([reserveId, tokenId])
   @@index([tokenId])
-  @@index([txId])
 }
 
 model TokenBalanceEvent {
@@ -643,7 +639,7 @@ model KandelOfferIndex {
   index    Int
   ba       String
 
-  offer  Offer       @relation("offerIndex", fields: [offerId], references: [id])
+  offer  Offer       @relation("offerIndex", fields: [offerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   kandel Kandel      @relation("offerIndex", fields: [kandelId], references: [id])
   tx     Transaction @relation(fields: [txId], references: [id])
 
@@ -654,11 +650,11 @@ model KandelOfferIndex {
 
 model KandelEvent {
   id              String @id @default(uuid())
-  kandelVersionId String @unique @db.VarChar(255)
+  kandelVersionId String? @unique @db.VarChar(255)
   kandelId        String @db.VarChar(255)
 
   kandel                     Kandel                      @relation(fields: [kandelId], references: [id])
-  KandelVersion              KandelVersion               @relation("kandelVersion", fields: [kandelVersionId], references: [id], onDelete: Cascade)
+  KandelVersion              KandelVersion?               @relation("kandelVersion", fields: [kandelVersionId], references: [id], onDelete: Cascade)
   compoundRateEvent          KandelCompoundRateEvent?
   gasPriceEvent              KandelGasPriceEvent?
   KandelGasReqEvent          KandelGasReqEvent?

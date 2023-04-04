@@ -15,4 +15,9 @@ export class AccountOperations extends DbOperations {
     }
     return account;
   }
+
+  async deleteAccount(id:AccountId){
+    await this.tx.account.delete({where: {id: id.value}});
+  }
+
 }

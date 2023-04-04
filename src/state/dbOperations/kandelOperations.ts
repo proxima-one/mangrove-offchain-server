@@ -2,9 +2,11 @@ import * as prisma from "@prisma/client";
 import _ from "lodash";
 import { AccountId, KandelId, KandelVersionId, MangroveId, OfferId, TokenId } from "../model";
 import { DbOperations, toNewVersionUpsert } from "./dbOperations";
+import { AccountOperations } from "./accountOperations";
 
 
 export class KandelOperations extends DbOperations {
+
 
 
   public async addVersionedKandel(params: {
@@ -16,7 +18,7 @@ export class KandelOperations extends DbOperations {
       mangroveId: MangroveId,
       base: TokenId,
       quote: TokenId,
-      type: "NewKandel" | "NewAaveKandel"
+      type: "Kandel" | "AaveKandel"
     }
   }) {
     let kandel: prisma.Kandel | null = await this.tx.kandel.findUnique({
@@ -33,7 +35,7 @@ export class KandelOperations extends DbOperations {
       if (!params.constParams?.type) {
         throw new Error(`Can't create Kandel without a type, id:${params.id.value}`);
       }
-      if (params.constParams?.type == "NewAaveKandel" && !params.constParams?.reserveId?.value) {
+      if (params.constParams?.type == "AaveKandel" && !params.constParams?.reserveId?.value) {
         throw new Error(`Can't create Kandel without an reserveId, id:${params.id.value}`);
       }
       const newVersionId = new KandelVersionId({ kandelId: params.id, versionNumber: 0 });
@@ -59,11 +61,7 @@ export class KandelOperations extends DbOperations {
       await this.tx.strat.create({ data:{
         id: params.id.value
       } });
-      await this.tx.account.create({ data: {
-        id: params.id.value,
-        chainId: params.id.chainId.value,
-        address: params.id.address
-      } });
+      await new AccountOperations(this.tx).ensureAccount(params.id);
       if( params.constParams.reserveId && await this.tx.account.findUnique({where: {id:params.constParams.reserveId.value}}) ==null ){
         await this.tx.account.create({ data: {
           id: params.constParams.reserveId.value,
@@ -251,11 +249,11 @@ export class KandelOperations extends DbOperations {
     return kandel
   }
 
-  async createKandelEvent(kandelId: KandelId | prisma.Kandel, kandelVersionId: KandelVersionId | prisma.KandelVersion) {
+  async createKandelEvent(kandelId: KandelId | prisma.Kandel, kandelVersionId?: KandelVersionId | prisma.KandelVersion) {
     return await this.tx.kandelEvent.create({
       data: {
         kandelId: "id" in kandelId ? kandelId.id : kandelId.value,
-        kandelVersionId: "id" in kandelVersionId ? kandelVersionId.id : kandelVersionId.value,
+        kandelVersionId: kandelVersionId ? (  "id" in kandelVersionId ? kandelVersionId.id : kandelVersionId.value ) : "",
       }
     })
   }
@@ -347,5 +345,27 @@ export class KandelOperations extends DbOperations {
         eventId: kandelEvent.id,
       }
     })
+  }
+
+  async deleteRetractEventIfNoReferences( id: string ){
+    const offerVersion = await this.tx.offerVersion.findFirst({where: { kandelRetractEventId: id}})
+    if( !offerVersion) {
+      const retractEvent = await this.tx.kandelRetractEvent.findUnique({where: { id:id}});
+      if( !retractEvent) {
+        throw new Error( `Cannot fund retract event to delete: id: ${id}`)
+      }
+      await this.tx.kandelEvent.delete({where: { id: retractEvent?.eventId}});
+    }
+  }
+
+  async deletePopulateEventIfNoReferences( id: string ){
+    const offerVersion = await this.tx.offerVersion.findFirst({where: { kandelPopulateEventId: id}});
+    if( !offerVersion) {
+      const populateEvent = await this.tx.kandelPopulateEvent.findUnique({where: { id:id}});
+      if( !populateEvent) {
+        throw new Error( `Cannot fund populate event to delete: id: ${id}`)
+      }
+      await this.tx.kandelEvent.delete({where: { id: populateEvent?.eventId}});
+    }
   }
 }

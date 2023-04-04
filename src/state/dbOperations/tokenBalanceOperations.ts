@@ -51,7 +51,6 @@ export class TokenBalanceOperations extends DbOperations {
 
       tokenBalance = {
         id: params.tokenBalanceId.value,
-        txId: params.txId,
         reserveId: reserve.id,
         tokenId: params.tokenBalanceId.params.tokenId.value,
         currentVersionId: newVersionId.value
@@ -97,30 +96,23 @@ export class TokenBalanceOperations extends DbOperations {
     return {updatedOrNewTokenBalance, newVersion}
   }
 
-  async getTokenBalanceFromKandel(kandelId:KandelId, tokenId: TokenId){
-    const kandel = await this.kandelOperations.getKandel(kandelId);
-    const reserve =await this.tx.account.findUnique({where: {
-      id: kandel.reserveId
-    }})
-    if( !reserve){
-      throw new Error(`Cannot find reserve on kandel: ${kandel.id}, with reserveId: ${kandel.reserveId}`);
-    }
-
+  async getTokenBalance(tokenBalanceId:TokenBalanceId){
     const tokenBalance = await this.tx.tokenBalance.findUnique({where: {
-      id: new TokenBalanceId({account:reserve, tokenId}).value
+      id: tokenBalanceId.value
     }})
     if(!tokenBalance){
-      throw new Error(`Cannot find tokenBalance from reserveId: ${reserve.id} and tokenId: ${tokenId.value}`)
+      throw new Error(`Cannot find tokenBalance from tokenBalanceid: ${tokenBalanceId.value}`)
     }
-    return await this.getCurrentTokenBalanceVersion(tokenBalance);
+    return tokenBalance;
   }
 
-  async getCurrentTokenBalanceVersion(tokenBalance: prisma.TokenBalance): Promise<prisma.TokenBalanceVersion> {
+  async getCurrentTokenBalanceVersion(tokenBalance: prisma.TokenBalance | TokenBalanceId): Promise<prisma.TokenBalanceVersion> {
+    const tokenBal = "value" in tokenBalance ? await this.getTokenBalance(tokenBalance) : tokenBalance; 
     const currentTokenBalanceVersion = await this.tx.tokenBalanceVersion.findUnique({
-      where: { id: tokenBalance.currentVersionId },
+      where: { id: tokenBal.currentVersionId },
     });
     if (currentTokenBalanceVersion === null) {
-      throw new Error(`Current TokenBalanceVersion not found, currentTokenBalanceVersionId: ${tokenBalance.currentVersionId}, on TokenBalance id : ${tokenBalance.id}`);
+      throw new Error(`Current TokenBalanceVersion not found, currentTokenBalanceVersionId: ${tokenBal.currentVersionId}, on TokenBalance id : ${tokenBal.id}`);
     }
     return currentTokenBalanceVersion;
   }

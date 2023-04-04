@@ -15,8 +15,9 @@ export interface NewKandel {
     quote: Address;
     owner: Address;
     reserve: Address;
+    router: Address;
     address:Address;
-    compoundRates?: {
+    compoundRates: {
         base: number;
         quote: number;
     };

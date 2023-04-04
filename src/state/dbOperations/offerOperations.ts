@@ -2,8 +2,11 @@ import * as prisma from "@prisma/client";
 import * as _ from "lodash";
 import { AccountId, OfferId, OfferListingId, OfferVersionId } from "src/state/model";
 import { DbOperations, toNewVersionUpsert } from "./dbOperations";
+import { KandelOperations } from "./kandelOperations";
 
 export class OfferOperations extends DbOperations {
+
+  kandelOperations = new KandelOperations(this.tx);
 
   public async getOffer(id: OfferId): Promise<prisma.Offer | null> {
     return await this.tx.offer.findUnique({ where: { id: id.value } });
@@ -133,5 +136,13 @@ export class OfferOperations extends DbOperations {
         where: { id: offer.currentVersionId },
       });
     }
+
+    if( version.kandelRetractEventId ) {
+      await this.kandelOperations.deleteRetractEventIfNoReferences(version.kandelRetractEventId)
+    }
+    if( version.kandelPopulateEventId ) {
+      await this.kandelOperations.deletePopulateEventIfNoReferences(version.kandelPopulateEventId)
+    }
+
   }
 }
