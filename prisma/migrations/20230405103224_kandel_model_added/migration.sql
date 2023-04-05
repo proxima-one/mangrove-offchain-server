@@ -1,6 +1,7 @@
 /*
   Warnings:
 
+  - You are about to drop the `Strat` table. If the table is not empty, all the data it contains will be lost.
   - A unique constraint covering the columns `[chainId,address]` on the table `Account` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[mangroveId,makerId]` on the table `MakerBalance` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[makerBalanceId,versionNumber]` on the table `MakerBalanceVersion` will be added. If there are existing duplicate values, this will fail.
@@ -11,7 +12,6 @@
   - A unique constraint covering the columns `[mangroveId,offerListingId,offerNumber]` on the table `Offer` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[mangroveId,inboundTokenId,outboundTokenId]` on the table `OfferListing` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[offerListingId,versionNumber]` on the table `OfferListingVersion` will be added. If there are existing duplicate values, this will fail.
-  - A unique constraint covering the columns `[id]` on the table `Strat` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[orderId,offerVersionId]` on the table `TakenOffer` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[mangroveId,offerListingId,ownerId,spenderId]` on the table `TakerApproval` will be added. If there are existing duplicate values, this will fail.
   - A unique constraint covering the columns `[takerApprovalId,versionNumber]` on the table `TakerApprovalVersion` will be added. If there are existing duplicate values, this will fail.
@@ -31,6 +31,9 @@ ADD COLUMN     "kandelRetractEventId" TEXT;
 
 -- AlterTable
 ALTER TABLE "TakenOffer" ALTER COLUMN "takerGot" SET DATA TYPE TEXT;
+
+-- DropTable
+DROP TABLE "Strat";
 
 -- CreateTable
 CREATE TABLE "TokenBalance" (
@@ -458,9 +461,6 @@ CREATE INDEX "Order_offerListingId_idx" ON "Order"("offerListingId");
 
 -- CreateIndex
 CREATE INDEX "Order_takerId_idx" ON "Order"("takerId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "Strat_id_key" ON "Strat"("id");
 
 -- CreateIndex
 CREATE INDEX "TakenOffer_offerVersionId_idx" ON "TakenOffer"("offerVersionId");

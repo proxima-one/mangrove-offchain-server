@@ -58,9 +58,6 @@ export class KandelOperations extends DbOperations {
         versionNumber: 0,
         prevVersionId: null
       };
-      await this.tx.strat.create({ data:{
-        id: params.id.value
-      } });
       await new AccountOperations(this.tx).ensureAccount(params.id);
       if( params.constParams.reserveId && await this.tx.account.findUnique({where: {id:params.constParams.reserveId.value}}) ==null ){
         await this.tx.account.create({ data: {
@@ -240,9 +237,7 @@ export class KandelOperations extends DbOperations {
     const kandel = await this.tx.kandel.findFirst({
       where: {
         strat: {
-          account: {
-            address: account.address
-          }
+          address: account.address
         }
       }
     })

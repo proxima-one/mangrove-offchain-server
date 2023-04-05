@@ -2,12 +2,12 @@ import * as prisma from "@prisma/client";
 import { MangroveOrder } from "@prisma/client";
 import * as _ from "lodash";
 import {
+  AccountId,
   MangroveId,
   MangroveOrderId,
   MangroveOrderVersionId,
   OfferId,
   OfferListingId,
-  StratId
 } from "src/state/model";
 import { DbOperations, PrismaTx, toNewVersionUpsert } from "./dbOperations";
 import { OfferListingOperations } from "./offerListingOperations";
@@ -221,7 +221,7 @@ export class MangroveOrderOperations extends DbOperations {
   }
 
 
-  public async getMangroveIdByStratId(stratId:StratId){
+  public async getMangroveIdByStratId(stratId:AccountId){
     const mangroveOrder = await this.tx.mangroveOrder.findFirst({where: {stratId: stratId.value}});
     if( mangroveOrder){
       return new MangroveId(stratId.chainId, mangroveOrder.mangroveId);

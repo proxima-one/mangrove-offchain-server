@@ -2,11 +2,10 @@ import { Order, TakenOffer } from "@prisma/client";
 import assert from "assert";
 import { describe, it } from "mocha";
 import { MangroveOrderOperations } from "src/state/dbOperations/mangroveOrderOperations";
-import { OrderOperations } from "src/state/dbOperations/orderOperations";
-import { AccountId, ChainId, MangroveId, MangroveOrderId, MangroveOrderVersionId, OfferId, OfferListingId, OfferListingVersionId, OfferVersionId, OrderId, StratId, TakenOfferId, TokenId } from "src/state/model";
-import { prisma } from "utils/test/mochaHooks";
-import { OfferListParams } from "@proximaone/stream-schema-mangrove/dist/core";
 import { OfferOperations } from "src/state/dbOperations/offerOperations";
+import { OrderOperations } from "src/state/dbOperations/orderOperations";
+import { AccountId, ChainId, MangroveId, MangroveOrderId, OfferId, OfferListingId, OfferListingVersionId, OfferVersionId, OrderId, TakenOfferId, TokenId } from "src/state/model";
+import { prisma } from "utils/test/mochaHooks";
 
 describe("Order Operations Integration test Suite", () => {
 
@@ -209,7 +208,7 @@ describe("Order Operations Integration test Suite", () => {
         })
 
         await mangroveOrderOperations.addMangroveOrderVersion( mangroveOrderId, "txId", (m) => m , {
-            stratId: new StratId(chainId, "mangroveOrder").value,
+            stratId: new AccountId(chainId, "mangroveOrder").value,
             orderId: new OrderId(mangroveId, offerListKey, "proximaId").value,
             takerId: takerId.value,
             restingOrderId: offerId0.value,
@@ -311,7 +310,7 @@ describe("Order Operations Integration test Suite", () => {
             ]
             
             await mangroveOrderOperations.addMangroveOrderVersion( new MangroveOrderId(mangroveId, offerListKey, "2"), "txId", (m) => m , {
-                stratId: new StratId(chainId, "mangroveOrder").value,
+                stratId: new AccountId(chainId, "mangroveOrder").value,
                 orderId: new OrderId(mangroveId, offerListKey, "proximaId2").value,
                 takerId: takerId.value,
                 restingOrderId: offerId2.value,

@@ -16,15 +16,6 @@ export class AccountId extends Id<string> {
   }
 }
 
-export class StratId extends AccountId {
-  public constructor(
-    public readonly chainId: ChainId,
-    public readonly address: string
-  ) {
-    super(chainId, address);
-  }
-}
-
 export class TransactionId extends Id<string> {
   public constructor(
     public readonly chainId: ChainId,
@@ -250,7 +241,7 @@ export class TokenBalanceVersionId extends Id<string> {
   }
 }
 
-export class KandelId extends StratId {
+export class KandelId extends AccountId {
   public constructor(
     public readonly chainId: ChainId,
     public readonly address: string

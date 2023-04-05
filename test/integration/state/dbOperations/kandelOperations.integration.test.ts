@@ -1,4 +1,4 @@
-import { Account, Kandel, KandelConfiguration, KandelVersion, Strat, Token, Transaction } from "@prisma/client";
+import { Account, Kandel, KandelConfiguration, KandelVersion, Token, Transaction } from "@prisma/client";
 import assert from "assert";
 import { before, describe } from "mocha";
 import { KandelOperations } from "src/state/dbOperations/kandelOperations";
@@ -45,7 +45,6 @@ describe("Kandel Operations Integration test suite", () => {
   let kandel:Kandel;
   let kandelVersion:KandelVersion;
   let kandelConfiguration:KandelConfiguration;
-  let strat:Strat;
   let account:Account;
 
 
@@ -102,12 +101,6 @@ describe("Kandel Operations Integration test suite", () => {
         reserveId: reserveId.value,
         type: "Kandel",
         currentVersionId: kandelVersionId.value
-      }
-    })
-
-    strat = await prisma.strat.create( {
-      data: {
-        id: kandelId.value,
       }
     })
 
@@ -179,14 +172,12 @@ describe("Kandel Operations Integration test suite", () => {
     it("Brand new Kandel, no Reserve Id when creating an normal Kandel", async () => {
       assert.strictEqual(await prisma.kandel.count(), 1);
       assert.strictEqual(await prisma.kandelVersion.count(), 1);
-      assert.strictEqual(await prisma.strat.count(), 1);
       assert.strictEqual(await prisma.account.count(), 2);
       const newKandelId = new KandelId(chainId, "newKandel");
       const newKandelVersionId = new KandelVersionId({kandelId:newKandelId, versionNumber: 0});
       const {kandelVersion:newVersion} =  await kandelOperations.addVersionedKandel( { id: newKandelId, txId: "txId2", constParams: { mangroveId: mangroveId, base: baseId, quote: quoteId, type: "Kandel" }});
       assert.strictEqual(await prisma.kandel.count(), 2);
       assert.strictEqual(await prisma.kandelVersion.count(), 2);
-      assert.strictEqual(await prisma.strat.count(), 2);
       assert.strictEqual(await prisma.account.count(), 3);
       assert.deepStrictEqual( newVersion,
         { 
@@ -210,8 +201,6 @@ describe("Kandel Operations Integration test suite", () => {
           currentVersionId: newKandelVersionId.value,
           type: "Kandel"
         } )
-      const newStart = await prisma.strat.findUnique({where: {id: newKandelId.value}});
-      assert.notStrictEqual(newStart, null);
       const newAccount = await prisma.account.findUnique( {where: {id: newKandelId.value}})
       assert.deepStrictEqual(newAccount, {
         id: newKandelId.value,
@@ -222,14 +211,12 @@ describe("Kandel Operations Integration test suite", () => {
     it("Brand new Kandel, has same Reserve Id when creating an AaveKandel", async () => {
       assert.strictEqual(await prisma.kandel.count(), 1);
       assert.strictEqual(await prisma.kandelVersion.count(), 1);
-      assert.strictEqual(await prisma.strat.count(), 1);
       assert.strictEqual(await prisma.account.count(), 2);
       const newKandelId = new KandelId(chainId, "newKandel");
       const newKandelVersionId = new KandelVersionId({kandelId:newKandelId, versionNumber: 0});
       const {kandelVersion:newVersion} =  await kandelOperations.addVersionedKandel( { id: newKandelId, txId: "txId2", constParams: { reserveId: reserveId, mangroveId: mangroveId, base: baseId, quote: quoteId, type: "AaveKandel" }});
       assert.strictEqual(await prisma.kandel.count(), 2);
       assert.strictEqual(await prisma.kandelVersion.count(), 2);
-      assert.strictEqual(await prisma.strat.count(), 2);
       assert.strictEqual(await prisma.account.count(), 3);
       assert.deepStrictEqual( newVersion,
         { 
@@ -253,8 +240,6 @@ describe("Kandel Operations Integration test suite", () => {
           currentVersionId: newKandelVersionId.value,
           type: "AaveKandel"
         } )
-      const newStart = await prisma.strat.findUnique({where: {id: newKandelId.value}});
-      assert.notStrictEqual(newStart, null);
       const newAccount = await prisma.account.findUnique( {where: {id: newKandelId.value}})
       assert.deepStrictEqual(newAccount, {
         id: newKandelId.value,
@@ -265,7 +250,6 @@ describe("Kandel Operations Integration test suite", () => {
     it("Brand new Kandel, has different Reserve Id when creating an AaveKandel", async () => {
       assert.strictEqual(await prisma.kandel.count(), 1);
       assert.strictEqual(await prisma.kandelVersion.count(), 1);
-      assert.strictEqual(await prisma.strat.count(), 1);
       assert.strictEqual(await prisma.account.count(), 2);
       const newKandelId = new KandelId(chainId, "newKandel");
       const newKandelVersionId = new KandelVersionId({kandelId:newKandelId, versionNumber: 0});
@@ -273,7 +257,6 @@ describe("Kandel Operations Integration test suite", () => {
       const {kandelVersion:newVersion} =   await kandelOperations.addVersionedKandel( { id: newKandelId, txId: "txId2", constParams: { reserveId: newReserveId, mangroveId: mangroveId, base: baseId, quote: quoteId, type: "AaveKandel" }});
       assert.strictEqual(await prisma.kandel.count(), 2);
       assert.strictEqual(await prisma.kandelVersion.count(), 2);
-      assert.strictEqual(await prisma.strat.count(), 2);
       assert.strictEqual(await prisma.account.count(), 4);
       assert.deepStrictEqual( newVersion,
         { 
@@ -297,8 +280,6 @@ describe("Kandel Operations Integration test suite", () => {
           currentVersionId: newKandelVersionId.value,
           type: "AaveKandel"
         } )
-      const newStart = await prisma.strat.findUnique({where: {id: newKandelId.value}});
-      assert.notStrictEqual(newStart, null);
       const newAccount = await prisma.account.findUnique( {where: {id: newKandelId.value}})
       assert.deepStrictEqual(newAccount, {
         id: newKandelId.value,

@@ -249,7 +249,6 @@ describe("Kandel Events Logic Integration test suite", () => {
                 const kandelConfigCount = await prisma.kandelConfiguration.count()
                 const kandelEventCount = await prisma.kandelEvent.count()
                 const newKandelEventCount = await prisma.newKandelEvent.count()
-                const stratCount = await prisma.strat.count()
                 await kandelEventsLogic.handleKandelCreated(false, chainId, event, tx);
                 assert.strictEqual(await prisma.account.count() - accountCount, hasReserve ? 2 : 1)
                 assert.strictEqual(await prisma.kandel.count() - kandelCount, 1)
@@ -257,7 +256,6 @@ describe("Kandel Events Logic Integration test suite", () => {
                 assert.strictEqual(await prisma.kandelConfiguration.count() -kandelConfigCount , 1)
                 assert.strictEqual(await prisma.kandelEvent.count() - kandelEventCount, 1)
                 assert.strictEqual(await prisma.newKandelEvent.count() - newKandelEventCount, 1)
-                assert.strictEqual(await prisma.strat.count() - stratCount, 1)
 
                 const kandelId = new KandelId(chainId, event.address);
                 const reserveId = hasReserve ? new AccountId(chainId, event.reserve) : kandelId;
@@ -265,7 +263,6 @@ describe("Kandel Events Logic Integration test suite", () => {
                 const kandel = await prisma.kandel.findUnique({ where: { id: kandelId.value } });
                 const kandelVersion = await prisma.kandelVersion.findUnique({ where: { id: kandel?.currentVersionId } });
                 const config = await prisma.kandelConfiguration.findUnique({ where: { id: kandelVersion?.congigurationId } })
-                const strat = await prisma.strat.findUnique({ where: { id: kandelId.value } })
                 const kandelAccount = await prisma.account.findUnique({ where: { id: kandelId.value } })
                 const reserveAccount = await prisma.account.findUnique({ where: { id: reserveId.value } })
                 assert.deepStrictEqual(kandel, {
@@ -296,9 +293,6 @@ describe("Kandel Events Logic Integration test suite", () => {
                     spread: 0,
                     ratio: 0,
                     length: 0
-                })
-                assert.deepStrictEqual(strat, {
-                    id: kandelId.value,
                 })
                 assert.deepStrictEqual(kandelAccount, {
                     id: kandelId.value,
@@ -338,7 +332,6 @@ describe("Kandel Events Logic Integration test suite", () => {
             const kandelConfigCount = await prisma.kandelConfiguration.count()
             const kandelEventCount = await prisma.kandelEvent.count()
             const newKandelEventCount = await prisma.newKandelEvent.count()
-            const stratCount = await prisma.strat.count()
             await kandelEventsLogic.handleKandelCreated(true, chainId, event, tx);
             assert.strictEqual( await prisma.account.count() - accountCount, -1) // the reserve account is not deleted
             assert.strictEqual(await prisma.kandel.count() - kandelCount, -1)
@@ -346,7 +339,6 @@ describe("Kandel Events Logic Integration test suite", () => {
             assert.strictEqual(await prisma.kandelConfiguration.count() -kandelConfigCount , -1)
             assert.strictEqual(await prisma.kandelEvent.count() - kandelEventCount, -1)
             assert.strictEqual(await prisma.newKandelEvent.count() - newKandelEventCount, -1)
-            assert.strictEqual(await prisma.strat.count() - stratCount, -1)
 
         });
     })

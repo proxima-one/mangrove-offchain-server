@@ -1,5 +1,4 @@
 import { MangroveOrderVersion, TakenOffer, Transaction } from ".prisma/client";
-import { Timestamp } from "@proximaone/stream-client-js";
 import { OrderSummary } from "@proximaone/stream-schema-mangrove/dist/strategyEvents";
 import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
 import { addNumberStrings, getNumber, getPrice } from "src/state/handlers/handlerUtils";
@@ -11,7 +10,6 @@ import {
   OfferId,
   OfferListingId,
   OrderId,
-  StratId,
   TokenId
 } from "src/state/model";
 
@@ -32,7 +30,7 @@ export class MangroveOrderEventsLogic {
       inboundToken: string;
     }
   ) {
-    const stratId = new StratId(chainId, params.address);
+    const stratId = new AccountId(chainId, params.address);
     const mangroveId = await db.mangroveOrderOperations.getMangroveIdByStratId(stratId);
     if (!mangroveId) {
       throw new Error(`Cannot find match mangroveId, from mangroveOrder address: ${params.address}`);
@@ -107,7 +105,7 @@ export class MangroveOrderEventsLogic {
     await db.mangroveOrderOperations.addMangroveOrderVersion(mangroveOrderId, transaction.id, initialVersionFunc, {
       orderId: new OrderId(mangroveId, offerList, e.orderId).value,
       takerId: new AccountId(chainId, e.taker).value,
-      stratId: new StratId(chainId, e.address).value,
+      stratId: new AccountId(chainId, e.address).value,
       fillOrKill: e.fillOrKill.valueOf(),
       fillWants: e.fillWants.valueOf(),
       restingOrder: e.restingOrder.valueOf(),
