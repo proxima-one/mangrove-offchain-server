@@ -1,11 +1,8 @@
 import {
-  MakerBalance,
-  MakerBalanceVersion,
   MangroveOrder,
   MangroveOrderVersion,
   Offer,
   OfferListing,
-  OfferListingVersion,
   OfferVersion,
   Order,
   TakenOffer,

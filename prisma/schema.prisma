@@ -158,6 +158,7 @@ model Account {
 
 model Strat {
   id String @id @unique @db.VarChar(255)
+  test String?
 
   account Account @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: Cascade )
 

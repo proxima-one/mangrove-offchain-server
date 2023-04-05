@@ -45,6 +45,7 @@
   "dependencies": {
     "@apollo/server": "^4.2.2",
     "@espendk/json-file-reporter": "^1.4.2",
+    "@graphql-tools/merge": "^8.4.0",
     "@mangrovedao/commonlib.js": "^1.0.0",
     "@prisma/client": "^4.11.0",
     "@proximaone/stream-client-js": "^1.2.1",
@@ -67,6 +68,7 @@
     "graphql": "^16.6.0",
     "graphql-fields": "^2.0.3",
     "graphql-scalars": "^1.20.1",
+    "graphql-tools": "^8.3.19",
     "lint-staged": "^13.1.0",
     "lodash": "^4.17.21",
     "mocha": "^10.2.0",
