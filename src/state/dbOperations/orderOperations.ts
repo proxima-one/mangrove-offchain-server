@@ -5,6 +5,7 @@ import { DbOperations, PrismaTx } from "./dbOperations";
 import { MangroveOrderOperations } from "./mangroveOrderOperations";
 import { OfferOperations } from "./offerOperations";
 import { MangroveOrderEventsLogic } from "src/state/handlers/stratsHandler/mangroveOrderEventsLogic";
+import BigNumber from "bignumber.js";
 
 export class OrderOperations extends DbOperations {
 
@@ -54,7 +55,7 @@ export class OrderOperations extends DbOperations {
         }
         const currentVersionId =  await this.offerOperations.getCurrentOfferVersion(offer);
         if( currentVersionId.id != takenOffer.offerVersionId){
-          throw new Error(`Cannot take version of offer that is not the current version of the offer. currentOfferVersionId: ${currentVersionId} & takenOffer.offerVersionId: ${takenOffer.offerVersionId}`)
+          throw new Error(`Cannot take version of offer that is not the current version of the offer. currentOfferVersionId: ${currentVersionId.id} & takenOffer.offerVersionId: ${takenOffer.offerVersionId}`)
         }
         await this.offerOperations.addVersionedOffer(new OfferId(orderId.mangroveId, orderId.offerListKey, offer.offerNumber), order.txId, (m) => m.deleted = true); 
         let updateFunc = ( 
@@ -70,4 +71,5 @@ export class OrderOperations extends DbOperations {
           );
       };
   }
+
 }

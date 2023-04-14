@@ -25,6 +25,10 @@ import {
   CustomMangroveOrderVersionFieldsResolver,
   CustomTakenOfferFieldsResolver,
   CustomTokenFieldsResolver,
+  KandelHistoryResolver,
+  KandelHomePageResolver,
+  KandelManageStrategyPageResolver,
+  MangroveOrderResolver,
 } from "src/resolvers/customFieldResolvers";
 import { AddressInfo } from "net";
 import logger from "src/utils/logger"
@@ -43,7 +47,12 @@ async function main() {
     CustomMangroveOrderVersionFieldsResolver,
     CustomTakenOfferFieldsResolver,
     CustomTokenFieldsResolver,
-    ...Array.from( graphql.resolvers.values() )];
+    KandelHistoryResolver,
+    KandelHomePageResolver,
+    KandelManageStrategyPageResolver,
+    MangroveOrderResolver,
+    // ...Array.from( graphql.resolvers.values() )
+   ];
   
 
 
