@@ -2,72 +2,66 @@ import { ObjectType, Field } from "type-graphql";
 import { Token } from "@generated/type-graphql";
 
 @ObjectType()
-export class MangroveOrderFills {
+export class MangroveOrderFillWithTokens {
     constructor(params: {
-        fillWants: boolean,
         totalFee: string,
-        restingOrderId?: string,
-        id: string,
+        mangroveOrderId?: string,
         taker: string,
-        inboundToken?: Token,
-        outboundToken?: Token,
-        price?: string,
-        expiryDate?: Date,
-        firstDate: Date,
-        takerGot?: string,
-        takerWants: string
+        inboundToken: Token,
+        outboundToken: Token,
+        price: number,
+        type: string,
+        fillsId: string,
+        time: Date,
+        takerGot: number,
+        txHash: string
     }) {
-        this.fillWants = params.fillWants;
         this.totalFee = params.totalFee;
-        this.restingOrderId = params.restingOrderId;
-        this.id = params.id;
+        this.mangroveOrderId = params.mangroveOrderId;
         this.taker = params.taker;
         this.inbound = params.inboundToken;
         this.outbound = params.outboundToken;
         this.price = params.price;
-        this.expiryDate = params.expiryDate;
-        this.firstDate = params.firstDate;
+        this.type = params.type;
+        this.fillsId = params.fillsId;
+        this.time = params.time;
         this.takerGot = params.takerGot;
-        this.takerWants = params.takerWants;
+        this.txHash = params.txHash;
 
     }
 
+    @Field( {nullable: true})
+    fillsId: string;
 
-    @Field()
-    fillWants!: boolean;
+    @Field( {nullable: true})
+    totalFee: string;
 
-    @Field()
-    totalFee!: string;
+    @Field( {nullable: true})
+    mangroveOrderId?: string;
 
-    @Field()
-    restingOrderId?: string;
+    @Field( {nullable: true})
+    taker: string;
 
-    @Field()
-    id!: string;
+    @Field( {nullable: true})
+    type: string;
 
-    @Field()
-    taker!: string;
+    @Field( {nullable: true})
+    inbound: Token
 
-    @Field()
-    inbound?: Token
+    @Field( {nullable: true})
+    outbound: Token
 
-    @Field()
-    outbound?: Token
+    @Field( {nullable: true})
+    price: number;
 
-    @Field()
-    price?: string;
+    @Field( {nullable: true})
+    takerGot: number;
 
-    @Field()
-    takerGot?: string;
+    @Field( {nullable: true})
+    time: Date;
 
-    @Field()
-    expiryDate?: Date;
-
-    @Field()
-    firstDate!: Date;
-
-    @Field()
-    takerWants!: string;
+    @Field( {nullable: true})
+    txHash: string;
 }
 
 
@@ -75,33 +69,27 @@ export class MangroveOrderFills {
 export class MangroveOrderOpenOrder {
 
     constructor(params: {
-        fillWants: boolean,
-        totalFee: string
-        id: string
+        side: "Buy" | "Sell",
+        offerId?: string
         taker: string,
         inboundToken?: Token,
         outboundToken?: Token,
         price?: string
-        cancelled?: boolean,
-        failed?: boolean,
+        status?: "Cancelled" | "Failed" | "Filled" | "Partial Fill" | "Open" | "Expired",
         failedReason?: string,
-        filled?: boolean,
         expiryDate?: Date
         date: Date,
         takerGot?: string,
         takerWants: string
     }) {
-        this.fillWants = params.fillWants;
-        this.totalFee = params.totalFee;
-        this.id = params.id;
+        this.side = params.side;
+        this.offerId = params.offerId;
         this.taker = params.taker;
         this.inbound = params.inboundToken;
         this.outbound = params.outboundToken;
         this.price = params.price;
-        this.cancelled = params.cancelled;
-        this.failed = params.failed;
+        this.status = params.status;
         this.failedReason = params.failedReason;
-        this.filled = params.filled;
         this.expiryDate = params.expiryDate;
         this.date = params.date;
         this.takerGot = params.takerGot;
@@ -109,49 +97,40 @@ export class MangroveOrderOpenOrder {
 
     }
 
-    @Field()
-    fillWants!: boolean;
+    @Field( {nullable: true})
+    side!: string;
 
-    @Field()
-    totalFee!: string;
+    @Field( {nullable: true})
+    offerId?: string;
 
-    @Field()
-    id!: string;
-
-    @Field()
+    @Field( {nullable: true})
     taker!: string;
 
-    @Field()
+    @Field( {nullable: true})
     inbound?: Token
 
-    @Field()
+    @Field( {nullable: true})
     outbound?: Token
 
-    @Field()
+    @Field( {nullable: true})
     price?: string;
 
-    @Field()
-    cancelled?: boolean;
+    @Field( {nullable: true})
+    status?: string;
 
-    @Field()
-    failed?: boolean;
-
-    @Field()
+    @Field( {nullable: true})
     failedReason?: string;
 
-    @Field()
-    filled?: boolean;
-
-    @Field()
+    @Field( {nullable: true})
     expiryDate?: Date;
 
-    @Field()
+    @Field( {nullable: true})
     date!: Date;
 
-    @Field()
+    @Field( {nullable: true})
     takerGot?: string;
 
-    @Field()
+    @Field( {nullable: true})
     takerWants!: string;
 
 }

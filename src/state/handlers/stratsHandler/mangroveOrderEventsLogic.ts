@@ -41,7 +41,7 @@ export class MangroveOrderEventsLogic {
     };
     const offerId = new OfferId(mangroveId, offerListKey, params.offerId);
 
-    db.mangroveOrderOperations.addMangroveOrderVersionFromOfferId(
+    await db.mangroveOrderOperations.addMangroveOrderVersionFromOfferId(
       offerId,
       txId,
       (m) => (m.expiryDate = new Date(params.date))
@@ -180,8 +180,8 @@ export class MangroveOrderEventsLogic {
   }
   getOfferListFromOrderSummary(e:{ fillWants: boolean, outboundToken: string, inboundToken: string }) {
     return {
-      outboundToken: e.fillWants ? e.outboundToken : e.inboundToken,
-      inboundToken: e.fillWants ? e.inboundToken : e.outboundToken,
+      outboundToken: e.outboundToken,
+      inboundToken: e.inboundToken,
     };
   }
 

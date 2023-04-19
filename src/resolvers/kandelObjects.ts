@@ -91,7 +91,7 @@ export class KandelStrategy{
 }
 
 @ObjectType()
-export class KandelFills {
+export class KandelFill {
   constructor( params:{
     takerGave: string;
     takerGot: string;
@@ -134,7 +134,7 @@ export class KandelFills {
 
 
 @ObjectType()
-export class KandelFailedOffers {
+export class KandelFailedOffer {
 
   constructor( params:{
     takerGave: string;
@@ -217,7 +217,7 @@ export class KandelDepositWithdraw {
 }
 
 @ObjectType()
-export class KandelParameters {
+export class KandelParameter {
 
   constructor(params: {
     event: {

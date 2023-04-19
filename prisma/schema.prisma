@@ -8,7 +8,8 @@ datasource db {
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
 }
 
 generator typegraphql {
@@ -263,6 +264,7 @@ model OfferListing {
   currentVersionId     String                @unique @db.VarChar(255)
   currentVersion       OfferListingVersion?  @relation("currentVersion", fields: [currentVersionId], references: [id])
   offerListingVersions OfferListingVersion[] @relation("offerListingVersion")
+  MangroveOrderFill    MangroveOrderFill[]
 
   @@unique([mangroveId, inboundTokenId, outboundTokenId])
   @@index([inboundTokenId])
@@ -773,4 +775,25 @@ model KandelConfiguration {
 model Streams {
   id     String @id @db.VarChar(255)
   offset String @db.VarChar(255)
+}
+
+view MangroveOrderFill {
+  mangroveId      String
+  takerId         String
+  offerListingId  String
+  mangroveOrderId String?
+  fillsId         String // Either a TakenOfferId or OrderId
+  type            String
+  totalFee        String
+  amount          Float
+  price           Float?
+  txHash          String
+  time            DateTime @db.Timestamp
+
+  offerListing OfferListing @relation(fields: [offerListingId], references: [id])
+
+  @@unique([type, fillsId])
+  @@index([takerId])
+  @@index([mangroveId])
+  @@index([offerListingId])
 }

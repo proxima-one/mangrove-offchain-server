@@ -1,28 +1,26 @@
 import "reflect-metadata";
 
-import { PrismaClient } from "@prisma/client";
-import * as graphql from "@generated/type-graphql";
-import { NonEmptyArray, buildSchema, buildSchemaSync } from "type-graphql";
-import { mergeResolvers } from '@graphql-tools/merge';
 import { ApolloServer } from "@apollo/server";
-import express from "express";
-import http from "http";
-import cors from "cors";
-import bodyParser from "body-parser";
-import rateLimit from "express-rate-limit";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 import {
   ApolloServerPluginLandingPageLocalDefault,
   ApolloServerPluginLandingPageProductionDefault,
 } from "@apollo/server/plugin/landingPage/default";
+import { PrismaClient } from "@prisma/client";
+import bodyParser from "body-parser";
+import cors from "cors";
+import express from "express";
+import rateLimit from "express-rate-limit";
+import http from "http";
+import { AddressInfo } from "net";
 import {
+  CustomMangroveOrderFieldsResolver,
+  CustomMangroveOrderVersionFieldsResolver,
   CustomOfferFieldsResolver,
   CustomOfferListingFieldsResolver,
   CustomOfferVersionFieldsResolver,
   CustomOrderFieldsResolver,
-  CustomMangroveOrderFieldsResolver,
-  CustomMangroveOrderVersionFieldsResolver,
   CustomTakenOfferFieldsResolver,
   CustomTokenFieldsResolver,
   KandelHistoryResolver,
@@ -30,8 +28,8 @@ import {
   KandelManageStrategyPageResolver,
   MangroveOrderResolver,
 } from "src/resolvers/customFieldResolvers";
-import { AddressInfo } from "net";
-import logger from "src/utils/logger"
+import logger from "src/utils/logger";
+import { NonEmptyArray, buildSchema } from "type-graphql";
 
 const prisma = new PrismaClient();
 
