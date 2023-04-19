@@ -74,8 +74,8 @@ describe("Mangrove Order Events Logic Unit Test Suite", () => {
             const outboundToken = "outbound";
             const inboundToken = "inbound";
             const offerListKey  = mangroveOrderEventLogic.getOfferListFromOrderSummary({ fillWants:false, outboundToken: outboundToken, inboundToken: inboundToken})
-            assert.strictEqual(offerListKey.inboundToken, outboundToken);
-            assert.strictEqual(offerListKey.outboundToken, inboundToken);
+            assert.strictEqual(offerListKey.inboundToken, inboundToken);
+            assert.strictEqual(offerListKey.outboundToken, outboundToken);
         })
     })
 
