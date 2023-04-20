@@ -580,8 +580,8 @@ model TokenBalanceVersion {
   tokenBalanceId String @db.VarChar(255)
   deposit        String
   withdrawal     String
-  spent          String
-  earned         String
+  send           String
+  received       String
   balance        String
 
   tx           Transaction  @relation(fields: [txId], references: [id])

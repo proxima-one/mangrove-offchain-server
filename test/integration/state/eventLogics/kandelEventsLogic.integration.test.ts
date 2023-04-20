@@ -213,8 +213,8 @@ describe("Kandel Events Logic Integration test suite", () => {
             txId: tx.id,
             deposit: "20",
             withdrawal: "10",
-            spent: "30",
-            earned: "40",
+            send: "30",
+            received: "40",
             balance: "20",
             versionNumber: tokenBalanceVersionId.params.versionNumber
         }})

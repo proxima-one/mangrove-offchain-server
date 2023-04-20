@@ -62,8 +62,8 @@ export class TokenBalanceOperations extends DbOperations {
         tokenBalanceId: tokenBalance.id,
         deposit: "0",
         withdrawal: "0",
-        spent: "0",
-        earned: "0",
+        send: "0",
+        received: "0",
         balance: "0",
         versionNumber: 0,
         prevVersionId: null

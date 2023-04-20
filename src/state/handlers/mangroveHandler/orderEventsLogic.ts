@@ -85,7 +85,7 @@ export class OrderEventLogic {
       tokenBalanceId: inboundTokenBalanceId,
       txId: txId,
       updateFunc: (tokenBalanceVersion) => {
-        tokenBalanceVersion.earned = new BigNumber(takenOffer.takerGot).plus(tokenBalanceVersion.earned).toString();
+        tokenBalanceVersion.received = new BigNumber(takenOffer.takerGot).plus(tokenBalanceVersion.received).toString();
         tokenBalanceVersion.balance = new BigNumber(takenOffer.takerGot).plus(tokenBalanceVersion.balance).toString();
       }
     })
@@ -99,7 +99,7 @@ export class OrderEventLogic {
       tokenBalanceId: outboundTokenBalanceId,
       txId: txId,
       updateFunc: (tokenBalanceVersion) => {
-        tokenBalanceVersion.spent = new BigNumber(takenOffer.takerGave).plus(tokenBalanceVersion.earned).toString();
+        tokenBalanceVersion.send = new BigNumber(takenOffer.takerGave).plus(tokenBalanceVersion.send).toString();
         tokenBalanceVersion.balance = new BigNumber(takenOffer.takerGave).minus(tokenBalanceVersion.balance).toString();
       }
     })
