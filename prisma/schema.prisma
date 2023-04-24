@@ -53,6 +53,7 @@ model Transaction {
   KandelVersion         KandelVersion[]
   KandelOfferIndex      KandelOfferIndex[]
   TokenBalanceVersion   TokenBalanceVersion[]
+  KandelEvent           KandelEvent[]
 
   @@unique([chainId, txHash])
 }
@@ -517,23 +518,22 @@ model MangroveOrderVersion {
 
 model TokenBalance {
   id        String @id @db.VarChar(255)
-  reserveId String @db.VarChar(255)
+  accountId String @db.VarChar(255) @map("reserveId")
   tokenId   String @db.VarChar(255)
 
   currentVersionId String                @unique @db.VarChar(255)
   currentVersion   TokenBalanceVersion?  @relation("currentVersion", fields: [currentVersionId], references: [id])
   token            Token                 @relation(fields: [tokenId], references: [id])
-  reserve          Account               @relation("reserve", fields: [reserveId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  reserve          Account               @relation("reserve", fields: [accountId], references: [id], onDelete: Restrict, onUpdate: Restrict)
   allBalances      TokenBalanceVersion[] @relation("tokenBalance")
 
-  @@unique([reserveId, tokenId])
+  @@unique([accountId, tokenId])
   @@index([tokenId])
 }
 
 model TokenBalanceEvent {
   id                    String  @id @default(uuid())
-  reserveId             String  @db.VarChar(255)
-  kandelId              String? @db.VarChar(255)
+  accountId             String  @db.VarChar(255) @map("reserveId")
   tokenId               String  @db.VarChar(255)
   tokenBalanceVersionId String  @unique @db.VarChar(255)
   takenOfferId          String? @db.VarChar(255)
@@ -541,37 +541,36 @@ model TokenBalanceEvent {
   tokenBalanceVersion TokenBalanceVersion @relation(fields: [tokenBalanceVersionId], references: [id], onDelete: Cascade)
   token               Token               @relation(fields: [tokenId], references: [id])
 
-  kandel                      Kandel?                      @relation(fields: [kandelId], references: [id])
-  reserve                     Account                      @relation(fields: [reserveId], references: [id])
+  reserve                     Account                      @relation(fields: [accountId], references: [id])
   TokenBalanceDepositEvent    TokenBalanceDepositEvent?
   TokenBalanceWithdrawalEvent TokenBalanceWithdrawalEvent?
   takenOffer                  TakenOffer?                  @relation(fields: [takenOfferId], references: [id], onDelete: Cascade)
 
   @@index([tokenId])
-  @@index([kandelId])
-  @@index([reserveId])
+  @@index([accountId])
   @@index([takenOfferId])
 }
 
 model TokenBalanceDepositEvent {
-  id                  String                  @id @default(uuid())
-  tokenBalanceEventId String                  @unique @db.VarChar(255)
-  tokenBalanceEvent   TokenBalanceEvent       @relation(fields: [tokenBalanceEventId], references: [id], onDelete: Cascade)
-  source              TokenBalanceEventSource
+  id                  String            @id @default(uuid())
+  tokenBalanceEventId String            @unique @db.VarChar(255)
+  tokenBalanceEvent   TokenBalanceEvent @relation(fields: [tokenBalanceEventId], references: [id], onDelete: Cascade)
+  source              String
   value               String
+  kandel              Kandel?           @relation("depositEvent", fields: [source], references: [id])
+
+  @@index([source])
 }
 
 model TokenBalanceWithdrawalEvent {
-  id                  String                  @id @default(uuid())
-  tokenBalanceEventId String                  @unique @db.VarChar(255)
-  tokenBalanceEvent   TokenBalanceEvent       @relation(fields: [tokenBalanceEventId], references: [id], onDelete: Cascade)
-  source              TokenBalanceEventSource
+  id                  String            @id @default(uuid())
+  tokenBalanceEventId String            @unique @db.VarChar(255)
+  tokenBalanceEvent   TokenBalanceEvent @relation(fields: [tokenBalanceEventId], references: [id], onDelete: Cascade)
+  source              String
   value               String
-}
+  kandel              Kandel?           @relation("withdrawalEvent", fields: [source], references: [id])
 
-enum TokenBalanceEventSource {
-  KANDEL
-  OTHER
+  @@index([source])
 }
 
 model TokenBalanceVersion {
@@ -587,12 +586,16 @@ model TokenBalanceVersion {
   tx           Transaction  @relation(fields: [txId], references: [id])
   tokenBalance TokenBalance @relation("tokenBalance", fields: [tokenBalanceId], references: [id], onDelete: Restrict, onUpdate: Restrict)
 
-  versionNumber     Int
-  prevVersionId     String?              @unique @db.VarChar(255) // This points to the older version that this version replaces, if any
-  prevVersion       TokenBalanceVersion? @relation("prevVersion", fields: [prevVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  nextVersion       TokenBalanceVersion? @relation("prevVersion")
-  currentVersion    TokenBalance?        @relation("currentVersion")
-  TokenBalanceEvent TokenBalanceEvent?
+  versionNumber                    Int
+  prevVersionId                    String?              @unique @db.VarChar(255) // This points to the older version that this version replaces, if any
+  prevVersion                      TokenBalanceVersion? @relation("prevVersion", fields: [prevVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  nextVersion                      TokenBalanceVersion? @relation("prevVersion")
+  currentVersion                   TokenBalance?        @relation("currentVersion")
+  TokenBalanceEvent                TokenBalanceEvent?
+  populateBaseTokenBalanceVersion  KandelPopulateEvent? @relation("populateBaseTokenBalanceVersion")
+  populateQuoteTokenBalanceVersion KandelPopulateEvent? @relation("populateQuoteTokenBalanceVersion")
+  retractBaseTokenBalanceVersion   KandelRetractEvent?  @relation("retractBaseTokenBalanceVersion")
+  retractQuoteTokenBalanceVersion  KandelRetractEvent?  @relation("retractQuoteTokenBalanceVersion")
 
   @@unique([tokenBalanceId, versionNumber])
   @@index([txId])
@@ -606,17 +609,18 @@ model Kandel {
   reserveId  String @db.VarChar(255)
   type       String
 
-  currentVersionId   String              @unique @db.VarChar(255)
-  currentVersion     KandelVersion?      @relation("currentVersion", fields: [currentVersionId], references: [id])
-  baseToken          Token               @relation("base", fields: [baseId], references: [id])
-  quoteToken         Token               @relation("quote", fields: [quoteId], references: [id])
-  mangrove           Mangrove            @relation(fields: [mangroveId], references: [id])
-  strat              Account             @relation("strat", fields: [id], references: [id])
-  reserve            Account             @relation("reserveId", fields: [reserveId], references: [id])
-  kandelVersions     KandelVersion[]     @relation("kandelVersion")
-  kandelOfferIndexes KandelOfferIndex[]  @relation("offerIndex")
-  KandelEvent        KandelEvent[]
-  TokenBalanceEvent  TokenBalanceEvent[]
+  currentVersionId            String                        @unique @db.VarChar(255)
+  currentVersion              KandelVersion?                @relation("currentVersion", fields: [currentVersionId], references: [id])
+  baseToken                   Token                         @relation("base", fields: [baseId], references: [id])
+  quoteToken                  Token                         @relation("quote", fields: [quoteId], references: [id])
+  mangrove                    Mangrove                      @relation(fields: [mangroveId], references: [id])
+  strat                       Account                       @relation("strat", fields: [id], references: [id])
+  reserve                     Account                       @relation("reserveId", fields: [reserveId], references: [id])
+  kandelVersions              KandelVersion[]               @relation("kandelVersion")
+  kandelOfferIndexes          KandelOfferIndex[]            @relation("offerIndex")
+  KandelEvent                 KandelEvent[]
+  TokenBalanceDepositEvent    TokenBalanceDepositEvent[]    @relation("depositEvent")
+  TokenBalanceWithdrawalEvent TokenBalanceWithdrawalEvent[] @relation("withdrawalEvent")
 
   @@index([baseId])
   @@index([quoteId])
@@ -642,9 +646,11 @@ model KandelOfferIndex {
 
 model KandelEvent {
   id              String  @id @default(uuid())
+  txId            String  @db.VarChar(255)
   kandelVersionId String? @unique @db.VarChar(255)
   kandelId        String  @db.VarChar(255)
 
+  transaction                Transaction                 @relation(fields: [txId], references: [id])
   kandel                     Kandel                      @relation(fields: [kandelId], references: [id])
   KandelVersion              KandelVersion?              @relation("kandelVersion", fields: [kandelVersionId], references: [id], onDelete: Cascade)
   compoundRateEvent          KandelCompoundRateEvent?
@@ -659,6 +665,7 @@ model KandelEvent {
   KandelRetractEvent         KandelRetractEvent?
 
   @@index([kandelId])
+  @@index([txId])
 }
 
 model KandelCompoundRateEvent {
@@ -719,17 +726,27 @@ model NewKandelEvent {
 }
 
 model KandelPopulateEvent {
-  id           String         @id @default(uuid())
-  eventId      String         @unique @db.VarChar(255)
-  event        KandelEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  OfferVersion OfferVersion[]
+  id                         String  @id @default(uuid())
+  eventId                    String  @unique @db.VarChar(255)
+  baseTokenBalanceVersionId  String? @unique @db.VarChar(255)
+  quoteTokenBalanceVersionId String? @unique @db.VarChar(255)
+
+  event                    KandelEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  OfferVersion             OfferVersion[]
+  baseTokenBalanceVersion  TokenBalanceVersion? @relation("populateBaseTokenBalanceVersion", fields: [baseTokenBalanceVersionId], references: [id])
+  quoteTokenBalanceVersion TokenBalanceVersion? @relation("populateQuoteTokenBalanceVersion", fields: [quoteTokenBalanceVersionId], references: [id])
 }
 
 model KandelRetractEvent {
-  id           String         @id @default(uuid())
-  eventId      String         @unique @db.VarChar(255)
-  event        KandelEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  OfferVersion OfferVersion[]
+  id                         String         @id @default(uuid())
+  eventId                    String         @unique @db.VarChar(255)
+  baseTokenBalanceVersionId  String?        @unique @db.VarChar(255)
+  quoteTokenBalanceVersionId String?        @unique @db.VarChar(255)
+  event                      KandelEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  OfferVersion               OfferVersion[]
+
+  baseTokenBalanceVersion  TokenBalanceVersion? @relation("retractBaseTokenBalanceVersion", fields: [baseTokenBalanceVersionId], references: [id])
+  quoteTokenBalanceVersion TokenBalanceVersion? @relation("retractQuoteTokenBalanceVersion", fields: [quoteTokenBalanceVersionId], references: [id])
 }
 
 model KandelVersion {

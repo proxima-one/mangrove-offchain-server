@@ -1,4 +1,4 @@
-import { Account, Kandel, Token, TokenBalance, TokenBalanceEventSource, TokenBalanceVersion, Transaction } from "@prisma/client";
+import { Account, Kandel, Token, TokenBalance, TokenBalanceVersion, Transaction } from "@prisma/client";
 import assert from "assert";
 import { before, describe } from "mocha";
 import { KandelOperations } from "src/state/dbOperations/kandelOperations";
@@ -95,7 +95,7 @@ describe("Token Balance Operations Integration test suite", () => {
     tokenBalance = await prisma.tokenBalance.create( {
       data: {
         id: tokenBalanceId.value,
-        reserveId: reserveId.value,
+        accountId: reserveId.value,
         tokenId: tokenId.value,
         currentVersionId: tokenBalanceVersionId.value
       }
@@ -166,7 +166,7 @@ describe("Token Balance Operations Integration test suite", () => {
        }, newVersion )
        assert.deepStrictEqual({
         id: newTokenBalanceId.value,
-        reserveId: newReserveId.value,
+        accountId: newReserveId.value,
         tokenId: tokenId.value,
         currentVersionId: new TokenBalanceVersionId({tokenBalanceId:newTokenBalanceId, versionNumber:0}).value
       },  updatedOrNewTokenBalance)
@@ -196,7 +196,7 @@ describe("Token Balance Operations Integration test suite", () => {
        }, newVersion )
        assert.deepStrictEqual({
         id: newTokenBalanceId.value,
-        reserveId: reserveId.value,
+        accountId: reserveId.value,
         tokenId: newTokenId.value,
         currentVersionId: new TokenBalanceVersionId({tokenBalanceId:newTokenBalanceId, versionNumber:0}).value
       },  updatedOrNewTokenBalance)
@@ -266,7 +266,7 @@ describe("Token Balance Operations Integration test suite", () => {
     it( "With kandelId and taken offerId", async () => {
       assert.strictEqual(await prisma.tokenBalanceEvent.count(), 0);
       const takenOfferId = new TakenOfferId( new OrderId(mangroveId, offerListKey, "proximaId"), 2);
-      const event = await tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandelId, tokenId, tokenBalanceVersion, takenOfferId)
+      const event = await tokenBalanceOperations.createTokenBalanceEvent(reserveId, tokenId, tokenBalanceVersion, takenOfferId)
       assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
       const eventInDb = await prisma.tokenBalanceEvent.findUnique({where: { id: event.id}})
       assert.deepStrictEqual( event, eventInDb )
@@ -276,7 +276,7 @@ describe("Token Balance Operations Integration test suite", () => {
 
     it( "With kandel and no taken offerId", async () => {
       assert.strictEqual(await prisma.tokenBalanceEvent.count(), 0);
-      const event = await tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandel, tokenId, tokenBalanceVersion )
+      const event = await tokenBalanceOperations.createTokenBalanceEvent(reserveId, tokenId, tokenBalanceVersion )
       assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
       const eventInDb = await prisma.tokenBalanceEvent.findUnique({where: { id: event.id}})
       assert.deepStrictEqual( event, eventInDb )
@@ -286,10 +286,10 @@ describe("Token Balance Operations Integration test suite", () => {
   })
 
   it(TokenBalanceOperations.prototype.createTokenBalanceDepositEvent.name, async () => {
-    const tokenBalanceEvent = await tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandelId, tokenId, tokenBalanceVersion)
+    const tokenBalanceEvent = await tokenBalanceOperations.createTokenBalanceEvent(reserveId, tokenId, tokenBalanceVersion)
     assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
     assert.strictEqual(await prisma.tokenBalanceDepositEvent.count(), 0);
-    const depositEvent = await tokenBalanceOperations.createTokenBalanceDepositEvent( tokenBalanceEvent, "100", TokenBalanceEventSource.KANDEL );
+    const depositEvent = await tokenBalanceOperations.createTokenBalanceDepositEvent( tokenBalanceEvent, "100", kandelId.value );
     assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
     assert.strictEqual(await prisma.tokenBalanceDepositEvent.count(), 1);
     const eventInDb = await prisma.tokenBalanceDepositEvent.findUnique({where: { id: depositEvent.id}})
@@ -298,10 +298,10 @@ describe("Token Balance Operations Integration test suite", () => {
   })
 
   it(TokenBalanceOperations.prototype.createTokenBalanceWithdrawalEvent.name, async () => {
-    const tokenBalanceEvent = await tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandelId, tokenId, tokenBalanceVersion)
+    const tokenBalanceEvent = await tokenBalanceOperations.createTokenBalanceEvent(reserveId,  tokenId, tokenBalanceVersion)
     assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
     assert.strictEqual(await prisma.tokenBalanceWithdrawalEvent.count(), 0);
-    const withdrawEvent = await tokenBalanceOperations.createTokenBalanceWithdrawalEvent( tokenBalanceEvent, "100", TokenBalanceEventSource.KANDEL );
+    const withdrawEvent = await tokenBalanceOperations.createTokenBalanceWithdrawalEvent( tokenBalanceEvent, "100", kandelId.value  );
     assert.strictEqual(await prisma.tokenBalanceEvent.count(), 1);
     assert.strictEqual(await prisma.tokenBalanceWithdrawalEvent.count(), 1);
     const eventInDb = await prisma.tokenBalanceWithdrawalEvent.findUnique({where: { id: withdrawEvent.id}})

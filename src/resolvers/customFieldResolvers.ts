@@ -8,7 +8,7 @@ import {
   TakenOffer,
   Token
 } from "@generated/type-graphql";
-import { PrismaClient, TokenBalanceEventSource } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { Arg, Ctx, FieldResolver, Query, Resolver, Root } from "type-graphql";
 
 // At most re-fetch once per 1000 ms for each token
@@ -19,19 +19,22 @@ import { AccountId, ChainId, KandelId, MangroveId, OfferListingId } from "src/st
 import { KandelDepositWithdraw, KandelFailedOffer, KandelFill, KandelOffer, KandelParameter, KandelPopulateRetract, KandelStrategy } from "./kandelObjects";
 import { MangroveOrderFillWithTokens, MangroveOrderOpenOrder } from "./mangroveOrderObjects";
 import { GraphQLError } from "graphql";
+import { KandelReturnUtils } from "src/utils/KandelReturnUtils";
 const fetch = fetchBuilder.withCache(new MemoryCache({ ttl: 1000 }));
-async function fetchTokenPriceInUsd(token: Token) {
+async function fetchTokenPriceIn(token: Token, inSymbol:string) {
   return (await fetch(
-    `https://min-api.cryptocompare.com/data/price?fsym=${token.symbol}&tsyms=USD`
+    `https://min-api.cryptocompare.com/data/price?fsym=${token.symbol}&tsyms=${inSymbol}`
   )
     .then((response: any) => response.json())
-    .then((json: any) => json["USD"])
+    .then((json: any) => json[inSymbol])
     .catch(() => undefined)) as number;
 }
 
 type Context = {
   prisma: PrismaClient;
 };
+
+const kandelReturnUtils = new KandelReturnUtils();
 
 @Resolver()
 export class KandelManageStrategyPageResolver {
@@ -165,17 +168,17 @@ export class KandelHomePageResolver {
     let adminId = new AccountId(chainId, admin);
     const kandels = await ctx.prisma.kandel.findMany({ skip, take, where: { currentVersion: { adminId: adminId.value } }, select: { strat: { select: { address: true, offers: { where: { currentVersion: { deleted: false } } } } }, id: true, type: true, baseToken: true, quoteToken: true, reserve: { select: { address: true, TokenBalance: { select: { tokenId: true, currentVersion: { select: { deposit: true, withdrawal: true } } } } } } } })
 
-    return kandels.map(kandel => {
+    return (await  Promise.all( kandels.map( async kandel => {
       return new KandelStrategy({
         name: kandel.type,
         address: kandel.strat.address,
         reserve: kandel.reserve.address,
         tokenA: kandel.baseToken,
         tokenB: kandel.quoteToken,
-        return: "", //TODO:
-        status: kandel.strat.offers.length > 0 ? "active" : "closed" // inactive makes no sense
+        return: await kandelReturnUtils.getKandelReturn(new KandelId(chainId, kandel.strat.address),ctx.prisma, ( token ) => fetchTokenPriceIn( token, 'USDC')),
+        status: kandel.strat.offers.length > 0 ? "active" : "closed" 
       });
-    }).sort((v1, v2) => v1.status == "active" ? 0 : -1);
+    }) ) ).sort((v1, v2) => v1.status == "active" ? 0 : -1);
   }
 
   @Query(() => KandelStrategy)
@@ -196,8 +199,8 @@ export class KandelHomePageResolver {
       reserve: kandel.reserve.address,
       tokenA: kandel.baseToken,
       tokenB: kandel.quoteToken,
-      return: "", //TODO:
-      status: kandel.strat.offers.length > 0 ? "active" : "closed" // inactive makes no sense
+      return: await kandelReturnUtils.getKandelReturn(new KandelId(chainId, kandel.strat.address),ctx.prisma,( token ) => fetchTokenPriceIn( token, 'USDC')),
+      status: kandel.strat.offers.length > 0 ? "active" : "closed" 
     });
   }
 }
@@ -253,7 +256,7 @@ export class KandelHistoryResolver {
     }
     let chainId = new ChainId(chain);
     let kandelId = new KandelId(chainId, address);
-    let events = await ctx.prisma.tokenBalanceEvent.findMany({ take, skip, where: { kandelId: kandelId.value, OR: [{ TokenBalanceDepositEvent: { source: TokenBalanceEventSource.KANDEL } }, { TokenBalanceWithdrawalEvent: { source: TokenBalanceEventSource.KANDEL } }] }, include: { TokenBalanceDepositEvent: { select: { value: true, tokenBalanceEvent: { select: { token: true, tokenBalanceVersion: { select: { tx: { select: { time: true } } } } } } } }, TokenBalanceWithdrawalEvent: { select: { value: true, tokenBalanceEvent: { select: { token: true, tokenBalanceVersion: { select: { tx: { select: { time: true } } } } } } } } }, orderBy: [{ tokenBalanceVersion: { tx: { time: 'desc' } } }] })
+    let events = await ctx.prisma.tokenBalanceEvent.findMany({ take, skip, where: { OR: [{ TokenBalanceDepositEvent: { source: kandelId.value } }, { TokenBalanceWithdrawalEvent: { source: kandelId.value } }] }, include: { TokenBalanceDepositEvent: { select: { value: true, tokenBalanceEvent: { select: { token: true, tokenBalanceVersion: { select: { tx: { select: { time: true } } } } } } } }, TokenBalanceWithdrawalEvent: { select: { value: true, tokenBalanceEvent: { select: { token: true, tokenBalanceVersion: { select: { tx: { select: { time: true } } } } } } } } }, orderBy: [{ tokenBalanceVersion: { tx: { time: 'desc' } } }] })
     return events.map(v => {
       if (v.TokenBalanceDepositEvent) {
         return new KandelDepositWithdraw({ ...v.TokenBalanceDepositEvent, event: "deposit" })
@@ -320,7 +323,7 @@ export class KandelHistoryResolver {
     @Arg("address") address: string,
     @Arg("chain") chain: number,
     @Arg("take") take: number,
-    @Arg("skip") skip: number, // TODO:
+    @Arg("skip") skip: number,
     @Ctx() ctx: Context
   ): Promise<KandelPopulateRetract[]> {
     if (take > 100) {
@@ -329,7 +332,7 @@ export class KandelHistoryResolver {
     let chainId = new ChainId(chain);
     let kandelId = new KandelId(chainId, address);
     let events = await ctx.prisma.kandelEvent.findMany({
-      where: { kandelId: kandelId.value, NOT: { KandelVersion: null } }, include: {
+      where: { kandelId: kandelId.value, NOT: [{ KandelVersion: null }, {OR: [{KandelPopulateEvent:null}, {KandelRetractEvent: null} ] }] }, include: {
         KandelVersion: { include: { tx: true, prevVersion: { include: { admin: true, configuration: true } } } },
         KandelPopulateEvent: { select: { OfferVersion: { select: { offer: { select: { offerListing: { select: { outboundToken: true, inboundToken: true } } } }, gives: true } }, event: { select: { KandelVersion: { select: { tx: { select: { time: true } } } } } } }},
         KandelRetractEvent: { select: { OfferVersion: { select: { offer: { select: { offerListing: { select: { outboundToken: true, inboundToken: true } } } }, gives: true } }, event: { select: { KandelVersion: { select: { tx: { select: { time: true } } } } } } }}
@@ -338,8 +341,7 @@ export class KandelHistoryResolver {
       take, skip
     })
 
-    let populateEvents = await ctx.prisma.kandelPopulateEvent.findMany({ take, skip, where: { event: { kandelId: kandelId.value }, NOT: { event: { KandelVersion: null, OR: [ { KandelPopulateEvent: null}, { KandelRetractEvent: null } ] } } }, select: { OfferVersion: { select: { offer: { select: { offerListing: { select: { outboundToken: true, inboundToken: true } } } }, gives: true } }, event: { select: { KandelVersion: { select: { tx: { select: { time: true } } } } } } } });
-    let { inboundToken: tokenA, outboundToken: tokenB } = populateEvents[0].OfferVersion[0].offer.offerListing;
+    let { inboundToken: tokenA, outboundToken: tokenB } = events[0].KandelPopulateEvent!.OfferVersion[0].offer.offerListing;
     const retractsAndPopulates = events.map(v => {
       if( v.KandelPopulateEvent || v.KandelRetractEvent){
         const e = ( v.KandelPopulateEvent ? v.KandelPopulateEvent.OfferVersion : v.KandelRetractEvent?.OfferVersion )

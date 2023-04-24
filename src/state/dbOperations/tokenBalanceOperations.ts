@@ -2,14 +2,9 @@ import * as prisma from "@prisma/client";
 import _ from "lodash";
 import { AccountId, KandelId, TakenOfferId, TokenBalanceId, TokenBalanceVersionId, TokenId } from "../model";
 import { DbOperations, toNewVersionUpsert } from "./dbOperations";
-import { KandelOperations } from "./kandelOperations";
 
 
 export class TokenBalanceOperations extends DbOperations {
-
-  kandelOperations= new KandelOperations(this.tx);
-
-  
 
   public async addTokenBalanceVersion(params: {
     tokenBalanceId: TokenBalanceId,
@@ -51,7 +46,7 @@ export class TokenBalanceOperations extends DbOperations {
 
       tokenBalance = {
         id: params.tokenBalanceId.value,
-        reserveId: reserve.id,
+        accountId: reserve.id,
         tokenId: params.tokenBalanceId.params.tokenId.value,
         currentVersionId: newVersionId.value
       }      
@@ -122,7 +117,18 @@ export class TokenBalanceOperations extends DbOperations {
   }
 
 
-
+  public async getCurrentBaseAndQuoteBalanceVersionForAddress( accountId: AccountId | string, baseId: TokenId | string, quoteId: TokenId | string){
+    const account = await this.tx.account.findUnique({where: { id: typeof accountId === "string"?  accountId : accountId.value},  include: { TokenBalance: { where: { OR: [{ tokenId:typeof baseId === "string"?  baseId : baseId.value }, { tokenId: typeof quoteId === "string"?  quoteId : quoteId.value}]}, include: { currentVersion: true} } }} )
+    if( !account ){
+      throw new Error(`Cannot find account with id: ${typeof accountId === "string"?  accountId : accountId.value }`)
+    }
+    const baseValue = account.TokenBalance.find( v => v.tokenId == (typeof baseId === "string"?  baseId : baseId.value ));
+    const quoteValue = account.TokenBalance.find( v => v.tokenId == (typeof quoteId === "string"?  quoteId : quoteId.value));
+    return {
+      base: baseValue ? baseValue.currentVersion : undefined,
+      quote: quoteValue ? quoteValue.currentVersion : undefined,
+    }
+  }
 
 
   public async deleteLatestTokenBalanceVersion(id: TokenBalanceId) {
@@ -162,17 +168,16 @@ export class TokenBalanceOperations extends DbOperations {
     }
   }
 
-  async createTokenBalanceEvent(reserveId:AccountId, kandelId: KandelId|prisma.Kandel, tokenId: TokenId, tokenBalanceVersion:prisma.TokenBalanceVersion, takenOfferId?: TakenOfferId){
+  async createTokenBalanceEvent(reserveId:AccountId, tokenId: TokenId, tokenBalanceVersion:prisma.TokenBalanceVersion, takenOfferId?: TakenOfferId){
     return await this.tx.tokenBalanceEvent.create({data: {
-      reserveId: reserveId.value,
-      kandelId: "value" in kandelId ?  kandelId.value :kandelId.id,
+      accountId: reserveId.value,
       tokenId: tokenId.value,
       tokenBalanceVersionId: tokenBalanceVersion.id,
       takenOfferId: takenOfferId?.value
     }})
   }
 
-  async createTokenBalanceDepositEvent(tokenBalanceEvent: prisma.TokenBalanceEvent, value: string, source:prisma.TokenBalanceEventSource ){
+  async createTokenBalanceDepositEvent(tokenBalanceEvent: prisma.TokenBalanceEvent, value: string, source:string ){
     return await this.tx.tokenBalanceDepositEvent.create({data: {
       tokenBalanceEventId: tokenBalanceEvent.id,
       source: source,
@@ -180,7 +185,7 @@ export class TokenBalanceOperations extends DbOperations {
     }})
   }
 
-  async createTokenBalanceWithdrawalEvent(tokenBalanceEvent: prisma.TokenBalanceEvent, value: string, source:prisma.TokenBalanceEventSource ){
+  async createTokenBalanceWithdrawalEvent(tokenBalanceEvent: prisma.TokenBalanceEvent, value: string, source:string ){
     return await this.tx.tokenBalanceWithdrawalEvent.create({data: {
       tokenBalanceEventId: tokenBalanceEvent.id,
       source: source,

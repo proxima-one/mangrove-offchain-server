@@ -3,11 +3,12 @@ import _ from "lodash";
 import { AccountId, KandelId, KandelVersionId, MangroveId, OfferId, TokenId } from "../model";
 import { DbOperations, toNewVersionUpsert } from "./dbOperations";
 import { AccountOperations } from "./accountOperations";
+import { TokenBalanceOperations } from "./tokenBalanceOperations";
 
 
 export class KandelOperations extends DbOperations {
 
-
+  tokenBalanceOperations = new TokenBalanceOperations(this.tx);
 
   public async addVersionedKandel(params: {
     id: KandelId,
@@ -67,7 +68,7 @@ export class KandelOperations extends DbOperations {
         } });
       }
 
-      const kandelEvent = await this.createKandelEvent(kandel, newVersion);
+      const kandelEvent = await this.createKandelEvent(kandel,params.txId, newVersion);
       await this.createNewKandelEvent(kandelEvent);
 
     } else {
@@ -193,10 +194,11 @@ export class KandelOperations extends DbOperations {
     return token;
   }
 
-  async getKandel(kandelId: KandelId) {
-    const kandel = await this.tx.kandel.findUniqueOrThrow({ where: { id: kandelId.value } });
+  async getKandel(kandelId: KandelId | string) {
+    const id =typeof kandelId === "string" ? kandelId : kandelId.value;
+    const kandel = await this.tx.kandel.findUnique({ where: { id: id } });
     if (!kandel) {
-      throw new Error(`Cannot find kandel instance from kandel id: ${kandelId.value}`)
+      throw new Error(`Cannot find kandel instance from kandel id: ${id}`)
     }
     return kandel;
   }
@@ -244,9 +246,10 @@ export class KandelOperations extends DbOperations {
     return kandel
   }
 
-  async createKandelEvent(kandelId: KandelId | prisma.Kandel, kandelVersionId?: KandelVersionId | prisma.KandelVersion) {
+  async createKandelEvent(kandelId: KandelId | prisma.Kandel, txId: string, kandelVersionId?: KandelVersionId | prisma.KandelVersion) {
     return await this.tx.kandelEvent.create({
       data: {
+        txId: txId,
         kandelId: "id" in kandelId ? kandelId.id : kandelId.value,
         kandelVersionId: kandelVersionId ? (  "id" in kandelVersionId ? kandelVersionId.id : kandelVersionId.value ) : "",
       }
@@ -326,18 +329,26 @@ export class KandelOperations extends DbOperations {
     })
   }
 
-  async createKandelPopulateEvent(kandelEvent: prisma.KandelEvent) {
+  async createKandelPopulateEvent(kandelEvent: prisma.KandelEvent, ) {
+    const kandel = await this.getKandel(kandelEvent.kandelId);
+    const { base, quote } = await this.tokenBalanceOperations.getCurrentBaseAndQuoteBalanceVersionForAddress(kandelEvent.kandelId, kandel.baseId, kandel.quoteId);
     return this.tx.kandelPopulateEvent.create({
       data: {
         eventId: kandelEvent.id,
+        baseTokenBalanceVersionId: base?.id,
+        quoteTokenBalanceVersionId: quote?.id
       }
     })
   }
 
   async createKandelRetractEvent(kandelEvent: prisma.KandelEvent) {
+    const kandel = await this.getKandel(kandelEvent.kandelId);
+    const { base, quote } = await this.tokenBalanceOperations.getCurrentBaseAndQuoteBalanceVersionForAddress(kandelEvent.kandelId, kandel.baseId, kandel.quoteId);
     return this.tx.kandelRetractEvent.create({
       data: {
         eventId: kandelEvent.id,
+        baseTokenBalanceVersionId: base?.id,
+        quoteTokenBalanceVersionId: quote?.id
       }
     })
   }

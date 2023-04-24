@@ -8,7 +8,7 @@ export class OfferOperations extends DbOperations {
 
   kandelOperations = new KandelOperations(this.tx);
 
-  public async getOffer(id: OfferId): Promise<prisma.Offer | null> {
+  public async getOffer(id: OfferId){
     return await this.tx.offer.findUnique({ where: { id: id.value } });
   }
 
@@ -22,7 +22,7 @@ export class OfferOperations extends DbOperations {
       makerId:AccountId
     }
   ) {
-    let offer = (await this.getOffer(id));
+    let offer:prisma.Offer|null = (await this.getOffer(id));
     let newVersion:prisma.OfferVersion;
     if (offer === null) {
       if(!initial){

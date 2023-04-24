@@ -13,7 +13,7 @@ import {
   TokenBalanceId,
   TokenId
 } from "src/state/model";
-import { getBigNumber, getNumber, getPrice } from "src/state/handlers/handlerUtils";
+import { getFromBigNumber, fromBigNumber, getPrice } from "src/utils/numberUtils";
 import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
 import BigNumber from "bignumber.js";
 
@@ -63,22 +63,29 @@ export class OrderEventLogic {
       const offer = await this.db.offerOperations.getOffer(new OfferId(mangroveId, offerList, takenOfferEvent.id));
       assert(offer);
       const kandel = await this.db.kandelOperations.getKandelFromOffer(offer)
-      if (!kandel) {
-        continue
-      }
+      const takenOfferId = new TakenOfferId(orderId, takenOfferEvent.id);
       const { inboundToken, outboundToken } = await this.db.offerListOperations.getOfferListTokens({ id: offerListingId });
+      const maker = await this.db.accountOperations.getAccount(offer.makerId);
+      const makerId = new AccountId( mangroveId.chainId, maker ? maker.address: "")
+      await this.addNewInboundBalanceWithEvent(chainId, makerId, inboundToken, transaction!.id, takenOfferId, takenOffer)
+      await this.addNewOutboundBalanceWithEvent(chainId, makerId, outboundToken, transaction!.id, takenOfferId, takenOffer)
+      if (!kandel || kandel.reserveId == offer.makerId ) {
+        continue
+      } 
+
       const reserveAddress = await this.db.kandelOperations.getReserveAddress({ kandel })
       const reserveId = new AccountId(chainId, reserveAddress);
-      const takenOfferId = new TakenOfferId(orderId, takenOfferEvent.id);
         
-      await this.addNewInboundBalanceWithEvent(chainId, reserveId, inboundToken, transaction!.id, kandel, takenOfferId, takenOffer)
-      await this.addNewOutboundBalanceWithEvent(chainId, reserveId, outboundToken, transaction!.id, kandel, takenOfferId, takenOffer)
+      await this.addNewInboundBalanceWithEvent(chainId, reserveId, inboundToken, transaction!.id, takenOfferId, takenOffer)
+      await this.addNewOutboundBalanceWithEvent(chainId, reserveId, outboundToken, transaction!.id, takenOfferId, takenOffer)
+      
+
 
     }
 
   }
 
-  async addNewInboundBalanceWithEvent(chainId:ChainId, reserveId:AccountId, inboundToken:prisma.Token, txId:string, kandel:prisma.Kandel, takenOfferId:TakenOfferId, takenOffer:Omit<prisma.TakenOffer, "orderId">) {
+  async addNewInboundBalanceWithEvent(chainId:ChainId, reserveId:AccountId, inboundToken:prisma.Token, txId:string, takenOfferId:TakenOfferId, takenOffer:Omit<prisma.TakenOffer, "orderId">) {
     const inboundTokenId = new TokenId(chainId, inboundToken.address);
     const inboundTokenBalanceId = new TokenBalanceId({ accountId: reserveId, tokenId: inboundTokenId })
     const { updatedOrNewTokenBalance, newVersion:newInboundBalance } = await this.db.tokenBalanceOperations.addTokenBalanceVersion({
@@ -89,10 +96,10 @@ export class OrderEventLogic {
         tokenBalanceVersion.balance = new BigNumber(takenOffer.takerGot).plus(tokenBalanceVersion.balance).toString();
       }
     })
-    await this. db.tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandel, inboundTokenId, newInboundBalance, takenOfferId)
+    await this. db.tokenBalanceOperations.createTokenBalanceEvent(reserveId, inboundTokenId, newInboundBalance, takenOfferId)
   }
 
-  async addNewOutboundBalanceWithEvent(chainId:ChainId, reserveId:AccountId, outboundToken:prisma.Token, txId:string, kandel:prisma.Kandel, takenOfferId:TakenOfferId, takenOffer:Omit<prisma.TakenOffer, "orderId">) {
+  async addNewOutboundBalanceWithEvent(chainId:ChainId, reserveId:AccountId, outboundToken:prisma.Token, txId:string, takenOfferId:TakenOfferId, takenOffer:Omit<prisma.TakenOffer, "orderId">) {
     const outboundTokenId = new TokenId(chainId, outboundToken.address);
     const outboundTokenBalanceId = new TokenBalanceId({ accountId: reserveId, tokenId: outboundTokenId })
     const { updatedOrNewTokenBalance, newVersion:newOutboundBalance } = await this.db.tokenBalanceOperations.addTokenBalanceVersion({
@@ -103,7 +110,7 @@ export class OrderEventLogic {
         tokenBalanceVersion.balance = new BigNumber(takenOffer.takerGave).minus(tokenBalanceVersion.balance).toString();
       }
     })
-    await this. db.tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandel, outboundTokenId, newOutboundBalance, takenOfferId)
+    await this. db.tokenBalanceOperations.createTokenBalanceEvent(reserveId, outboundTokenId, newOutboundBalance, takenOfferId)
   }
 }
 export class OrderEventLogicHelper {
@@ -119,11 +126,11 @@ export class OrderEventLogicHelper {
     parentOrderId?: OrderId,
   ) {
 
-    const takerGotBigNumber = getBigNumber({
+    const takerGotBigNumber = getFromBigNumber({
       value: order.takerGot,
       token: tokens.outboundToken,
     });
-    const takerGaveBigNumber = getBigNumber({
+    const takerGaveBigNumber = getFromBigNumber({
       value: order.takerGave,
       token: tokens.inboundToken,
     });
@@ -153,9 +160,9 @@ export class OrderEventLogicHelper {
       takerPaidPrice: getPrice({ over: takerGaveBigNumber, under: takerGotBigNumber }),
       makerPaidPrice: getPrice({ over: takerGotBigNumber, under: takerGaveBigNumber }),
       bounty: order.penalty,
-      bountyNumber: getNumber({ value: order.penalty, decimals: 18 }),
+      bountyNumber: fromBigNumber({ value: order.penalty, decimals: 18 }),
       totalFee: order.feePaid.length == 0 ? "0" : order.feePaid,
-      totalFeeNumber: order.feePaid.length == 0 ? 0 : getNumber({
+      totalFeeNumber: order.feePaid.length == 0 ? 0 : fromBigNumber({
         value: order.feePaid,
         token: tokens.outboundToken,
       }),
@@ -170,8 +177,8 @@ export class OrderEventLogicHelper {
     tokens: { inboundToken: { decimals: number }, outboundToken: { decimals: number } },
     getOffer: (offerId: OfferId) => Promise<{ currentVersionId: string } | null>,
   ) {
-    const takerGotBigNumber = getBigNumber({ value: takenOfferEvent.takerWants, token: tokens.outboundToken });
-    const takerGaveBigNumber = getBigNumber({ value: takenOfferEvent.takerGives, token: tokens.inboundToken });
+    const takerGotBigNumber = getFromBigNumber({ value: takenOfferEvent.takerWants, token: tokens.outboundToken });
+    const takerGaveBigNumber = getFromBigNumber({ value: takenOfferEvent.takerGives, token: tokens.inboundToken });
     const offerId = new OfferId(orderId.mangroveId, orderId.offerListKey, takenOfferEvent.id);
     const offer = await getOffer(offerId);
 

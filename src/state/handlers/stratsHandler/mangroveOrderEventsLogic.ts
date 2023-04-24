@@ -1,7 +1,7 @@
 import { MangroveOrderVersion, TakenOffer, Transaction } from ".prisma/client";
 import { OrderSummary } from "@proximaone/stream-schema-mangrove/dist/strategyEvents";
 import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
-import { addNumberStrings, getNumber, getPrice } from "src/state/handlers/handlerUtils";
+import { addNumberStrings, fromBigNumber, getPrice } from "src/utils/numberUtils";
 import {
   AccountId,
   ChainId,
@@ -78,11 +78,11 @@ export class MangroveOrderEventsLogic {
     const { outboundToken, inboundToken } = await db.offerListOperations.getOfferListTokens({
       id: offerListingId
     });
-    const takerGaveNumber = getNumber({
+    const takerGaveNumber = fromBigNumber({
       value: e.takerGave,
       token: inboundToken,
     });
-    const takerGotNumber = getNumber({
+    const takerGotNumber = fromBigNumber({
       value: e.takerGot,
       token: outboundToken,
     });
@@ -110,19 +110,19 @@ export class MangroveOrderEventsLogic {
       fillWants: e.fillWants.valueOf(),
       restingOrder: e.restingOrder.valueOf(),
       takerWants: e.takerWants,
-      takerWantsNumber: getNumber({
+      takerWantsNumber: fromBigNumber({
         value: e.takerWants,
         token: outboundToken,
       }),
       takerGives: e.takerGives,
-      takerGivesNumber: getNumber({
+      takerGivesNumber: fromBigNumber({
         value: e.takerGives,
         token: inboundToken,
       }),
       bounty: e.bounty,
-      bountyNumber: getNumber({ value: e.bounty, decimals: 18 }),
+      bountyNumber: fromBigNumber({ value: e.bounty, decimals: 18 }),
       totalFee: e.fee,
-      totalFeeNumber: getNumber({ value: e.fee, token: outboundToken }),
+      totalFeeNumber: fromBigNumber({ value: e.fee, token: outboundToken }),
       restingOrderId: e.restingOrderId != 0 ? new OfferId(mangroveId, offerList, e.restingOrderId).value : null,
     });
 
@@ -147,7 +147,7 @@ export class MangroveOrderEventsLogic {
       value2: takenOffer.takerGave,
       token: tokens.inboundToken,
     });
-    newVersion.takerGaveNumber = getNumber({
+    newVersion.takerGaveNumber = fromBigNumber({
       value: newVersion.takerGave,
       token: tokens.inboundToken,
     });
@@ -156,7 +156,7 @@ export class MangroveOrderEventsLogic {
       value2: takenOffer.takerGot,
       token: tokens.outboundToken,
     });
-    newVersion.takerGotNumber = getNumber({
+    newVersion.takerGotNumber = fromBigNumber({
       value: newVersion.takerGot,
       token: tokens.inboundToken,
     });

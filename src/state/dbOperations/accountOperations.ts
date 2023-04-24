@@ -20,4 +20,8 @@ export class AccountOperations extends DbOperations {
     await this.tx.account.delete({where: {id: id.value}});
   }
 
+  async getAccount(id:AccountId|string){
+    return this.tx.account.findUnique({ where:{ id: typeof id === "string" ? id : id.value}})
+  }
+
 }

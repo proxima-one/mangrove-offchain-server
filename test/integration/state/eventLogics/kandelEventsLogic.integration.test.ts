@@ -200,10 +200,16 @@ describe("Kandel Events Logic Integration test suite", () => {
             address: reserveId.address
         }})
 
+        await prisma.account.create({data: {
+            id: kandelId.value,
+            chainId:chainId.value,
+            address: kandelId.address
+        }})
+
         await prisma.tokenBalance.create({ data: {
             id:tokenBalanceId.value,
             tokenId: tokenAId.value,
-            reserveId: reserveId.value,
+            accountId: reserveId.value,
             currentVersionId: tokenBalanceVersionId.value
         }})
 
@@ -556,7 +562,7 @@ describe("Kandel Events Logic Integration test suite", () => {
             const kandelVersionId = new KandelVersionId({kandelId, versionNumber: 0});
             assert.strictEqual( await prisma.kandelEvent.count(), 0);
             assert.strictEqual( await prisma.kandelGasReqEvent.count(), 0);
-            const event = await kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params);
+            const event = await kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params, "txId");
             assert.strictEqual( await prisma.kandelEvent.count(), 1);
             assert.strictEqual( await prisma.kandelGasReqEvent.count(), 1);
             const prismaEvent = await prisma.kandelEvent.findFirst({where: {kandelVersionId: kandelVersionId.value}}).KandelGasReqEvent();
@@ -572,7 +578,7 @@ describe("Kandel Events Logic Integration test suite", () => {
             const kandelVersionId = new KandelVersionId({kandelId, versionNumber: 0});
             assert.strictEqual( await prisma.kandelEvent.count(), 0);
             assert.strictEqual( await prisma.kandelGasPriceEvent.count(), 0);
-            const event = await kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params);
+            const event = await kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params, "txId");
             assert.strictEqual( await prisma.kandelEvent.count(), 1);
             assert.strictEqual( await prisma.kandelGasPriceEvent.count(), 1);
             const prismaEvent = await prisma.kandelEvent.findFirst({where: {kandelVersionId: kandelVersionId.value}}).gasPriceEvent();
@@ -589,7 +595,7 @@ describe("Kandel Events Logic Integration test suite", () => {
             const kandelVersionId = new KandelVersionId({kandelId, versionNumber: 0});
             assert.strictEqual( await prisma.kandelEvent.count(), 0);
             assert.strictEqual( await prisma.kandelLengthEvent.count(), 0);
-            const event = await kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params);
+            const event = await kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params, "txId");
             assert.strictEqual( await prisma.kandelEvent.count(), 1);
             assert.strictEqual( await prisma.kandelLengthEvent.count(), 1);
             const prismaEvent = await prisma.kandelEvent.findFirst({where: {kandelVersionId: kandelVersionId.value}}).KandelLengthEvent();
@@ -610,7 +616,7 @@ describe("Kandel Events Logic Integration test suite", () => {
             const kandelVersionId = new KandelVersionId({kandelId, versionNumber: 0});
             assert.strictEqual( await prisma.kandelEvent.count(), 0);
             assert.strictEqual( await prisma.kandelCompoundRateEvent.count(), 0);
-            const event = await kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params);
+            const event = await kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params, "txId");
             assert.strictEqual( await prisma.kandelEvent.count(), 1);
             assert.strictEqual( await prisma.kandelCompoundRateEvent.count(), 1);
             const prismaEvent = await prisma.kandelEvent.findFirst({where: {kandelVersionId: kandelVersionId.value}}).compoundRateEvent();
@@ -631,7 +637,7 @@ describe("Kandel Events Logic Integration test suite", () => {
             const kandelVersionId = new KandelVersionId({kandelId, versionNumber: 0});
             assert.strictEqual( await prisma.kandelEvent.count(), 0);
             assert.strictEqual( await prisma.kandelGeometricParamsEvent.count(), 0);
-            const event = await kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params);
+            const event = await kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params, "txId");
             assert.strictEqual( await prisma.kandelEvent.count(), 1);
             assert.strictEqual( await prisma.kandelGeometricParamsEvent.count(), 1);
             const prismaEvent = await prisma.kandelEvent.findFirst({where: {kandelVersionId: kandelVersionId.value}}).KandelGeometricParamsEvent();
@@ -646,7 +652,7 @@ describe("Kandel Events Logic Integration test suite", () => {
             }
             const kandelId = new KandelId(chainId, kandelAddress);
             const kandelVersionId = new KandelVersionId({kandelId, versionNumber: 0});
-            await assert.rejects(  kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params), new Error( `Could not find correct kandel event: ${ JSON.stringify( params )}` ) ) ;
+            await assert.rejects(  kandelEventsLogic.createKandelParamsEvent(kandelId, kandelVersionId, params, "txId"), new Error( `Could not find correct kandel event: ${ JSON.stringify( params )}` ) ) ;
         })
     })
 

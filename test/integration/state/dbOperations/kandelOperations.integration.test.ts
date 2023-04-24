@@ -2,7 +2,6 @@ import { Account, Kandel, KandelConfiguration, KandelVersion, Token, Transaction
 import assert from "assert";
 import { before, describe } from "mocha";
 import { KandelOperations } from "src/state/dbOperations/kandelOperations";
-import { TokenBalanceOperations } from "src/state/dbOperations/tokenBalanceOperations";
 import {
   AccountId,
   ChainId,
@@ -12,16 +11,16 @@ import {
   OfferId,
   OfferListKey,
   OfferListingId,
+  TokenBalanceId,
+  TokenBalanceVersionId,
   TokenId
 } from "src/state/model";
 import { prisma } from "utils/test/mochaHooks";
 
 describe("Kandel Operations Integration test suite", () => {
-  let tokenBalanceOperations: TokenBalanceOperations;
   let kandelOperations: KandelOperations;
 
   before(() => {
-    tokenBalanceOperations = new TokenBalanceOperations(prisma);
     kandelOperations = new KandelOperations(prisma);
   });
 
@@ -37,6 +36,10 @@ describe("Kandel Operations Integration test suite", () => {
     inboundToken: quoteId.tokenAddress,
   };
   const offerListingId = new OfferListingId(mangroveId, offerListKey);
+  const baseTokenBalanceId= new TokenBalanceId({ accountId:reserveId, tokenId: baseId})
+  const baseTokenBalanceVersionId = new TokenBalanceVersionId({ tokenBalanceId:baseTokenBalanceId, versionNumber: 0 })
+  const quoteTokenBalanceId= new TokenBalanceId({ accountId:reserveId, tokenId: quoteId})
+  const quoteTokenBalanceVersionId = new TokenBalanceVersionId({ tokenBalanceId:quoteTokenBalanceId, versionNumber: 0 })
 
   let tx:Transaction;
   let baseToken:Token;
@@ -89,6 +92,52 @@ describe("Kandel Operations Integration test suite", () => {
         id: reserveId.value,
         chainId: chainId.value,
         address: reserveId.address
+      }
+    })
+
+    await prisma.tokenBalance.create( {
+      data: {
+        id: baseTokenBalanceId.value,
+        accountId: kandelId.value,
+        currentVersionId: baseTokenBalanceVersionId.value,
+        tokenId: baseId.value
+      }
+    })
+
+    await prisma.tokenBalanceVersion.create({
+      data: {
+        id: baseTokenBalanceVersionId.value,
+        tokenBalanceId: baseTokenBalanceId.value,
+        txId: tx.id,
+        send: "0",
+        received: "0",
+        deposit: "0",
+        withdrawal: "0",
+        balance: "0",
+        versionNumber: 0
+      }
+    })
+
+    await prisma.tokenBalance.create( {
+      data: {
+        id: quoteTokenBalanceId.value,
+        accountId: kandelId.value,
+        currentVersionId: quoteTokenBalanceVersionId.value,
+        tokenId: quoteId.value
+      }
+    })
+
+    await prisma.tokenBalanceVersion.create({
+      data: {
+        id: quoteTokenBalanceVersionId.value,
+        tokenBalanceId: quoteTokenBalanceId.value,
+        txId: tx.id,
+        send: "0",
+        received: "0",
+        deposit: "0",
+        withdrawal: "0",
+        balance: "0",
+        versionNumber: 0
       }
     })
 
@@ -493,27 +542,29 @@ describe("Kandel Operations Integration test suite", () => {
   describe(KandelOperations.prototype.createKandelEvent.name,  () => {
     it("with Kandel Id + kandel version Id", async () => {
       assert.strictEqual( await prisma.kandelEvent.count(), 0);
-      const event = await kandelOperations.createKandelEvent(kandelId, kandelVersionId);
+      const event = await kandelOperations.createKandelEvent(kandelId,"txId", kandelVersionId);
       assert.strictEqual( await prisma.kandelEvent.count(), 1);
       assert.deepStrictEqual( event, {
         id: event.id,
         kandelId: kandelId.value,
-        kandelVersionId: kandelVersionId.value
+        kandelVersionId: kandelVersionId.value,
+        txId: "txId"
       })
     })
     it("With Prisma kandel + prisma kandel version", async () => {
       assert.strictEqual( await prisma.kandelEvent.count(), 0);
-      const event = await kandelOperations.createKandelEvent(kandel, kandelVersion);
+      const event = await kandelOperations.createKandelEvent(kandel, "txId", kandelVersion);
       assert.strictEqual( await prisma.kandelEvent.count(), 1);
       assert.deepStrictEqual( event, {
         id: event.id,
         kandelId: kandel.id,
-        kandelVersionId: kandelVersion.id
+        kandelVersionId: kandelVersion.id,
+        txId: "txId"
       })
     })
   })
   it(KandelOperations.prototype.createNewKandelEvent.name, async () => {
-    const event = await kandelOperations.createKandelEvent(kandel, kandelVersion);
+    const event = await kandelOperations.createKandelEvent(kandel, "txId", kandelVersion);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.newKandelEvent.count(), 0);
     const newKandelEvent = await kandelOperations.createNewKandelEvent(event);
@@ -523,7 +574,7 @@ describe("Kandel Operations Integration test suite", () => {
     
   })
   it(KandelOperations.prototype.createKandelAdminEvent.name, async () => {
-    const event = await kandelOperations.createKandelEvent(kandel, kandelVersion);
+    const event = await kandelOperations.createKandelEvent(kandel, "txId", kandelVersion);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.kandelAdminEvent.count(), 0);
     const adminEvent = await kandelOperations.createKandelAdminEvent(event, "admin");
@@ -533,7 +584,7 @@ describe("Kandel Operations Integration test suite", () => {
     assert.strictEqual(adminEvent.admin, "admin");
   })
   it(KandelOperations.prototype.createKandelRouterEvent.name, async () => {
-    const event = await kandelOperations.createKandelEvent(kandel, kandelVersion);
+    const event = await kandelOperations.createKandelEvent(kandel, "txId", kandelVersion);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.kandelRouterEvent.count(), 0);
     const routerEvent = await kandelOperations.createKandelRouterEvent(event, "router");
@@ -543,7 +594,7 @@ describe("Kandel Operations Integration test suite", () => {
     assert.strictEqual(routerEvent.router, "router");
   })
   it(KandelOperations.prototype.createKandelGasReqEvent.name, async () => {
-    const event = await kandelOperations.createKandelEvent(kandel, kandelVersion);
+    const event = await kandelOperations.createKandelEvent(kandel, "txId", kandelVersion);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.kandelGasReqEvent.count(), 0);
     const gasreqEvent = await kandelOperations.createKandelGasReqEvent(event, "100");
@@ -553,7 +604,7 @@ describe("Kandel Operations Integration test suite", () => {
     assert.strictEqual(gasreqEvent.gasReq, "100");
   })
   it(KandelOperations.prototype.createKandelGasPriceEvent.name, async () => {
-    const event = await kandelOperations.createKandelEvent(kandel, kandelVersion);
+    const event = await kandelOperations.createKandelEvent(kandel, "txId", kandelVersion);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.kandelGasPriceEvent.count(), 0);
     const gaspriceEvent = await kandelOperations.createKandelGasPriceEvent(event, "100");
@@ -563,7 +614,7 @@ describe("Kandel Operations Integration test suite", () => {
     assert.strictEqual(gaspriceEvent.gasPrice, "100");
   })
   it(KandelOperations.prototype.createKandelLengthEvent.name, async () => {
-    const event = await kandelOperations.createKandelEvent(kandel, kandelVersion);
+    const event = await kandelOperations.createKandelEvent(kandel, "txId", kandelVersion);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.kandelLengthEvent.count(), 0);
     const lengthEvent = await kandelOperations.createKandelLengthEvent(event, 100);
@@ -573,7 +624,7 @@ describe("Kandel Operations Integration test suite", () => {
     assert.strictEqual(lengthEvent.length, 100);
   })
   it(KandelOperations.prototype.createKandelGeometricParamsEvent.name, async () => {
-    const event = await kandelOperations.createKandelEvent(kandel, kandelVersion);
+    const event = await kandelOperations.createKandelEvent(kandel, "txId", kandelVersion);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.kandelGeometricParamsEvent.count(), 0);
     const kandelGeometricParamsEvent = await kandelOperations.createKandelGeometricParamsEvent(event, 100, 10);
@@ -585,7 +636,7 @@ describe("Kandel Operations Integration test suite", () => {
   })
 
   it(KandelOperations.prototype.createKandelCompoundRateEvent.name, async () => {
-    const event = await kandelOperations.createKandelEvent(kandel, kandelVersion);
+    const event = await kandelOperations.createKandelEvent(kandel, "txId", kandelVersion);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.kandelCompoundRateEvent.count(), 0);
     const kandelCompoundRateEvent = await kandelOperations.createKandelCompoundRateEvent(event, 100, 10);
@@ -597,23 +648,33 @@ describe("Kandel Operations Integration test suite", () => {
   })
 
   it(KandelOperations.prototype.createKandelPopulateEvent.name, async () => {
-    const event = await kandelOperations.createKandelEvent(kandel, kandelVersion);
+    const event = await kandelOperations.createKandelEvent(kandel, "txId", kandelVersion);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.kandelPopulateEvent.count(), 0);
     const kandelPopulateEvent = await kandelOperations.createKandelPopulateEvent(event);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.kandelPopulateEvent.count(), 1);
-    assert.strictEqual(kandelPopulateEvent.eventId, event.id);
+    assert.deepStrictEqual(kandelPopulateEvent, {
+      id: kandelPopulateEvent.id,
+      eventId: event.id,
+      baseTokenBalanceVersionId: baseTokenBalanceVersionId.value,
+      quoteTokenBalanceVersionId: quoteTokenBalanceVersionId.value,
+    });
   })
 
   it(KandelOperations.prototype.createKandelRetractEvent.name, async () => {
-    const event = await kandelOperations.createKandelEvent(kandel, kandelVersion);
+    const event = await kandelOperations.createKandelEvent(kandel, "txId", kandelVersion);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.kandelRetractEvent.count(), 0);
     const kandelRetractEvent = await kandelOperations.createKandelRetractEvent(event);
     assert.strictEqual( await prisma.kandelEvent.count(), 1);
     assert.strictEqual( await prisma.kandelRetractEvent.count(), 1);
-    assert.strictEqual(kandelRetractEvent.eventId, event.id);
+    assert.deepStrictEqual(kandelRetractEvent, {
+      id: kandelRetractEvent.id,
+      eventId: event.id,
+      baseTokenBalanceVersionId: baseTokenBalanceVersionId.value,
+      quoteTokenBalanceVersionId: quoteTokenBalanceVersionId.value,
+    });
   })
 
 

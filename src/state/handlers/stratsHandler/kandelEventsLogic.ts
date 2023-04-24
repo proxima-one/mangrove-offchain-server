@@ -92,7 +92,7 @@ export class KandelEventsLogic {
             },
         });
 
-        await this.createKandelParamsEvent(kandelId, newVersions.kandelVersion, event);
+        await this.createKandelParamsEvent(kandelId, newVersions.kandelVersion, event, transaction!.id);
 
     }
 
@@ -108,8 +108,8 @@ export class KandelEventsLogic {
         }
     };
 
-    async createKandelParamsEvent(kandelId: KandelId, kandelVersion: prisma.KandelVersion | KandelVersionId, event: SetParams) {
-        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, kandelVersion);
+    async createKandelParamsEvent(kandelId: KandelId, kandelVersion: prisma.KandelVersion | KandelVersionId, event: SetParams, txId: string) {
+        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, txId, kandelVersion);
         if (event.gasReq) {
             return await this.db.kandelOperations.createKandelGasReqEvent(kandelEvent, event.gasReq);
         } else if (event.gasPrice) {
@@ -158,11 +158,11 @@ export class KandelEventsLogic {
             }
         })
 
-        const tokenBalanceEvent = await this.db.tokenBalanceOperations.createTokenBalanceEvent(reserveId, kandelId, tokenId, newTokenBalanceVersion);
+        const tokenBalanceEvent = await this.db.tokenBalanceOperations.createTokenBalanceEvent(reserveId, tokenId, newTokenBalanceVersion);
         if (event.type == "Credit") {
-            await this.db.tokenBalanceOperations.createTokenBalanceDepositEvent(tokenBalanceEvent, event.amount, prisma.TokenBalanceEventSource.KANDEL);
+            await this.db.tokenBalanceOperations.createTokenBalanceDepositEvent(tokenBalanceEvent, event.amount, kandelId.value);
         } else {
-            await this.db.tokenBalanceOperations.createTokenBalanceWithdrawalEvent(tokenBalanceEvent, event.amount, prisma.TokenBalanceEventSource.KANDEL);
+            await this.db.tokenBalanceOperations.createTokenBalanceWithdrawalEvent(tokenBalanceEvent, event.amount, kandelId.value);
         }
     }
 
@@ -182,7 +182,7 @@ export class KandelEventsLogic {
             return;
         }
 
-        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId );
+        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, transaction!.id );
         const kandelRetractEvent = await this.db.kandelOperations.createKandelRetractEvent(kandelEvent);
 
         for( const offerRetracted of event.offers) {
@@ -211,11 +211,13 @@ export class KandelEventsLogic {
 
         await this.handlePopulateOfferWrittenEvents(kandelId, event, mangroveId, transaction);
         await this.handlePopulateOfferIndexes(kandelId, event, mangroveId, transaction);
+        
 
     }
 
     async handlePopulateOfferWrittenEvents(kandelId: KandelId, event: Populate, mangroveId: MangroveId, transaction: prisma.Transaction | undefined) {
-        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId );
+        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, transaction!.id );
+         
         const kandelPopulateEvent = await this.db.kandelOperations.createKandelPopulateEvent(kandelEvent);
         let tokensMap = new Map<string, {
             outboundToken: prisma.Token;
@@ -291,7 +293,7 @@ export class KandelEventsLogic {
             },
         })
 
-        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, newVersions.kandelVersion);
+        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, transaction!.id, newVersions.kandelVersion);
         await this.db.kandelOperations.createKandelAdminEvent(kandelEvent, event.admin);
     }
 
@@ -317,7 +319,7 @@ export class KandelEventsLogic {
             },
         })
 
-        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, newVersions.kandelVersion);
+        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, transaction!.id, newVersions.kandelVersion);
         await this.db.kandelOperations.createKandelRouterEvent(kandelEvent, event.router);
 
     }

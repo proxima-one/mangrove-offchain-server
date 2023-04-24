@@ -19,9 +19,6 @@
   - A unique constraint covering the columns `[chainId,txHash]` on the table `Transaction` will be added. If there are existing duplicate values, this will fail.
 
 */
--- CreateEnum
-CREATE TYPE "TokenBalanceEventSource" AS ENUM ('KANDEL', 'OTHER');
-
 -- DropIndex
 DROP INDEX "MangroveVersion_id_key";
 
@@ -49,7 +46,6 @@ CREATE TABLE "TokenBalance" (
 CREATE TABLE "TokenBalanceEvent" (
     "id" TEXT NOT NULL,
     "reserveId" VARCHAR(255) NOT NULL,
-    "kandelId" VARCHAR(255),
     "tokenId" VARCHAR(255) NOT NULL,
     "tokenBalanceVersionId" VARCHAR(255) NOT NULL,
     "takenOfferId" VARCHAR(255),
@@ -61,7 +57,7 @@ CREATE TABLE "TokenBalanceEvent" (
 CREATE TABLE "TokenBalanceDepositEvent" (
     "id" TEXT NOT NULL,
     "tokenBalanceEventId" VARCHAR(255) NOT NULL,
-    "source" "TokenBalanceEventSource" NOT NULL,
+    "source" TEXT NOT NULL,
     "value" TEXT NOT NULL,
 
     CONSTRAINT "TokenBalanceDepositEvent_pkey" PRIMARY KEY ("id")
@@ -71,7 +67,7 @@ CREATE TABLE "TokenBalanceDepositEvent" (
 CREATE TABLE "TokenBalanceWithdrawalEvent" (
     "id" TEXT NOT NULL,
     "tokenBalanceEventId" VARCHAR(255) NOT NULL,
-    "source" "TokenBalanceEventSource" NOT NULL,
+    "source" TEXT NOT NULL,
     "value" TEXT NOT NULL,
 
     CONSTRAINT "TokenBalanceWithdrawalEvent_pkey" PRIMARY KEY ("id")
@@ -120,6 +116,7 @@ CREATE TABLE "KandelOfferIndex" (
 -- CreateTable
 CREATE TABLE "KandelEvent" (
     "id" TEXT NOT NULL,
+    "txId" VARCHAR(255) NOT NULL,
     "kandelVersionId" VARCHAR(255),
     "kandelId" VARCHAR(255) NOT NULL,
 
@@ -203,6 +200,8 @@ CREATE TABLE "NewKandelEvent" (
 CREATE TABLE "KandelPopulateEvent" (
     "id" TEXT NOT NULL,
     "eventId" VARCHAR(255) NOT NULL,
+    "baseTokenBalanceVersionId" VARCHAR(255),
+    "quoteTokenBalanceVersionId" VARCHAR(255),
 
     CONSTRAINT "KandelPopulateEvent_pkey" PRIMARY KEY ("id")
 );
@@ -211,6 +210,8 @@ CREATE TABLE "KandelPopulateEvent" (
 CREATE TABLE "KandelRetractEvent" (
     "id" TEXT NOT NULL,
     "eventId" VARCHAR(255) NOT NULL,
+    "baseTokenBalanceVersionId" VARCHAR(255),
+    "quoteTokenBalanceVersionId" VARCHAR(255),
 
     CONSTRAINT "KandelRetractEvent_pkey" PRIMARY KEY ("id")
 );
@@ -259,9 +260,6 @@ CREATE UNIQUE INDEX "TokenBalanceEvent_tokenBalanceVersionId_key" ON "TokenBalan
 CREATE INDEX "TokenBalanceEvent_tokenId_idx" ON "TokenBalanceEvent"("tokenId");
 
 -- CreateIndex
-CREATE INDEX "TokenBalanceEvent_kandelId_idx" ON "TokenBalanceEvent"("kandelId");
-
--- CreateIndex
 CREATE INDEX "TokenBalanceEvent_reserveId_idx" ON "TokenBalanceEvent"("reserveId");
 
 -- CreateIndex
@@ -271,7 +269,13 @@ CREATE INDEX "TokenBalanceEvent_takenOfferId_idx" ON "TokenBalanceEvent"("takenO
 CREATE UNIQUE INDEX "TokenBalanceDepositEvent_tokenBalanceEventId_key" ON "TokenBalanceDepositEvent"("tokenBalanceEventId");
 
 -- CreateIndex
+CREATE INDEX "TokenBalanceDepositEvent_source_idx" ON "TokenBalanceDepositEvent"("source");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "TokenBalanceWithdrawalEvent_tokenBalanceEventId_key" ON "TokenBalanceWithdrawalEvent"("tokenBalanceEventId");
+
+-- CreateIndex
+CREATE INDEX "TokenBalanceWithdrawalEvent_source_idx" ON "TokenBalanceWithdrawalEvent"("source");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "TokenBalanceVersion_prevVersionId_key" ON "TokenBalanceVersion"("prevVersionId");
@@ -316,6 +320,9 @@ CREATE UNIQUE INDEX "KandelEvent_kandelVersionId_key" ON "KandelEvent"("kandelVe
 CREATE INDEX "KandelEvent_kandelId_idx" ON "KandelEvent"("kandelId");
 
 -- CreateIndex
+CREATE INDEX "KandelEvent_txId_idx" ON "KandelEvent"("txId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "KandelCompoundRateEvent_eventId_key" ON "KandelCompoundRateEvent"("eventId");
 
 -- CreateIndex
@@ -343,7 +350,19 @@ CREATE UNIQUE INDEX "NewKandelEvent_eventId_key" ON "NewKandelEvent"("eventId");
 CREATE UNIQUE INDEX "KandelPopulateEvent_eventId_key" ON "KandelPopulateEvent"("eventId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "KandelPopulateEvent_baseTokenBalanceVersionId_key" ON "KandelPopulateEvent"("baseTokenBalanceVersionId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "KandelPopulateEvent_quoteTokenBalanceVersionId_key" ON "KandelPopulateEvent"("quoteTokenBalanceVersionId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "KandelRetractEvent_eventId_key" ON "KandelRetractEvent"("eventId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "KandelRetractEvent_baseTokenBalanceVersionId_key" ON "KandelRetractEvent"("baseTokenBalanceVersionId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "KandelRetractEvent_quoteTokenBalanceVersionId_key" ON "KandelRetractEvent"("quoteTokenBalanceVersionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "KandelVersion_prevVersionId_key" ON "KandelVersion"("prevVersionId");

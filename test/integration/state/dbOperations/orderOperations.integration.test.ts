@@ -329,16 +329,6 @@ describe("Order Operations Integration test Suite", () => {
                 offerListingId: offerListingId.value,
                 mangroveId: mangroveId.value,
                 takerId: takerId.value,
-                // takerWants: order.takerWants,
-                // takerWantsNumber: getNumber({
-                //   value: order.takerWants,
-                //   token: outboundToken,
-                // }),
-                // takerGives: order.takerGives,
-                // takerGivesNumber: getNumber({
-                //   value: order.takerGives,
-                //   token: inboundToken,
-                // }),
                 takerGot: "100",
                 takerGotNumber: 100,
                 takerGave: "50",
@@ -381,16 +371,6 @@ describe("Order Operations Integration test Suite", () => {
                 offerListingId: offerListingId.value,
                 mangroveId: mangroveId.value,
                 takerId: takerId.value,
-                // takerWants: order.takerWants,
-                // takerWantsNumber: getNumber({
-                //   value: order.takerWants,
-                //   token: outboundToken,
-                // }),
-                // takerGives: order.takerGives,
-                // takerGivesNumber: getNumber({
-                //   value: order.takerGives,
-                //   token: inboundToken,
-                // }),
                 takerGot: "100",
                 takerGotNumber: 100,
                 takerGave: "50",
@@ -433,16 +413,6 @@ describe("Order Operations Integration test Suite", () => {
                 offerListingId: offerListingId.value,
                 mangroveId: mangroveId.value,
                 takerId: takerId.value,
-                // takerWants: order.takerWants,
-                // takerWantsNumber: getNumber({
-                //   value: order.takerWants,
-                //   token: outboundToken,
-                // }),
-                // takerGives: order.takerGives,
-                // takerGivesNumber: getNumber({
-                //   value: order.takerGives,
-                //   token: inboundToken,
-                // }),
                 takerGot: "100",
                 takerGotNumber: 100,
                 takerGave: "50",
@@ -455,7 +425,7 @@ describe("Order Operations Integration test Suite", () => {
                 totalFeeNumber: 1,
               };
             const offerId2 = new OfferId(mangroveId, offerListKey, 2);
-            await offerOperations.addVersionedOffer( offerId2, "txId", (o) => {}, { makerId: makerId})
+            await offerOperations.addVersionedOffer( offerId2, "txId", () => {}, { makerId: makerId})
             await offerOperations.addVersionedOffer( offerId2, "txId", (o) => o.deleted=true, { makerId: makerId}) // creates new version,
             
             const takenOffers:Omit<TakenOffer, "orderId">[] =[{
