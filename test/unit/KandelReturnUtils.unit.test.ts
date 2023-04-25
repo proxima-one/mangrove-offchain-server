@@ -4,6 +4,7 @@ import { slice } from "lodash";
 import { describe } from "mocha";
 import { toBigNumber } from "src/utils/numberUtils";
 import { KandelReturnUtils, baseQuoteBalance, period, simpleOfferVersion, simplePrismaOfferVersion } from "src/utils/KandelReturnUtils";
+import BigNumber from "bignumber.js";
 
 
 let baseToken = {
@@ -19,7 +20,7 @@ let quoteToken = {
 let rates= {
     base: {
         token: baseToken,
-        rate: 1
+        rate: 2
     }, quote: {
         token: quoteToken,
         rate: 1
@@ -82,7 +83,7 @@ describe("Kandel Return Unit test suite", () => {
 
             const result = kandelReturnUtils.getOfferedVolume(period, isRetract, index, previous, rates);
 
-            assert.strictEqual( result.offeredTotal, "80" )
+            assert.strictEqual( result.offeredTotal, "120" )
 
         })
         it("index = 0 + isRetract = false", () => {
@@ -91,7 +92,7 @@ describe("Kandel Return Unit test suite", () => {
             let isRetract = false;
             const result = kandelReturnUtils.getOfferedVolume(period, isRetract, index, [], rates);
 
-            assert.strictEqual( result.offeredTotal, "80" )
+            assert.strictEqual( result.offeredTotal, "120" )
         })
         it("index > 0 + isRetract = true", () => {
             let index = 1;
@@ -112,6 +113,97 @@ describe("Kandel Return Unit test suite", () => {
 
             assert.strictEqual( result.offeredTotal, "0" )
         })
+    })
+
+    it( KandelReturnUtils.prototype.getOfferGives.name, () => {
+        let current:simpleOfferVersion = {
+            offerId: "id",
+            token: baseToken,
+            gives: "1000000000000000000"
+        }
+        const gives =  kandelReturnUtils.getOfferGives(current, rates);
+
+        assert.strictEqual(gives, "2")
+    })
+
+    describe(KandelReturnUtils.prototype.getCorrectRate.name, () => {
+        it("get base rate", () => {
+            const baseRate = kandelReturnUtils.getCorrectRate(baseToken, rates)
+            assert.strictEqual(baseRate, rates.base.rate)
+        })
+
+        it("get quote rate", () => {
+            const quoteRate = kandelReturnUtils.getCorrectRate(quoteToken, rates)
+            assert.strictEqual(quoteRate, rates.quote.rate)
+        })
+
+        it("rate not found", () => {
+            assert.throws( () => kandelReturnUtils.getCorrectRate({ id:"test", decimals: 1, symbol:"t" }, rates) )
+        })
+    })
+
+    describe(KandelReturnUtils.prototype.getReturnForPeriod.name, () => {
+        
+        it("offeredTotal <= 0", () => {
+            let dif = new BigNumber(10)
+            let offerTotal = "0"
+            let days = 10
+            const result = kandelReturnUtils.getReturnForPeriod(dif, offerTotal, days )
+            chaiAssert.closeTo( result.returnForPeriod.toNumber(), 0, 0 )
+            chaiAssert.closeTo( result.returnDay.toNumber(), 0, 0 )
+
+        } )
+
+        it("offeredTotal > 0", () => {
+            let dif = new BigNumber(100)
+            let offerTotal = "15"
+            let days = 13
+            const result = kandelReturnUtils.getReturnForPeriod(dif, offerTotal, days )
+            chaiAssert.closeTo( result.returnForPeriod.toNumber(), 6.6666, 0.0001 )
+            chaiAssert.closeTo( result.returnDay.toNumber(), 0.16962, 0.00001 )
+
+        } )
+    })
+
+    it(KandelReturnUtils.prototype.getDays.name, () => {
+        let start = new Date(2023, 0, 1)
+        let end = new Date(2024, 1, 3)
+        const days = kandelReturnUtils.getDays(end, start);
+        assert.strictEqual(days, 398)
+    })
+
+    it( KandelReturnUtils.prototype.getSendReceivedAndDif.name, () => {
+        let period = createPeriod({ type: "Populate", start: new Date(2023, 0, 1), end: new Date(2023, 1, 10), offers: offers.map(v => { return { ...v, gives: toBigNumber({ value: "10", token: v.token}).toString() } }), baseSend: "20", baseReceived: "22", quoteSend: "30", quoteReceived: "33" })
+        let result = kandelReturnUtils.getSendReceivedAndDif(period, rates)
+        assert.strictEqual( result.dif.toNumber(), 7)
+        assert.strictEqual( result.send.toNumber(), 70)
+        assert.strictEqual( result.received.toNumber(), 77)
+    })
+
+    describe(KandelReturnUtils.prototype.getTokenBalanceNumber.name, () => {
+        it("number is null", () => {
+            assert.strictEqual(kandelReturnUtils.getTokenBalanceNumber(null, "received"), "0")
+        })
+        it("number != null + send", () => {
+            let number = { send: "10", received:"20"}
+            const send = kandelReturnUtils.getTokenBalanceNumber(number, "send")
+            assert.strictEqual(send, "10")
+        })
+        it("number != null + send", () => {
+            let number = { send: "10", received:"20"}
+            const received = kandelReturnUtils.getTokenBalanceNumber(number, "received")
+            assert.strictEqual(received, "20")
+            
+        })
+    })
+
+    it( KandelReturnUtils.prototype.getTokenValueFromRate.name, () => {
+        let number = "10000000000";
+        let token = quoteToken;
+        let rate = 2;
+        const tokenValue = kandelReturnUtils.getTokenValueFromRate(number, token, rate)
+        assert.strictEqual(tokenValue.toNumber(), 20000)
+
     })
 
 })
