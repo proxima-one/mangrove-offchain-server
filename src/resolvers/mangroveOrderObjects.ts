@@ -30,37 +30,37 @@ export class MangroveOrderFillWithTokens {
 
     }
 
-    @Field( {nullable: true})
+    @Field( )
     fillsId: string;
 
-    @Field( {nullable: true})
+    @Field( )
     totalFee: string;
 
-    @Field( {nullable: true})
+    @Field( )
     mangroveOrderId?: string;
 
-    @Field( {nullable: true})
+    @Field( )
     taker: string;
 
-    @Field( {nullable: true})
+    @Field( )
     type: string;
 
-    @Field( {nullable: true})
+    @Field( )
     inbound: Token
 
-    @Field( {nullable: true})
+    @Field( )
     outbound: Token
 
-    @Field( {nullable: true})
+    @Field( )
     price: number;
 
-    @Field( {nullable: true})
+    @Field( )
     takerGot: number;
 
-    @Field( {nullable: true})
+    @Field( )
     time: Date;
 
-    @Field( {nullable: true})
+    @Field( )
     txHash: string;
 }
 
@@ -69,20 +69,28 @@ export class MangroveOrderFillWithTokens {
 export class MangroveOrderOpenOrder {
 
     constructor(params: {
-        side: "Buy" | "Sell",
+        mangroveOrderId: string,
+        isBuy: boolean,
+        isFailed: boolean,
+        isFilled: boolean,
         offerId?: string
         taker: string,
         inboundToken?: Token,
         outboundToken?: Token,
-        price?: string
-        status?: "Cancelled" | "Failed" | "Filled" | "Partial Fill" | "Open" | "Expired",
+        price?: number
+        status?: "Cancelled" | "Failed" | "Filled" | "Partial Fill" | "Open",
+        isOpen: boolean,
         failedReason?: string,
         expiryDate?: Date
         date: Date,
         takerGot?: string,
         takerWants: string
     }) {
-        this.side = params.side;
+        this.mangroveOrderId = params.mangroveOrderId
+        this.isBuy = params.isBuy;
+        this.isOpen = params.isOpen;
+        this.isFailed = params.isFailed;
+        this.isFilled = params.isFilled;
         this.offerId = params.offerId;
         this.taker = params.taker;
         this.inbound = params.inboundToken;
@@ -97,40 +105,52 @@ export class MangroveOrderOpenOrder {
 
     }
 
-    @Field( {nullable: true})
-    side!: string;
+    @Field( )
+    mangroveOrderId!: string;
 
-    @Field( {nullable: true})
+    @Field( )
+    isBuy!: boolean;
+
+    @Field( )
+    isFailed!: boolean;
+
+    @Field( )
+    isFilled!: boolean;
+
+    @Field( )
     offerId?: string;
 
-    @Field( {nullable: true})
+    @Field( )
     taker!: string;
 
-    @Field( {nullable: true})
+    @Field( )
     inbound?: Token
 
-    @Field( {nullable: true})
+    @Field( )
     outbound?: Token
 
-    @Field( {nullable: true})
-    price?: string;
+    @Field( )
+    price?: number;
 
-    @Field( {nullable: true})
+    @Field( )
     status?: string;
 
-    @Field( {nullable: true})
+    @Field( )
+    isOpen!: boolean;
+
+    @Field( )
     failedReason?: string;
 
-    @Field( {nullable: true})
+    @Field( )
     expiryDate?: Date;
 
-    @Field( {nullable: true})
+    @Field( )
     date!: Date;
 
-    @Field( {nullable: true})
+    @Field( )
     takerGot?: string;
 
-    @Field( {nullable: true})
+    @Field( )
     takerWants!: string;
 
 }
