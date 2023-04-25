@@ -2,7 +2,7 @@ import {
   PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
-} from "src/common";
+} from "src/utils/common";
 
 import { ChainId, TokenId } from "src/state/model";
 import { PrismaClient } from "@prisma/client";

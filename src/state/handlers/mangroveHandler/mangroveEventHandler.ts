@@ -6,7 +6,7 @@ import {
   PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
-} from "src/common";
+} from "src/utils/common";
 import { allDbOperations } from "src/state/dbOperations/allDbOperations";
 import {
   ChainId,

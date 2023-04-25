@@ -29,7 +29,7 @@ Manually adjust schema file and run `yarn prisma:migrate {migrationname}` create
 
 Run `yarn prisma:deploy` to apply all migrations to selected database (connection string is taken from `DATABASE_URL` env var).
 
-(!) Check out `.env.development` and `.env.test` file
+`.env.development` is used for the consumer and apolloserver. `.env.test` is used for all tests
 
 ### Useful commands
 
@@ -50,10 +50,23 @@ Instead of overwrites/deletes of entities, the following versioning pattern is a
 
 - `prisma.Entity` is the base entity with immutable data (such as id, mangrove id, ...)
   - `currentVersionId` is the id of the current version of the entity
-  - `deleted = true` means the entity has been deleted
 
 - `prisma.EntityVersion` contains the data that can change when the entity is updated
   - `versionNumber` is an incremental version number, starting at zero
   - `prevVersionId` is the id of an older version that this version replaces, if any
 
 On undo of an event that created a version, that version is deleted and the previous version set as the current. If there was no previous version, the entity itself is deleted (not just marked as deleted, as the undo can never be undone).
+
+### File structure
+
+All the source code is sorted in different folders:
+
+- `cmd` is for files that start proceses like the `consumer` and `server`
+- `resolvers` is for custom queries that are exposed by the graphQL server
+- `state` is for all the db operations that change the db
+  - `dbOperations` is the actual opreations that change the db
+  - `handlers` are the logic around the specifc events and how to handle them
+- `utils` is for all utility classes
+
+### GraphQL server
+The GraphQL server can either be started with only custom queries or also with generated resolvers that type-graphQL generates. This is controlled by the environment variable `WITH_RESOLVERS`. If this is true, then the generated queries resolvers, will also be available from the server.

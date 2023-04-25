@@ -6,7 +6,7 @@ import {
 import retry from "async-retry";
 import * as _ from "lodash";
 import { Subscription, takeWhile } from "rxjs";
-import { StreamEventHandler } from "src/common";
+import { StreamEventHandler } from "src/utils/common";
 import {
   MangroveEventHandler,
   IOrderLogicEventHandler as TakerStratEventHandler,
