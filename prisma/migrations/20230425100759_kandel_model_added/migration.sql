@@ -207,6 +207,15 @@ CREATE TABLE "KandelPopulateEvent" (
 );
 
 -- CreateTable
+CREATE TABLE "KandelOfferUpdate" (
+    "eventId" VARCHAR(255) NOT NULL,
+    "offerId" VARCHAR(255) NOT NULL,
+    "gives" TEXT NOT NULL,
+
+    CONSTRAINT "KandelOfferUpdate_pkey" PRIMARY KEY ("eventId","offerId")
+);
+
+-- CreateTable
 CREATE TABLE "KandelRetractEvent" (
     "id" TEXT NOT NULL,
     "eventId" VARCHAR(255) NOT NULL,
@@ -354,6 +363,12 @@ CREATE UNIQUE INDEX "KandelPopulateEvent_baseTokenBalanceVersionId_key" ON "Kand
 
 -- CreateIndex
 CREATE UNIQUE INDEX "KandelPopulateEvent_quoteTokenBalanceVersionId_key" ON "KandelPopulateEvent"("quoteTokenBalanceVersionId");
+
+-- CreateIndex
+CREATE INDEX "KandelOfferUpdate_eventId_idx" ON "KandelOfferUpdate"("eventId");
+
+-- CreateIndex
+CREATE INDEX "KandelOfferUpdate_offerId_idx" ON "KandelOfferUpdate"("offerId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "KandelRetractEvent_eventId_key" ON "KandelRetractEvent"("eventId");

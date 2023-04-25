@@ -1,8 +1,7 @@
-import { OfferVersion, PrismaClient, Token, TokenBalanceVersion } from "@prisma/client";
+import { PrismaClient, Token } from "@prisma/client";
 import BigNumber from "bignumber.js";
-import { last } from "lodash";
-import { fromBigNumber } from "src/utils/numberUtils";
 import { KandelId } from "src/state/model";
+import { fromBigNumber } from "src/utils/numberUtils";
 
 type returnTypes = {
     start: Date,
@@ -82,7 +81,7 @@ export class KandelReturnUtils {
     
     calculateReturn(periods: period[], rates: rates) {
         const returns = periods.reduce((result, period, index) => {
-            const { offeredTotal, offeredPerOffer } = this.getOfferedVolume(period, period.type == "Retract", index, result, rates);
+            const { offeredTotal, offeredPerOffer } = this.getOfferedVolume(period, index, result, rates);
             const sendReceivedInfo = this.getSendReceivedAndDif(period, rates);
             const { send, received } = index > 0 ? { send: sendReceivedInfo.send.minus(result[index-1].allTime.send ), received: sendReceivedInfo.received.minus(result[index-1].allTime.received) } : sendReceivedInfo;
             const dif = received.minus(send);
@@ -130,14 +129,14 @@ export class KandelReturnUtils {
                     select: {
                         baseTokenBalanceVersion: { select: { send: true, received: true } },
                         quoteTokenBalanceVersion: { select: { send: true, received: true } },
-                        OfferVersion: { select: { offerId: true, gives: true, offer: { select: { offerListing: { select: { outboundToken: { select: { id: true, decimals: true, symbol: true } } } } } } } }
+                        KandelOfferUpdate: { select: { offerId: true, gives: true, offer: { select: { offerListing: { select: { outboundToken: { select: { id: true, decimals: true, symbol: true } } } } } } } }
                     }
                 },
                 KandelRetractEvent: {
                     select: {
                         baseTokenBalanceVersion: { select: { send: true, received: true } },
                         quoteTokenBalanceVersion: { select: { send: true, received: true } },
-                        OfferVersion: { select: { offerId: true, gives: true, offer: { select: { offerListing: { select: { outboundToken: { select: { id: true, decimals: true, symbol: true } } } } } } } }
+                        KandelOfferUpdate: { select: { offerId: true, gives: true, offer: { select: { offerListing: { select: { outboundToken: { select: { id: true, decimals: true, symbol: true } } } } } } } }
                     }
                 }
             },
@@ -183,7 +182,7 @@ export class KandelReturnUtils {
                 {
                     start: events[index-1].transaction.time,
                     end: current.transaction.time,
-                    offers: eventForOffers ? eventForOffers.OfferVersion.map( this.convertOfferVersion ) : [] ,
+                    offers: eventForOffers ? eventForOffers.KandelOfferUpdate.map( this.convertOfferVersion ) : [] ,
                     type: type,
                     baseTokenBalanceVersion: eventForBalance ? eventForBalance.baseTokenBalanceVersion : {
                         send: "0",
@@ -223,7 +222,6 @@ export class KandelReturnUtils {
     
     getOfferedVolume(
         period: period,
-        isRetract: boolean,
         index: number,
         previousReturns: {offeredPerOffer: Map<string,string>}[],
         rates: rates
@@ -232,7 +230,7 @@ export class KandelReturnUtils {
         offeredPerOffer: Map<string, string>;
     } {
         const initalMap = index > 0 ? previousReturns[index - 1].offeredPerOffer : new Map<string, string>();
-        const offeredPerOffer = period.offers.reduce((acc, current) => acc.set(current.offerId, isRetract ? "0" : this.getOfferGives(current, rates)), initalMap);
+        const offeredPerOffer = period.offers.reduce((acc, current) => acc.set(current.offerId, this.getOfferGives(current, rates)), initalMap);
         const offeredTotal = Array.from(offeredPerOffer.values()).reduce((acc, current) => new BigNumber(acc).plus(current).toString(), "0");
         return { offeredTotal, offeredPerOffer };
     }

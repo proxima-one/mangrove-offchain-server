@@ -246,6 +246,10 @@ export class KandelOperations extends DbOperations {
     return kandel
   }
 
+  async deleteAllKandelEventsForTransaction( kandelId: KandelId | prisma.Kandel, txId: string ){
+    return await this.tx.kandelEvent.deleteMany({where: { txId: txId}})
+  }
+
   async createKandelEvent(kandelId: KandelId | prisma.Kandel, txId: string, kandelVersionId?: KandelVersionId | prisma.KandelVersion) {
     return await this.tx.kandelEvent.create({
       data: {
@@ -325,6 +329,16 @@ export class KandelOperations extends DbOperations {
         eventId: kandelEvent.id,
         compoundRateBase: base,
         compoundRateQuote: quote
+      }
+    })
+  }
+
+  async createKandelUpdateOffer( event: prisma.KandelPopulateEvent | prisma.KandelRetractEvent, offerId: OfferId, gives: string ){
+    return this.tx.kandelOfferUpdate.create({
+      data: {
+        eventId: event.id,
+        offerId:offerId.value,
+        gives
       }
     })
   }

@@ -406,17 +406,17 @@ export class KandelHistoryResolver {
     let events = await ctx.prisma.kandelEvent.findMany({
       where: { kandelId: kandelId.value, NOT: [{ KandelVersion: null }, { OR: [{ KandelPopulateEvent: null }, { KandelRetractEvent: null }] }] }, include: {
         KandelVersion: { include: { tx: true, prevVersion: { include: { admin: true, configuration: true } } } },
-        KandelPopulateEvent: { select: { OfferVersion: { select: { offer: { select: { offerListing: { select: { outboundToken: true, inboundToken: true } } } }, gives: true } }, event: { select: { KandelVersion: { select: { tx: { select: { time: true } } } } } } } },
-        KandelRetractEvent: { select: { OfferVersion: { select: { offer: { select: { offerListing: { select: { outboundToken: true, inboundToken: true } } } }, gives: true } }, event: { select: { KandelVersion: { select: { tx: { select: { time: true } } } } } } } }
+        KandelPopulateEvent: { select: { KandelOfferUpdate: { select: { offer: { select: { offerListing: { select: { outboundToken: true, inboundToken: true } } } }, gives: true } }, event: { select: { KandelVersion: { select: { tx: { select: { time: true } } } } } } } },
+        KandelRetractEvent: { select: { KandelOfferUpdate: { select: { offer: { select: { offerListing: { select: { outboundToken: true, inboundToken: true } } } }, gives: true } }, event: { select: { KandelVersion: { select: { tx: { select: { time: true } } } } } } } }
       },
       orderBy: { KandelVersion: { tx: { time: 'desc' } } },
       take, skip
     })
 
-    let { inboundToken: tokenA, outboundToken: tokenB } = events[0].KandelPopulateEvent!.OfferVersion[0].offer.offerListing;
+    let { inboundToken: tokenA, outboundToken: tokenB } = events[0].KandelPopulateEvent!.KandelOfferUpdate[0].offer.offerListing;
     const retractsAndPopulates = events.map(v => {
       if (v.KandelPopulateEvent || v.KandelRetractEvent) {
-        const e = (v.KandelPopulateEvent ? v.KandelPopulateEvent.OfferVersion : v.KandelRetractEvent?.OfferVersion)
+        const e = (v.KandelPopulateEvent ? v.KandelPopulateEvent.KandelOfferUpdate : v.KandelRetractEvent?.KandelOfferUpdate)
         return new KandelPopulateRetract({
           tokenA,
           tokenAAmount: e?.filter(o => o.offer.offerListing.inboundToken.id === tokenA.id).map(o => o.gives).reduce((result, current) => new BigNumber(result).plus(new BigNumber(current)).toString()) ?? "0",

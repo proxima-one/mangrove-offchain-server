@@ -761,34 +761,29 @@ describe("Kandel Events Logic Integration test suite", () => {
             }
             const kandelEventCount = await prisma.kandelEvent.count();
             const kandelRetractEventCount = await prisma.kandelRetractEvent.count();
-            const offerVersionCount = await  prisma.offerVersion.count();
+            const kandelOfferUpdates = await  prisma.kandelOfferUpdate.count();
             await kandelEventsLogic.handelRetractOffers(false, kandelId, event, tx);
             assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, 1 )
             assert.strictEqual( await prisma.kandelRetractEvent.count() - kandelRetractEventCount, 1 )
-            assert.strictEqual( await prisma.offerVersion.count() - offerVersionCount, 2 )
-            const newOfferVersionIdAB = new OfferVersionId(offerABId, 1);
-            const newOfferVersionIdBA = new OfferVersionId(offerBAId, 1);
-            const newOfferVersionAB = await prisma.offerVersion.findUnique({where: {id: newOfferVersionIdAB.value}})
-            const newOfferVersionBA = await prisma.offerVersion.findUnique({where: {id: newOfferVersionIdBA.value}})
-            assert.notStrictEqual(newOfferVersionAB, null )
-            const kandelRetractEvent = await prisma.kandelRetractEvent.findUnique({where: {id: newOfferVersionAB?.kandelRetractEventId ?? undefined }});
+            assert.strictEqual( await prisma.kandelOfferUpdate.count() - kandelOfferUpdates, 2 )
+            const kandelUpdateOfferAB = await prisma.kandelOfferUpdate.findFirst({where: { offerId: offerABId.value}})
+            const kandelUpdateOfferBA = await prisma.kandelOfferUpdate.findFirst({where: { offerId: offerBAId.value}})
+            assert.notStrictEqual(kandelUpdateOfferAB, null )
+            assert.notStrictEqual(kandelUpdateOfferBA, null )
+            const kandelRetractEvent = await prisma.kandelRetractEvent.findUnique({where: {id: kandelUpdateOfferAB?.eventId }});
             assert.notStrictEqual(kandelRetractEvent, null )
             const kandelEvent = await prisma.kandelEvent.findUnique({where: {id: kandelRetractEvent?.eventId ?? undefined }});
             assert.notStrictEqual(kandelEvent, null )
-            assert.deepStrictEqual( newOfferVersionAB, { ...offerVersionAB,
-                id: newOfferVersionAB?.id,
-                deleted: true,
-                kandelRetractEventId: newOfferVersionAB?.kandelRetractEventId,
-                prevVersionId: offerVersionAB.id,
-                versionNumber:1
+            assert.deepStrictEqual( kandelUpdateOfferAB, { 
+                eventId: kandelRetractEvent?.id,
+                offerId: offerABId.value,
+                gives: "0"
              } )
 
-             assert.deepStrictEqual( newOfferVersionBA, { ...offerVersionBA,
-                id: newOfferVersionBA?.id,
-                deleted: true,
-                kandelRetractEventId: newOfferVersionBA?.kandelRetractEventId,
-                prevVersionId: offerVersionBA.id,
-                versionNumber:1
+             assert.deepStrictEqual( kandelUpdateOfferBA, { 
+                eventId: kandelRetractEvent?.id,
+                offerId: offerBAId.value,
+                gives: "0"
              } )
 
         } )
@@ -820,11 +815,11 @@ describe("Kandel Events Logic Integration test suite", () => {
 
             const kandelEventCount = await prisma.kandelEvent.count();
             const kandelRetractEventCount = await prisma.kandelRetractEvent.count();
-            const offerVersionCount = await  prisma.offerVersion.count();
+            const kandelOfferUpdateCount = await  prisma.kandelOfferUpdate.count();
             await kandelEventsLogic.handelRetractOffers(true, kandelId, event, tx);
             assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, -1 )
             assert.strictEqual( await prisma.kandelRetractEvent.count() - kandelRetractEventCount, -1 )
-            assert.strictEqual( await prisma.offerVersion.count() - offerVersionCount, -2 )
+            assert.strictEqual( await prisma.kandelOfferUpdate.count() - kandelOfferUpdateCount, -2 )
         } )
     })
 
@@ -885,18 +880,16 @@ describe("Kandel Events Logic Integration test suite", () => {
             const kandelEventCount = await prisma.kandelEvent.count();
             const kandelPopulateEventCount = await prisma.kandelPopulateEvent.count();
             const kandelOfferIndexCount = await prisma.kandelOfferIndex.count();
-            const offerVersionCount = await  prisma.offerVersion.count();
+            const kandelUpdateOfferCount = await  prisma.kandelOfferUpdate.count();
             await kandelEventsLogic.handlePopulate(false, kandelId, event, tx);
             assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, 1 )
             assert.strictEqual( await prisma.kandelPopulateEvent.count() - kandelPopulateEventCount, 1 )
             assert.strictEqual( await prisma.kandelOfferIndex.count() - kandelOfferIndexCount, 2 )
-            assert.strictEqual( await prisma.offerVersion.count() - offerVersionCount, 2 )
-            const newOfferVersionIdAB = new OfferVersionId(offerABId, 1);
-            const newOfferVersionIdBA = new OfferVersionId(offerBAId, 1);
-            const newOfferVersionAB = await prisma.offerVersion.findUnique({where: {id: newOfferVersionIdAB.value}})
-            const newOfferVersionBA = await prisma.offerVersion.findUnique({where: {id: newOfferVersionIdBA.value}})
-            assert.notStrictEqual(newOfferVersionAB, null )
-            const kandelPopulateEvent = await prisma.kandelPopulateEvent.findUnique({where: {id: newOfferVersionAB?.kandelPopulateEventId ?? undefined }});
+            assert.strictEqual( await prisma.kandelOfferUpdate.count() - kandelUpdateOfferCount, 2 )
+            const kandelOfferUpdateAB = await prisma.kandelOfferUpdate.findFirst({where: {offerId: offerABId.value}})
+            const kandelOfferUpdateBA = await prisma.kandelOfferUpdate.findFirst({where: {offerId: offerBAId.value}})
+            assert.notStrictEqual(kandelOfferUpdateAB, null )
+            const kandelPopulateEvent = await prisma.kandelPopulateEvent.findUnique({where: {id: kandelOfferUpdateAB?.eventId }});
             assert.notStrictEqual(kandelPopulateEvent, null )
             const kandelEvent = await prisma.kandelEvent.findUnique({where: {id: kandelPopulateEvent?.eventId ?? undefined }});
             assert.notStrictEqual(kandelEvent, null )
@@ -914,34 +907,16 @@ describe("Kandel Events Logic Integration test suite", () => {
             } }})
             assert.notStrictEqual(kandelIndexOfferBA, null )
             assert.deepStrictEqual( kandelIndexOfferBA?.index, event.indexMapping[1].index)
-            assert.deepStrictEqual( newOfferVersionAB, { ...offerVersionAB,
-                id: newOfferVersionAB?.id,
-                wants: "20",
-                wantsNumber: 20,
+            assert.deepStrictEqual( kandelOfferUpdateAB, { 
+                offerId: kandelOfferUpdateAB?.offerId,
+                eventId: kandelOfferUpdateAB?.eventId,
                 gives: "20",
-                givesNumber: 20,
-                makerPaysPrice: 1,
-                takerPaysPrice: 1,
-                gasprice: 100,
-                gasreq: 500,
-                kandelPopulateEventId: newOfferVersionAB?.kandelPopulateEventId,
-                prevVersionId: offerVersionAB.id,
-                versionNumber:1
              } )
 
-             assert.deepStrictEqual( newOfferVersionBA, { ...offerVersionBA,
-                id: newOfferVersionBA?.id,
-                wants: "20",
-                wantsNumber: 20,
+             assert.deepStrictEqual( kandelOfferUpdateBA, { 
+                offerId: kandelOfferUpdateBA?.offerId,
+                eventId: kandelOfferUpdateBA?.eventId,
                 gives: "20",
-                givesNumber: 20,
-                makerPaysPrice: 1,
-                takerPaysPrice: 1,
-                gasprice: 100,
-                gasreq: 500,
-                kandelPopulateEventId: newOfferVersionBA?.kandelPopulateEventId,
-                prevVersionId: offerVersionBA.id,
-                versionNumber:1
              } )
 
         } ),
@@ -1003,13 +978,11 @@ describe("Kandel Events Logic Integration test suite", () => {
 
             const kandelEventCount = await prisma.kandelEvent.count();
             const kandelPopulateEventCount = await prisma.kandelPopulateEvent.count();
-            const kandelOfferIndexCount = await prisma.kandelOfferIndex.count();
-            const offerVersionCount = await  prisma.offerVersion.count();
+            const kandelOfferUpdateCount = await  prisma.kandelOfferUpdate.count();
             await kandelEventsLogic.handlePopulate(true, kandelId, event, tx);
             assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, -1 )
             assert.strictEqual( await prisma.kandelPopulateEvent.count() - kandelPopulateEventCount, -1 )
-            assert.strictEqual( await prisma.kandelOfferIndex.count() - kandelOfferIndexCount, -2 )
-            assert.strictEqual( await prisma.offerVersion.count() - offerVersionCount, -2 )
+            assert.strictEqual( await prisma.kandelOfferUpdate.count() - kandelOfferUpdateCount, -2 )
 
         } )
     })

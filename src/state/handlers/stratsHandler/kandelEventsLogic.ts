@@ -175,10 +175,7 @@ export class KandelEventsLogic {
         const kandel = await this.db.kandelOperations.getKandel(kandelId);
         const mangroveId = new MangroveId(kandelId.chainId, kandel.mangroveId);
         if (undo) {
-            for( const offerRetracted of event.offers){
-                const offerId = new OfferId(mangroveId, offerRetracted.offerList, offerRetracted.offerId);
-                await this.db.offerOperations.deleteLatestOfferVersion( offerId)
-            }
+            await this.db.kandelOperations.deleteAllKandelEventsForTransaction(kandelId, transaction!.id)
             return;
         }
 
@@ -187,8 +184,7 @@ export class KandelEventsLogic {
 
         for( const offerRetracted of event.offers) {
             const offerId = new OfferId(mangroveId, offerRetracted.offerList, offerRetracted.offerId);
-            await this.db.offerOperations.addVersionedOffer(offerId, transaction!.id, (m) =>{ m.deleted = true, m.kandelRetractEventId = kandelRetractEvent.id });
-
+            await this.db.kandelOperations.createKandelUpdateOffer( kandelRetractEvent, offerId,"0" )
         }
     }
 
@@ -201,37 +197,23 @@ export class KandelEventsLogic {
         const kandel = await this.db.kandelOperations.getKandel(kandelId);
         const mangroveId = new MangroveId(kandelId.chainId, kandel.mangroveId);
         if (undo) {
-            for (let offerWritten of event.offers) {
-                const offerId = new OfferId(mangroveId, offerWritten.offerList, offerWritten.offer.id);
-                await this.db.offerOperations.deleteLatestOfferVersion( offerId)
-            }
+            // Delete of offerIndex is handled when the offer is deleted, because of onDetele: cascade in the schema
+            await this.db.kandelOperations.deleteAllKandelEventsForTransaction(kandelId, transaction!.id)
             return;
         }
 
-
         await this.handlePopulateOfferWrittenEvents(kandelId, event, mangroveId, transaction);
         await this.handlePopulateOfferIndexes(kandelId, event, mangroveId, transaction);
-        
-
     }
 
     async handlePopulateOfferWrittenEvents(kandelId: KandelId, event: Populate, mangroveId: MangroveId, transaction: prisma.Transaction | undefined) {
         const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, transaction!.id );
          
         const kandelPopulateEvent = await this.db.kandelOperations.createKandelPopulateEvent(kandelEvent);
-        let tokensMap = new Map<string, {
-            outboundToken: prisma.Token;
-            inboundToken: prisma.Token;
-        }>();
 
         for (let offerWritten of event.offers) {
-            const offerListId = new OfferListingId(mangroveId, offerWritten.offerList);
-            tokensMap = !tokensMap.get(offerListId.value) ? tokensMap.set(offerListId.value, await this.db.offerListOperations.getOfferListTokens({ id: offerListId })) : tokensMap;
-            const tokens = tokensMap.get(offerListId.value);
             const offerId = new OfferId(mangroveId, offerWritten.offerList, offerWritten.offer.id);
-            const updateFunc = (v: Omit<prisma.OfferVersion, "id" | "versionNumber" | "prevVersionId" | "offerId">) => new OfferEventsLogic().offerWrittenFunc(v, offerWritten.offer, mangroveId, tokens!, transaction!.id);
-            const updateFuncWithEventId = (v: Omit<prisma.OfferVersion, "id" | "versionNumber" | "prevVersionId" | "offerId">) => { updateFunc(v); v.kandelPopulateEventId = kandelPopulateEvent.id; };
-            await this.db.offerOperations.addVersionedOffer(offerId, transaction!.id, updateFuncWithEventId, { makerId: kandelId });
+            await this.db.kandelOperations.createKandelUpdateOffer( kandelPopulateEvent, offerId, offerWritten.offer.gives)
         }
     }
 

@@ -74,45 +74,25 @@ describe("Kandel Return Unit test suite", () => {
     })
 
     describe(KandelReturnUtils.prototype.getOfferedVolume.name, () => {
-        it("index > 0 + isRetract = false", () => {
+        it("index > 0 ", () => {
             let index = 1;
             let period = createPeriod({ type: "Populate", start: new Date(2023, 0, 1), end: new Date(2023, 1, 10), offers: offers.map(v => { return { ...v, gives: toBigNumber({ value: "10", token: v.token}).toString() } }), baseSend: "20", baseReceived: "22", quoteSend: "30", quoteReceived: "33" })
-            let isRetract = false;
             let offeredPerOffer = period.offers.slice(0,3).reduce((result, current) => result.set(current.offerId, "2") ,new Map<string,string>() )
             let previous = [{ offeredPerOffer }]
 
-            const result = kandelReturnUtils.getOfferedVolume(period, isRetract, index, previous, rates);
+            const result = kandelReturnUtils.getOfferedVolume(period, index, previous, rates);
 
             assert.strictEqual( result.offeredTotal, "120" )
 
         })
-        it("index = 0 + isRetract = false", () => {
+        it("index = 0 ", () => {
             let index = 0;
             let period = createPeriod({ type: "Populate", start: new Date(2023, 0, 1), end: new Date(2023, 1, 10), offers: offers.map(v => { return { ...v, gives: toBigNumber({ value: "10", token: v.token}).toString() } }), baseSend: "20", baseReceived: "22", quoteSend: "30", quoteReceived: "33" })
-            let isRetract = false;
-            const result = kandelReturnUtils.getOfferedVolume(period, isRetract, index, [], rates);
+            const result = kandelReturnUtils.getOfferedVolume(period, index, [], rates);
 
             assert.strictEqual( result.offeredTotal, "120" )
         })
-        it("index > 0 + isRetract = true", () => {
-            let index = 1;
-            let period = createPeriod({ type: "Populate", start: new Date(2023, 0, 1), end: new Date(2023, 1, 10), offers: offers.map(v => { return { ...v, gives: toBigNumber({ value: "10", token: v.token}).toString() } }), baseSend: "20", baseReceived: "22", quoteSend: "30", quoteReceived: "33" })
-            let isRetract = true;
-            let offeredPerOffer = period.offers.slice(0,3).reduce((result, current) => result.set(current.offerId, "2") ,new Map<string,string>() )
-            let previous = [{ offeredPerOffer }]
 
-            const result = kandelReturnUtils.getOfferedVolume(period, isRetract, index, previous, rates);
-
-            assert.strictEqual( result.offeredTotal, "0" )
-        })
-        it("index = 0 + isRetract = true", () => {
-            let index = 0;
-            let period = createPeriod({ type: "Populate", start: new Date(2023, 0, 1), end: new Date(2023, 1, 10), offers: offers.map(v => { return { ...v, gives: toBigNumber({ value: "10", token: v.token}).toString() } }), baseSend: "20", baseReceived: "22", quoteSend: "30", quoteReceived: "33" })
-            let isRetract = true;
-            const result = kandelReturnUtils.getOfferedVolume(period, isRetract, index, [], rates);
-
-            assert.strictEqual( result.offeredTotal, "0" )
-        })
     })
 
     it( KandelReturnUtils.prototype.getOfferGives.name, () => {

@@ -312,10 +312,11 @@ model Offer {
   offerListing  OfferListing    @relation(fields: [offerListingId], references: [id])
   maker         Account         @relation(fields: [makerId], references: [id])
 
-  currentVersionId   String            @unique @db.VarChar(255)
-  currentVersion     OfferVersion?     @relation("currentVersion", fields: [currentVersionId], references: [id])
-  offerVersions      OfferVersion[]    @relation("offerVersion")
-  kandelOfferIndexes KandelOfferIndex? @relation("offerIndex")
+  currentVersionId   String              @unique @db.VarChar(255)
+  currentVersion     OfferVersion?       @relation("currentVersion", fields: [currentVersionId], references: [id])
+  offerVersions      OfferVersion[]      @relation("offerVersion")
+  kandelOfferIndexes KandelOfferIndex?   @relation("offerIndex")
+  KandelOfferUpdate  KandelOfferUpdate[]
 
   @@unique([mangroveId, offerListingId, offerNumber])
   @@index([offerListingId])
@@ -347,15 +348,13 @@ model OfferVersion {
   tx          Transaction @relation(fields: [txId], references: [id])
   parentOrder Order?      @relation(fields: [parentOrderId], references: [id])
 
-  versionNumber      Int
-  prevVersionId      String?              @unique @db.VarChar(255) // This points to the older version that this version replaces, if any
-  prevVersion        OfferVersion?        @relation("prevVersion", fields: [prevVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
-  nextVersion        OfferVersion?        @relation("prevVersion")
-  currentVersion     Offer?               @relation("currentVersion")
-  offer              Offer                @relation("offerVersion", fields: [offerId], references: [id], onDelete: Restrict, onUpdate: Restrict) // This points to the older version that this version replaces, if any
-  populateEvent      KandelPopulateEvent? @relation(fields: [kandelPopulateEventId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  TakenOffer         TakenOffer[]
-  KandelRetractEvent KandelRetractEvent?  @relation(fields: [kandelRetractEventId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  versionNumber  Int
+  prevVersionId  String?       @unique @db.VarChar(255) // This points to the older version that this version replaces, if any
+  prevVersion    OfferVersion? @relation("prevVersion", fields: [prevVersionId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+  nextVersion    OfferVersion? @relation("prevVersion")
+  currentVersion Offer?        @relation("currentVersion")
+  offer          Offer         @relation("offerVersion", fields: [offerId], references: [id], onDelete: Restrict, onUpdate: Restrict) // This points to the older version that this version replaces, if any
+  TakenOffer     TakenOffer[]
 
   @@index([txId])
   @@index([offerId])
@@ -518,7 +517,7 @@ model MangroveOrderVersion {
 
 model TokenBalance {
   id        String @id @db.VarChar(255)
-  accountId String @db.VarChar(255) @map("reserveId")
+  accountId String @map("reserveId") @db.VarChar(255)
   tokenId   String @db.VarChar(255)
 
   currentVersionId String                @unique @db.VarChar(255)
@@ -533,7 +532,7 @@ model TokenBalance {
 
 model TokenBalanceEvent {
   id                    String  @id @default(uuid())
-  accountId             String  @db.VarChar(255) @map("reserveId")
+  accountId             String  @map("reserveId") @db.VarChar(255)
   tokenId               String  @db.VarChar(255)
   tokenBalanceVersionId String  @unique @db.VarChar(255)
   takenOfferId          String? @db.VarChar(255)
@@ -732,18 +731,33 @@ model KandelPopulateEvent {
   quoteTokenBalanceVersionId String? @unique @db.VarChar(255)
 
   event                    KandelEvent          @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  OfferVersion             OfferVersion[]
   baseTokenBalanceVersion  TokenBalanceVersion? @relation("populateBaseTokenBalanceVersion", fields: [baseTokenBalanceVersionId], references: [id])
   quoteTokenBalanceVersion TokenBalanceVersion? @relation("populateQuoteTokenBalanceVersion", fields: [quoteTokenBalanceVersionId], references: [id])
+  KandelOfferUpdate        KandelOfferUpdate[]  @relation("kandelOfferUpdatePopulate")
+}
+
+model KandelOfferUpdate {
+  eventId String @db.VarChar(255)
+  offerId String @db.VarChar(255)
+
+  gives String
+
+  offer         Offer                @relation(fields: [offerId], references: [id])
+  populateEvent KandelPopulateEvent? @relation("kandelOfferUpdatePopulate", references: [id], fields: [eventId], map: "populateEvent", onDelete: Cascade)
+  retractEvent  KandelRetractEvent?  @relation("kandelOfferUpdateRetract", references: [id], fields: [eventId], map: "retractEvent", onDelete: Cascade)
+
+  @@id([eventId, offerId])
+  @@index([eventId])
+  @@index([offerId])
 }
 
 model KandelRetractEvent {
-  id                         String         @id @default(uuid())
-  eventId                    String         @unique @db.VarChar(255)
-  baseTokenBalanceVersionId  String?        @unique @db.VarChar(255)
-  quoteTokenBalanceVersionId String?        @unique @db.VarChar(255)
-  event                      KandelEvent    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  OfferVersion               OfferVersion[]
+  id                         String              @id @default(uuid())
+  eventId                    String              @unique @db.VarChar(255)
+  baseTokenBalanceVersionId  String?             @unique @db.VarChar(255)
+  quoteTokenBalanceVersionId String?             @unique @db.VarChar(255)
+  event                      KandelEvent         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  KandelOfferUpdate          KandelOfferUpdate[] @relation("kandelOfferUpdateRetract")
 
   baseTokenBalanceVersion  TokenBalanceVersion? @relation("retractBaseTokenBalanceVersion", fields: [baseTokenBalanceVersionId], references: [id])
   quoteTokenBalanceVersion TokenBalanceVersion? @relation("retractQuoteTokenBalanceVersion", fields: [quoteTokenBalanceVersionId], references: [id])
