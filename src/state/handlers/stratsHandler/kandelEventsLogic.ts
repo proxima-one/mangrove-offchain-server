@@ -211,7 +211,7 @@ export class KandelEventsLogic {
          
         const kandelPopulateEvent = await this.db.kandelOperations.createKandelPopulateEvent(kandelEvent);
 
-        for (let offerWritten of event.offers) {
+        for (const offerWritten of event.offers) {
             const offerId = new OfferId(mangroveId, offerWritten.offerList, offerWritten.offer.id);
             await this.db.kandelOperations.createKandelUpdateOffer( kandelPopulateEvent, offerId, offerWritten.offer.gives)
         }
@@ -221,7 +221,7 @@ export class KandelEventsLogic {
         const base = await this.db.kandelOperations.getToken(kandelId, "baseId");
         const quote = await this.db.kandelOperations.getToken(kandelId, "quoteId");
 
-        for (let offerIndex of event.indexMapping) {
+        for (const offerIndex of event.indexMapping) {
             const offerId = new OfferId(mangroveId, {
                 outboundToken: offerIndex.ba === 1 ? base.address : quote.address,
                 inboundToken: offerIndex.ba === 1 ? quote.address : base.address,

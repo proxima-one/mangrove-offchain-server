@@ -125,7 +125,7 @@ export class MangroveOrderOperations extends DbOperations {
       }
     } else {
 
-      let oldVersion = await this.getCurrentMangroveOrderVersion(mangroveOrder);
+      const oldVersion = await this.getCurrentMangroveOrderVersion(mangroveOrder);
       const newVersionNumber =
         oldVersion === null ? 0 : oldVersion.versionNumber + 1;
       const newVersionId = new MangroveOrderVersionId({

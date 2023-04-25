@@ -58,7 +58,7 @@ export class OrderOperations extends DbOperations {
           throw new Error(`Cannot take version of offer that is not the current version of the offer. currentOfferVersionId: ${currentVersionId.id} & takenOffer.offerVersionId: ${takenOffer.offerVersionId}`)
         }
         await this.offerOperations.addVersionedOffer(new OfferId(orderId.mangroveId, orderId.offerListKey, offer.offerNumber), order.txId, (m) => m.deleted = true); 
-        let updateFunc = ( 
+        const updateFunc = ( 
           tokens: {
              outboundToken: prismaModel.Token; 
              inboundToken: prismaModel.Token; }, 

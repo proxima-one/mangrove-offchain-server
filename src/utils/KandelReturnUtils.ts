@@ -122,7 +122,7 @@ export class KandelReturnUtils {
         const baseRate: number = await rate(tokens.baseToken);
         const quoteRate: number = await rate(tokens.quoteToken);
     
-        let events = (await prisma.kandelEvent.findMany({
+        const events = (await prisma.kandelEvent.findMany({
             where: { kandelId: kandelId.value, OR: [{ NOT: { KandelPopulateEvent: null } }, { NOT: { KandelRetractEvent: null } }] }, select: {
                 transaction: { select: { time: true } },
                 KandelPopulateEvent: {
@@ -143,12 +143,12 @@ export class KandelReturnUtils {
             orderBy: { KandelVersion: { tx: { time: 'desc' } } },
         })).map( event => {return { ...event, End: null as unknown as baseQuoteBalance | null}})
     
-        let last =  await prisma.account.findUnique({where:{ id: kandelId.value} , select: { TokenBalance: { where: { OR: [{ tokenId: tokens.baseToken.id }, {tokenId: tokens.quoteToken.id}] }, select: { token: true, currentVersion: { select :{ send: true, received: true} } } } } })
+        const last =  await prisma.account.findUnique({where:{ id: kandelId.value} , select: { TokenBalance: { where: { OR: [{ tokenId: tokens.baseToken.id }, {tokenId: tokens.quoteToken.id}] }, select: { token: true, currentVersion: { select :{ send: true, received: true} } } } } })
     
-        let lastBase = last?.TokenBalance.find(v => v.token.id == tokens.baseToken.id)?.currentVersion;
-        let lastQuote = last?.TokenBalance.find(v => v.token.id == tokens.quoteToken.id)?.currentVersion;
+        const lastBase = last?.TokenBalance.find(v => v.token.id == tokens.baseToken.id)?.currentVersion;
+        const lastQuote = last?.TokenBalance.find(v => v.token.id == tokens.quoteToken.id)?.currentVersion;
     
-        let lastPeriod = lastBase && lastQuote ? {
+        const lastPeriod = lastBase && lastQuote ? {
             transaction: { time: new Date()},
             KandelPopulateEvent: null,
             KandelRetractEvent: null,
@@ -165,7 +165,7 @@ export class KandelReturnUtils {
         } :null
     
     
-        let periods:period[] = [...events, lastPeriod].reduce((result, current, index ) => {
+        const periods:period[] = [...events, lastPeriod].reduce((result, current, index ) => {
             if(index==0 || !current){
                 return result;
             }

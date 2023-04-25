@@ -37,7 +37,7 @@ type streamLinks = {
 }
 
 async function main() {
-  let streamLinks: streamLinks[] = [];
+  const streamLinks: streamLinks[] = [];
   for (const chain of getChainConfigsOrThrow<ChainConfig>(config)) {
     logger.info(`consuming chain ${chain.id} using following streams ${JSON.stringify(chain.streams)}`);
     const chainId = new ChainId(parseInt( chain.id) );
@@ -84,8 +84,8 @@ async function handleStreamLinks( streamLink: streamLinks){
         factor: retryFactor,
       } ) );
 
-  let promises:Promise<void[]>[] = []
-  let continueStreams = Promise.all(  streamLink.stream.map( ({handler }) => {
+  const promises:Promise<void[]>[] = []
+  const continueStreams = Promise.all(  streamLink.stream.map( ({handler }) => {
     return retry( () => consumeStream( { handler }) )
   }, {
     retries: retries,
@@ -93,7 +93,7 @@ async function handleStreamLinks( streamLink: streamLinks){
   } ) )
   promises.push(continueStreams)
   if(streamLink.then){
-    let thenStreamLinks = Promise.all( streamLink.then.map( (value) => handleStreamLinks(value)) );
+    const thenStreamLinks = Promise.all( streamLink.then.map( (value) => handleStreamLinks(value)) );
     promises.push(thenStreamLinks)
   }
   await Promise.all( promises );

@@ -87,7 +87,7 @@ export class MangroveOrderEventsLogic {
       token: outboundToken,
     });
 
-    let initialVersionFunc = (version: Omit<MangroveOrderVersion, "id" | "mangroveOrderId" | "versionNumber" | "prevVersionId">) => {
+    const initialVersionFunc = (version: Omit<MangroveOrderVersion, "id" | "mangroveOrderId" | "versionNumber" | "prevVersionId">) => {
       version.filled = this.getFilled(e, outboundToken);
       version.cancelled = false;
       version.failed = false;
