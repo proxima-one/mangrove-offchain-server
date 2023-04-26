@@ -815,7 +815,7 @@ view MangroveOrderFill {
   mangroveOrderId String?
   fillsId         String // Either a TakenOfferId or OrderId
   type            String
-  totalFee        String
+  totalFee        Float
   amount          Float
   price           Float?
   txHash          String

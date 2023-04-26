@@ -85,24 +85,37 @@ export class MangroveOrderResolver {
     const mangroveOrders = await ctx.prisma.mangroveOrder.findMany({
       take, skip,
       where: {
-        mangrove: { address: mangrove, chainId: chain },
-        taker: { address: taker },
+        mangrove: { address: { contains: mangrove.toLowerCase(), mode: 'insensitive' }, chainId: chain },
+        taker: { address: { contains: taker.toLowerCase(), mode: 'insensitive' } },
         order: {
           offerListing: {
             inboundToken: {
               OR: [{
-                address: token1
+                address: {
+                  contains: token1.toLowerCase(),
+                  mode: 'insensitive'
+                }
+                
               },
               {
-                address: token2
-              }]
+                address:  {
+                  contains: token2.toLowerCase(),
+                  mode: 'insensitive'
+                }
+              }],
             },
             outboundToken: {
               OR: [{
-                address: token1
+                address:  {
+                  contains: token1.toLowerCase(),
+                  mode: 'insensitive'
+                }
               },
               {
-                address: token2
+                address:  {
+                  contains: token2.toLowerCase(),
+                  mode: 'insensitive'
+                }
               }]
             }
           }
@@ -132,9 +145,9 @@ export class MangroveOrderResolver {
       isFilled: m.currentVersion?.filled ?? false,
       failedReason: m.currentVersion?.failedReason ?? undefined,
       expiryDate: m.currentVersion?.expiryDate.getTime() == new Date(0).getTime() ? undefined : m.currentVersion?.expiryDate,
-      takerGot: m.currentVersion?.takerGotNumber.toString(),
+      takerGot: m.currentVersion?.takerGotNumber,
       date: m.order.tx.time,
-      takerWants: m.takerWantsNumber.toString(),
+      takerWants: m.takerWantsNumber,
     }));
   }
 
@@ -171,23 +184,39 @@ export class MangroveOrderResolver {
     const prismaMangrove = await ctx.prisma.mangrove.findFirst({ where: { address: mangrove, chainId: chain } })
     const fills = await ctx.prisma.mangroveOrderFill.findMany({
       where: {
-        takerId: new AccountId(new ChainId(chain), taker).value,
+        takerId: { 
+          contains: new AccountId(new ChainId(chain), taker).value.toLowerCase(),
+          mode: 'insensitive'
+        },
         mangroveId: prismaMangrove?.id,
           offerListing: {
             inboundToken: {
               OR: [{
-                address: token1
+                address: {
+                  contains: token1.toLowerCase(),
+                  mode: 'insensitive'
+                }
+                
               },
               {
-                address: token2
-              }]
+                address:  {
+                  contains: token2.toLowerCase(),
+                  mode: 'insensitive'
+                }
+              }],
             },
             outboundToken: {
               OR: [{
-                address: token1
+                address:  {
+                  contains: token1.toLowerCase(),
+                  mode: 'insensitive'
+                }
               },
               {
-                address: token2
+                address:  {
+                  contains: token2.toLowerCase(),
+                  mode: 'insensitive'
+                }
               }]
             }
           }
@@ -213,6 +242,7 @@ export class MangroveOrderResolver {
         takerGot: m.amount,
         time: m.time,
         type: m.type,
+        totalPaid: m.amount + m.totalFee
       })
     );
   }

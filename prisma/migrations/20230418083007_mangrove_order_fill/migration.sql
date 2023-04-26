@@ -1,6 +1,7 @@
 CREATE VIEW "MangroveOrderFill" AS
 
 
+
 Select 
 "MangroveOrder"."id" as "mangroveOrderId", 
 "Order"."takerGotNumber" as "amount", 
@@ -12,7 +13,7 @@ Select
 "MangroveOrder"."takerId" as "takerId", 
 "MangroveOrder"."mangroveId" as "mangroveId",
 "MangroveOrder"."offerListingId" as "offerListingId",
-"MangroveOrder"."totalFee" as"totalFee"
+"MangroveOrder"."totalFeeNumber" as"totalFee"
 FROM "MangroveOrder"
 inner Join "Order" on "Order"."id" = "MangroveOrder"."orderId"
 inner join "Transaction" on "Transaction"."id" = "Order"."txId"
@@ -50,7 +51,7 @@ NULL as "mangroveOrderId",
 "Order"."takerId" as "takerId", 
 "Order"."mangroveId" as "mangroveId", 
 "Order"."offerListingId" as "offerListingId", 
-"Order"."totalFee" as "totalFee"
+"Order"."totalFeeNumber" as "totalFee"
 FROM "Order"
 left join "MangroveOrder" on "MangroveOrder"."orderId" = "Order"."id"
 inner join "Transaction" on "Transaction"."id" = "Order"."txId"

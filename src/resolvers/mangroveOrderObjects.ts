@@ -4,7 +4,7 @@ import { Token } from "@generated/type-graphql";
 @ObjectType()
 export class MangroveOrderFillWithTokens {
     constructor(params: {
-        totalFee: string,
+        totalFee: number,
         mangroveOrderId?: string,
         taker: string,
         inboundToken: Token,
@@ -14,6 +14,7 @@ export class MangroveOrderFillWithTokens {
         fillsId: string,
         time: Date,
         takerGot: number,
+        totalPaid: number,
         txHash: string
     }) {
         this.totalFee = params.totalFee;
@@ -27,6 +28,7 @@ export class MangroveOrderFillWithTokens {
         this.time = params.time;
         this.takerGot = params.takerGot;
         this.txHash = params.txHash;
+        this.totalPaid = params.totalPaid;
 
     }
 
@@ -34,9 +36,12 @@ export class MangroveOrderFillWithTokens {
     fillsId: string;
 
     @Field( )
-    totalFee: string;
+    totalFee: number;
 
     @Field( )
+    totalPaid: number;
+
+    @Field( { nullable: true} )
     mangroveOrderId?: string;
 
     @Field( )
@@ -83,8 +88,8 @@ export class MangroveOrderOpenOrder {
         failedReason?: string,
         expiryDate?: Date
         date: Date,
-        takerGot?: string,
-        takerWants: string
+        takerGot?: number,
+        takerWants: number
     }) {
         this.mangroveOrderId = params.mangroveOrderId
         this.isBuy = params.isBuy;
@@ -117,7 +122,7 @@ export class MangroveOrderOpenOrder {
     @Field( )
     isFilled!: boolean;
 
-    @Field( )
+    @Field( { nullable: true} )
     offerId?: string;
 
     @Field( )
@@ -138,19 +143,19 @@ export class MangroveOrderOpenOrder {
     @Field( )
     isOpen!: boolean;
 
-    @Field( )
+    @Field( { nullable: true} )
     failedReason?: string;
 
-    @Field( )
+    @Field( { nullable: true} )
     expiryDate?: Date;
 
     @Field( )
     date!: Date;
 
     @Field( )
-    takerGot?: string;
+    takerGot?: number;
 
     @Field( )
-    takerWants!: string;
+    takerWants!: number;
 
 }

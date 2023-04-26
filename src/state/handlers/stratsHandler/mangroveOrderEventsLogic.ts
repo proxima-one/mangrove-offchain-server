@@ -12,6 +12,7 @@ import {
   OrderId,
   TokenId
 } from "src/state/model";
+import logger from "src/utils/logger";
 
 
 
@@ -30,10 +31,12 @@ export class MangroveOrderEventsLogic {
       inboundToken: string;
     }
   ) {
+
     const stratId = new AccountId(chainId, params.address);
     const mangroveId = await db.mangroveOrderOperations.getMangroveIdByStratId(stratId);
     if (!mangroveId) {
-      throw new Error(`Cannot find match mangroveId, from mangroveOrder address: ${params.address}`);
+      logger.info(`MangroveOrder strat not yet created, address: ${stratId.value}`)
+      return;
     }
     const offerListKey = {
       inboundToken: params.inboundToken,
