@@ -34,11 +34,13 @@ export class PrismaStreamEventHandler<TEventPayload>
         await this.handleParsedEvents(
           events.map((event) => {
             return {
+              offset: event.offset,
               undo: event.undo,
               timestamp: event.timestamp,
               payload: this.deserialize(Buffer.from(event.payload)),
             };
           }),
+          
           tx
         );
 
@@ -66,6 +68,7 @@ export class PrismaStreamEventHandler<TEventPayload>
 }
 
 export type TypedEvent<T> = Readonly<{
+  offset: Offset,
   undo: boolean;
   timestamp: Timestamp;
   payload: T;

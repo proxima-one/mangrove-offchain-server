@@ -20,7 +20,7 @@ import logger from "src/utils/logger";
 
 const retries = parseInt(process.env["CONSUMER_RETRIES"] ?? "100");
 const retryFactor = parseFloat(process.env["CONSUMER_RETRY_FACTOR"] ?? "1.2");
-const batchSize = parseInt(process.env["BATCH_SIZE"] ?? "50");
+const batchSize = parseInt(process.env["BATCH_SIZE"] ?? "200");
 
 const prisma = new PrismaClient();
 const streamClient = new ProximaStreamClient();
@@ -105,7 +105,7 @@ async function consumeStream(params:{handler: StreamEventHandler, toHeight?: big
   const stream = params.handler.getStreamName();
 
   logger.info(
-    `consuming stream ${stream} from offset ${currentOffset.toString()} to ${params.toHeight}`
+    `consuming stream ${stream} from offset ${currentOffset.height.toString()} to ${params.toHeight}`
   );
   let eventStream = await streamClient.streamEvents(stream, currentOffset);
 
@@ -136,11 +136,11 @@ async function consumeStream(params:{handler: StreamEventHandler, toHeight?: big
     }
 
     logger.info(
-      `handled ${stream}: ${events[events.length - 1].offset.toString()}, bufferSize: ${reader.buffer.length}`
+      `handled ${stream}: ${events[events.length - 1].offset.height.toString()}, bufferSize: ${reader.buffer.length}`
     );
   }
 
-  logger.info(`done consuming stream ${stream} from offset ${currentOffset.toString()} to ${params.toHeight}`)
+  logger.info(`done consuming stream ${stream} from offset ${currentOffset.height.toString()} to ${params.toHeight}`)
 }
 
 async function getStreamLastOffset(stream: string): Promise<Offset | undefined> {
