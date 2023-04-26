@@ -2,7 +2,7 @@ import assert from "assert";
 import { describe, it } from "mocha";
 import { MangroveEventHandler } from "src/state/handlers/mangroveHandler/mangroveEventHandler";
 import { TokenEventHandler } from "src/state/handlers/tokensHandler/tokenEventHandler";
-import { IOrderLogicEventHandler } from "src/state/handlers/stratsHandler/stratEventHandler";
+import { IOrderLogicEventHandler } from "src/state/handlers/stratsHandler/mangroveOrderEventHandler";
 
 import { prisma } from "src/utils/test/mochaHooks";
 import * as data from "src/utils/data/data";

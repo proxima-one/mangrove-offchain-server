@@ -1,11 +1,14 @@
 import * as prisma from "@prisma/client";
 import * as _ from "lodash";
 import { AccountId, OfferId, OfferListingId, OfferVersionId } from "src/state/model";
-import { DbOperations, toUpsert } from "./dbOperations";
+import { DbOperations, toNewVersionUpsert } from "./dbOperations";
+import { KandelOperations } from "./kandelOperations";
 
 export class OfferOperations extends DbOperations {
 
-  public async getOffer(id: OfferId): Promise<prisma.Offer | null> {
+  kandelOperations = new KandelOperations(this.tx);
+
+  public async getOffer(id: OfferId){
     return await this.tx.offer.findUnique({ where: { id: id.value } });
   }
 
@@ -19,7 +22,7 @@ export class OfferOperations extends DbOperations {
       makerId:AccountId
     }
   ) {
-    let offer = (await this.getOffer(id));
+    let offer:prisma.Offer|null = (await this.getOffer(id));
     let newVersion:prisma.OfferVersion;
     if (offer === null) {
       if(!initial){
@@ -40,6 +43,8 @@ export class OfferOperations extends DbOperations {
         txId: txId,
         parentOrderId: null,
         prevOfferId: null,
+        kandelPopulateEventId: null,
+        kandelRetractEventId: null,
         deleted: false,
         wants: "0",
         wantsNumber: 0,
@@ -75,11 +80,7 @@ export class OfferOperations extends DbOperations {
 
 
     await this.tx.offer.upsert(
-      toUpsert(
-        _.merge(offer, {
-          currentVersionId: newVersion.id,
-        })
-      )
+      toNewVersionUpsert( offer, newVersion.id )
     );
 
     await this.tx.offerVersion.create({ data: newVersion });
@@ -135,5 +136,13 @@ export class OfferOperations extends DbOperations {
         where: { id: offer.currentVersionId },
       });
     }
+
+    if( version.kandelRetractEventId ) {
+      await this.kandelOperations.deleteRetractEventIfNoReferences(version.kandelRetractEventId)
+    }
+    if( version.kandelPopulateEventId ) {
+      await this.kandelOperations.deletePopulateEventIfNoReferences(version.kandelPopulateEventId)
+    }
+
   }
 }

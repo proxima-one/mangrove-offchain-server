@@ -1,7 +1,7 @@
 import { describe } from "mocha";
 import { AccountId, ChainId, MangroveId, OfferListingId, OrderId, TakenOfferId } from "src/state/model";
 import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
-import { OrderEventLogic } from "src/state/handlers/mangroveHandler/orderEventsLogic";
+import { OrderEventLogic, OrderEventLogicHelper } from "src/state/handlers/mangroveHandler/orderEventsLogic";
 import assert from "assert";
 
 
@@ -15,7 +15,7 @@ describe("Order Events Logic Unit Test Suite", () => {
     const orderId = new OrderId(mangroveId, offerListKey, "proximaId" );
     const parantOrderId = new OrderId(mangroveId, offerListKey, "parantOrder" );
 
-    const orderEventsLogic = new OrderEventLogic();
+    const orderEventsLogic = new OrderEventLogicHelper();
 
     describe("createOrder", () => {
 
@@ -100,7 +100,8 @@ describe("Order Events Logic Unit Test Suite", () => {
                 takerGives: "50"
             }
 
-            const takenOfferToCreate = await orderEventsLogic.mapTakenOffer(orderId, takenOffer, tokens, (o) => { return new Promise( (resolve, reject) => { resolve( { currentVersionId:"10"})} ); });
+            const takenOfferToCreateWithEvents = await orderEventsLogic.mapTakenOffer(orderId, takenOffer, tokens, (o) => { return new Promise( (resolve, reject) => { resolve( { currentVersionId:"10"})} ); });
+            const takenOfferToCreate = takenOfferToCreateWithEvents.takenOffer
 
             assert.deepStrictEqual( takenOfferToCreate, {
                 id: new TakenOfferId(orderId, takenOffer.id).value,
@@ -127,7 +128,8 @@ describe("Order Events Logic Unit Test Suite", () => {
                 posthookFailed: true
             }
 
-            const takenOfferToCreate = await orderEventsLogic.mapTakenOffer(orderId, takenOffer, tokens, (o) => { return new Promise( (resolve, reject) => { resolve( { currentVersionId:"10"})} ); });
+            const takenOfferToCreateWithEvents = await orderEventsLogic.mapTakenOffer(orderId, takenOffer, tokens, (o) => { return new Promise( (resolve, reject) => { resolve( { currentVersionId:"10"})} ); });
+            const takenOfferToCreate = takenOfferToCreateWithEvents.takenOffer
 
             assert.deepStrictEqual( takenOfferToCreate, {
                 id: new TakenOfferId(orderId, takenOffer.id).value,

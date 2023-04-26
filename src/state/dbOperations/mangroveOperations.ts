@@ -1,7 +1,7 @@
 import * as prisma from "@prisma/client";
 import _ from "lodash";
 import { MangroveId, MangroveVersionId } from "src/state/model";
-import { DbOperations, toUpsert } from "./dbOperations";
+import { DbOperations, toNewVersionUpsert } from "./dbOperations";
 
 export class MangroveOperations extends DbOperations {
 
@@ -65,11 +65,7 @@ export class MangroveOperations extends DbOperations {
     }
 
     await this.tx.mangrove.upsert(
-      toUpsert(
-        _.merge(mangrove, {
-          currentVersionId: newVersion.id,
-        })
-      )
+      toNewVersionUpsert( mangrove, newVersion.id )
     );
 
     await this.tx.mangroveVersion.create({ data: newVersion });

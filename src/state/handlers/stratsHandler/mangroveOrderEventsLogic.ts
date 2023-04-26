@@ -1,8 +1,7 @@
 import { MangroveOrderVersion, TakenOffer, Transaction } from ".prisma/client";
-import { Timestamp } from "@proximaone/stream-client-js";
 import { OrderSummary } from "@proximaone/stream-schema-mangrove/dist/strategyEvents";
 import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
-import { addNumberStrings, getNumber, getPrice } from "src/state/handlers/handlerUtils";
+import { addNumberStrings, fromBigNumber, getPrice } from "src/utils/numberUtils";
 import {
   AccountId,
   ChainId,
@@ -11,9 +10,9 @@ import {
   OfferId,
   OfferListingId,
   OrderId,
-  StratId,
   TokenId
 } from "src/state/model";
+import logger from "src/utils/logger";
 
 
 
@@ -32,10 +31,12 @@ export class MangroveOrderEventsLogic {
       inboundToken: string;
     }
   ) {
-    const stratId = new StratId(chainId, params.address);
+
+    const stratId = new AccountId(chainId, params.address);
     const mangroveId = await db.mangroveOrderOperations.getMangroveIdByStratId(stratId);
     if (!mangroveId) {
-      throw new Error(`Cannot find match mangroveId, from mangroveOrder address: ${params.address}`);
+      logger.info(`MangroveOrder strat not yet created, address: ${stratId.value}`)
+      return;
     }
     const offerListKey = {
       inboundToken: params.inboundToken,
@@ -43,7 +44,7 @@ export class MangroveOrderEventsLogic {
     };
     const offerId = new OfferId(mangroveId, offerListKey, params.offerId);
 
-    db.mangroveOrderOperations.addMangroveOrderVersionFromOfferId(
+    await db.mangroveOrderOperations.addMangroveOrderVersionFromOfferId(
       offerId,
       txId,
       (m) => (m.expiryDate = new Date(params.date))
@@ -80,16 +81,16 @@ export class MangroveOrderEventsLogic {
     const { outboundToken, inboundToken } = await db.offerListOperations.getOfferListTokens({
       id: offerListingId
     });
-    const takerGaveNumber = getNumber({
+    const takerGaveNumber = fromBigNumber({
       value: e.takerGave,
       token: inboundToken,
     });
-    const takerGotNumber = getNumber({
+    const takerGotNumber = fromBigNumber({
       value: e.takerGot,
       token: outboundToken,
     });
 
-    let initialVersionFunc = (version: Omit<MangroveOrderVersion, "id" | "mangroveOrderId" | "versionNumber" | "prevVersionId">) => {
+    const initialVersionFunc = (version: Omit<MangroveOrderVersion, "id" | "mangroveOrderId" | "versionNumber" | "prevVersionId">) => {
       version.filled = this.getFilled(e, outboundToken);
       version.cancelled = false;
       version.failed = false;
@@ -107,24 +108,24 @@ export class MangroveOrderEventsLogic {
     await db.mangroveOrderOperations.addMangroveOrderVersion(mangroveOrderId, transaction.id, initialVersionFunc, {
       orderId: new OrderId(mangroveId, offerList, e.orderId).value,
       takerId: new AccountId(chainId, e.taker).value,
-      stratId: new StratId(chainId, e.address).value,
+      stratId: new AccountId(chainId, e.address).value,
       fillOrKill: e.fillOrKill.valueOf(),
       fillWants: e.fillWants.valueOf(),
       restingOrder: e.restingOrder.valueOf(),
       takerWants: e.takerWants,
-      takerWantsNumber: getNumber({
+      takerWantsNumber: fromBigNumber({
         value: e.takerWants,
         token: outboundToken,
       }),
       takerGives: e.takerGives,
-      takerGivesNumber: getNumber({
+      takerGivesNumber: fromBigNumber({
         value: e.takerGives,
         token: inboundToken,
       }),
       bounty: e.bounty,
-      bountyNumber: getNumber({ value: e.bounty, decimals: 18 }),
+      bountyNumber: fromBigNumber({ value: e.bounty, decimals: 18 }),
       totalFee: e.fee,
-      totalFeeNumber: getNumber({ value: e.fee, token: outboundToken }),
+      totalFeeNumber: fromBigNumber({ value: e.fee, token: outboundToken }),
       restingOrderId: e.restingOrderId != 0 ? new OfferId(mangroveId, offerList, e.restingOrderId).value : null,
     });
 
@@ -149,7 +150,7 @@ export class MangroveOrderEventsLogic {
       value2: takenOffer.takerGave,
       token: tokens.inboundToken,
     });
-    newVersion.takerGaveNumber = getNumber({
+    newVersion.takerGaveNumber = fromBigNumber({
       value: newVersion.takerGave,
       token: tokens.inboundToken,
     });
@@ -158,7 +159,7 @@ export class MangroveOrderEventsLogic {
       value2: takenOffer.takerGot,
       token: tokens.outboundToken,
     });
-    newVersion.takerGotNumber = getNumber({
+    newVersion.takerGotNumber = fromBigNumber({
       value: newVersion.takerGot,
       token: tokens.inboundToken,
     });
@@ -182,8 +183,8 @@ export class MangroveOrderEventsLogic {
   }
   getOfferListFromOrderSummary(e:{ fillWants: boolean, outboundToken: string, inboundToken: string }) {
     return {
-      outboundToken: e.fillWants ? e.outboundToken : e.inboundToken,
-      inboundToken: e.fillWants ? e.inboundToken : e.outboundToken,
+      outboundToken: e.outboundToken,
+      inboundToken: e.inboundToken,
     };
   }
 

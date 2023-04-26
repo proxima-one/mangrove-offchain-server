@@ -2,14 +2,14 @@ import * as prisma from "@prisma/client";
 import { MangroveOrder } from "@prisma/client";
 import * as _ from "lodash";
 import {
+  AccountId,
   MangroveId,
   MangroveOrderId,
   MangroveOrderVersionId,
   OfferId,
   OfferListingId,
-  StratId
 } from "src/state/model";
-import { DbOperations, PrismaTx, toUpsert } from "./dbOperations";
+import { DbOperations, PrismaTx, toNewVersionUpsert } from "./dbOperations";
 import { OfferListingOperations } from "./offerListingOperations";
 
 export type MangroveOrderIds = {
@@ -125,7 +125,7 @@ export class MangroveOrderOperations extends DbOperations {
       }
     } else {
 
-      let oldVersion = await this.getCurrentMangroveOrderVersion(mangroveOrder);
+      const oldVersion = await this.getCurrentMangroveOrderVersion(mangroveOrder);
       const newVersionNumber =
         oldVersion === null ? 0 : oldVersion.versionNumber + 1;
       const newVersionId = new MangroveOrderVersionId({
@@ -142,11 +142,7 @@ export class MangroveOrderOperations extends DbOperations {
     }
     updateFunc(newVersion);
     await this.tx.mangroveOrder.upsert(
-      toUpsert(
-        _.merge(mangroveOrder, {
-          currentVersionId: newVersion.id,
-        })
-      )
+      toNewVersionUpsert(mangroveOrder, newVersion.id )
     );
     await this.tx.mangroveOrderVersion.create({ data: newVersion });
   }
@@ -225,7 +221,7 @@ export class MangroveOrderOperations extends DbOperations {
   }
 
 
-  public async getMangroveIdByStratId(stratId:StratId){
+  public async getMangroveIdByStratId(stratId:AccountId){
     const mangroveOrder = await this.tx.mangroveOrder.findFirst({where: {stratId: stratId.value}});
     if( mangroveOrder){
       return new MangroveId(stratId.chainId, mangroveOrder.mangroveId);

@@ -1,4 +1,4 @@
-import { DbOperations, toUpsert } from "./dbOperations";
+import { DbOperations, toNewVersionUpsert } from "./dbOperations";
 import * as _ from "lodash";
 import * as prisma from "@prisma/client";
 import {
@@ -49,13 +49,15 @@ export class MakerBalanceOperations extends DbOperations {
 
     updateFunc(newVersion);
 
-    await this.tx.makerBalance.upsert(
-      toUpsert(
-        _.merge(makerBalance, {
-          currentVersionId: newVersion.id,
-        })
-      )
-    );
+    await this.tx.makerBalance.upsert({
+      where: { id: makerBalance.id},
+      update: {
+        currentVersionId: {
+          set: newVersion.id
+      } 
+    },
+      create: {...makerBalance}
+    });
 
     await this.tx.makerBalanceVersion.create({ data: newVersion });
   }

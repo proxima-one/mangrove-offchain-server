@@ -13,7 +13,7 @@ import {
   OfferListKey,
   OrderId,
 } from "src/state/model";
-import { getBigNumber, getPrice } from "src/state/handlers/handlerUtils";
+import { getFromBigNumber, getPrice } from "src/utils/numberUtils";
 
 export class OfferEventsLogic {
   async handleOfferRetracted(
@@ -82,8 +82,9 @@ export class OfferEventsLogic {
     tokens: { inboundToken: {address:string, decimals: number}, outboundToken: {address:string, decimals: number} },
     txId: string,
     parentOrderId?: OrderId) {
-    const givesBigNumber = getBigNumber({ value: offer.gives, token: tokens.outboundToken });
-    const wantsBigNumber = getBigNumber({ value: offer.wants, token: tokens.inboundToken });
+      
+    const givesBigNumber = getFromBigNumber({ value: offer.gives, token: tokens.outboundToken });
+    const wantsBigNumber = getFromBigNumber({ value: offer.wants, token: tokens.inboundToken });
     offerVersion.txId = txId;
     offerVersion.parentOrderId = parentOrderId?.value ?? null;
     offerVersion.deleted = false;

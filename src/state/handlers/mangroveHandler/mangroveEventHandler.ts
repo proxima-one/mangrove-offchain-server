@@ -6,7 +6,7 @@ import {
   PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
-} from "src/common";
+} from "src/utils/common";
 import { allDbOperations } from "src/state/dbOperations/allDbOperations";
 import {
   ChainId,
@@ -29,13 +29,14 @@ export class MangroveEventHandler extends PrismaStreamEventHandler<mangroveSchem
   }
   mangroveEventsLogic = new MangroveEventsLogic();
   offerEventsLogic = new OfferEventsLogic();
-  orderEventLogic = new OrderEventLogic();
+  
   
   protected async handleParsedEvents(
     events: TypedEvent<mangroveSchema.events.MangroveEvent>[],
     tx: PrismaTransaction
   ): Promise<void> {
     const allDbOperation = allDbOperations(tx);
+    const orderEventLogic = new OrderEventLogic(allDbOperation);
     for (const event of events) {
       const { payload, undo, timestamp } = event;
       const mangroveId = new MangroveId(this.chainId, payload.mangroveId!);
@@ -132,7 +133,7 @@ export class MangroveEventHandler extends PrismaStreamEventHandler<mangroveSchem
             allDbOperation
           ),
         OrderCompleted: async ({ id, order, offerList }) =>
-          await this.orderEventLogic.handleOrderCompleted(
+          await orderEventLogic.handleOrderCompleted(
             txRef,
             order,
             offerList,
@@ -141,7 +142,6 @@ export class MangroveEventHandler extends PrismaStreamEventHandler<mangroveSchem
             mangroveId,
             this.chainId,
             transaction,
-            allDbOperation,
             parentOrderId,
           ),
       })(payload);

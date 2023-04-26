@@ -1,4 +1,4 @@
-import { MangroveOrder } from "@prisma/client";
+import { Account, Kandel, MangroveOrder, TokenBalance } from "@prisma/client";
 
 export class Id<T extends string | number> {
   public readonly value:T
@@ -13,15 +13,6 @@ export class AccountId extends Id<string> {
     public readonly address: string
   ) {
     super(`${chainId.chainlistId}-${address}`);
-  }
-}
-
-export class StratId extends AccountId {
-  public constructor(
-    public readonly chainId: ChainId,
-    public readonly address: string
-  ) {
-    super(chainId, address);
   }
 }
 
@@ -208,6 +199,72 @@ export class MangroveOrderVersionId extends Id<string> {
       "mangroveOrderId" in params
         ? `${params.mangroveOrderId.value}-${params.versionNumber}`
         : `${params.mangroveOrder.id}-${params.versionNumber}`
+    );
+  }
+}
+
+export class TokenBalanceId extends Id<string> {
+  public constructor(
+    public readonly params: (
+      | {
+        accountId: AccountId;
+      }
+      | { account: Account }
+    ) & {
+      tokenId: TokenId;
+    }
+  ) {
+    super(
+      "accountId" in params
+        ? `${params.accountId.value}-${params.tokenId.value}`
+        : `${params.account.id}-${params.tokenId.value}`
+    );
+  }
+}
+
+export class TokenBalanceVersionId extends Id<string> {
+  public constructor(
+    public readonly params: (
+      | {
+        tokenBalanceId: TokenBalanceId;
+      }
+      | { tokenBalance: TokenBalance }
+    ) & {
+      versionNumber: number;
+    }
+  ) {
+    super(
+      "tokenBalanceId" in params
+        ? `${params.tokenBalanceId.value}-${params.versionNumber}`
+        : `${params.tokenBalance.id}-${params.versionNumber}`
+    );
+  }
+}
+
+export class KandelId extends AccountId {
+  public constructor(
+    public readonly chainId: ChainId,
+    public readonly address: string
+  ) {
+    super(chainId, address);
+  }
+}
+
+export class KandelVersionId extends Id<string> {
+  public constructor(
+    public readonly params: (
+      | {
+        kandelId: KandelId;
+      }
+      | { kandel: Kandel }
+    ) & {
+      versionNumber: number;
+    }
+  ) {
+    super(
+      "kandelId" in params
+        ? `${params.kandelId.value}-${params.versionNumber}`
+        : `${params.kandel.id}-${params.versionNumber}`
     );
   }
 }

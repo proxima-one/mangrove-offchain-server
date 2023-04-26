@@ -1,12 +1,11 @@
-import { Order, TakenOffer } from "@prisma/client";
+import { OfferVersion, Order, TakenOffer } from "@prisma/client";
 import assert from "assert";
 import { describe, it } from "mocha";
 import { MangroveOrderOperations } from "src/state/dbOperations/mangroveOrderOperations";
-import { OrderOperations } from "src/state/dbOperations/orderOperations";
-import { AccountId, ChainId, MangroveId, MangroveOrderId, MangroveOrderVersionId, OfferId, OfferListingId, OfferListingVersionId, OfferVersionId, OrderId, StratId, TakenOfferId, TokenId } from "src/state/model";
-import { prisma } from "utils/test/mochaHooks";
-import { OfferListParams } from "@proximaone/stream-schema-mangrove/dist/core";
 import { OfferOperations } from "src/state/dbOperations/offerOperations";
+import { OrderOperations } from "src/state/dbOperations/orderOperations";
+import { AccountId, ChainId, MangroveId, MangroveOrderId, OfferId, OfferListingId, OfferListingVersionId, OfferVersionId, OrderId, TakenOfferId, TokenId } from "src/state/model";
+import { prisma } from "utils/test/mochaHooks";
 
 describe("Order Operations Integration test Suite", () => {
 
@@ -39,6 +38,10 @@ describe("Order Operations Integration test Suite", () => {
     const takenOfferId1 = new TakenOfferId(orderId, 1);
     const makerId = new AccountId(chainId, "makerAddress");
     const mangroveOrderId = new MangroveOrderId(mangroveId, offerListKey, "mangroveOrderId" );
+    let offer0Version0: OfferVersion;
+    let offer0Version1: OfferVersion;
+    let offer1Version0: OfferVersion;
+    let offer1Version1: OfferVersion;
 
     beforeEach(async () => {
 
@@ -91,7 +94,7 @@ describe("Order Operations Integration test Suite", () => {
             }
         })
 
-        await prisma.offerVersion.create({
+        offer0Version0 =  await prisma.offerVersion.create({
             data: {
                 id: offer0VersionId0.value,
                 offerId: offerId0.value,
@@ -108,7 +111,7 @@ describe("Order Operations Integration test Suite", () => {
                 versionNumber: 0
             }
         });
-        await prisma.offerVersion.create({
+        offer0Version1 = await prisma.offerVersion.create({
             data: {
                 id: offer0VersionId1.value,
                 offerId: offerId0.value,
@@ -127,7 +130,7 @@ describe("Order Operations Integration test Suite", () => {
             }
         });
 
-        await prisma.offerVersion.create({
+        offer1Version0 = await prisma.offerVersion.create({
             data: {
                 id: offer1VersionId0.value,
                 offerId: offerId1.value,
@@ -146,7 +149,7 @@ describe("Order Operations Integration test Suite", () => {
             }
         });
 
-        await prisma.offerVersion.create({
+        offer1Version1 = await prisma.offerVersion.create({
             data: {
                 id: offer1VersionId1.value,
                 offerId: offerId1.value,
@@ -209,7 +212,7 @@ describe("Order Operations Integration test Suite", () => {
         })
 
         await mangroveOrderOperations.addMangroveOrderVersion( mangroveOrderId, "txId", (m) => m , {
-            stratId: new StratId(chainId, "mangroveOrder").value,
+            stratId: new AccountId(chainId, "mangroveOrder").value,
             orderId: new OrderId(mangroveId, offerListKey, "proximaId").value,
             takerId: takerId.value,
             restingOrderId: offerId0.value,
@@ -246,7 +249,7 @@ describe("Order Operations Integration test Suite", () => {
 
     describe("createOrder", () => {
 
-        it("Creates order, takenOffers, offerVersios and mangroveOrderVersion", async () => {
+        it("Creates order, takenOffers, offerVersions and mangroveOrderVersion", async () => {
             const newOrderId = new OrderId( mangroveId, offerListKey, "2")
             const newOrder:Order = {
                 id: newOrderId.value,
@@ -256,16 +259,6 @@ describe("Order Operations Integration test Suite", () => {
                 offerListingId: offerListingId.value,
                 mangroveId: mangroveId.value,
                 takerId: takerId.value,
-                // takerWants: order.takerWants,
-                // takerWantsNumber: getNumber({
-                //   value: order.takerWants,
-                //   token: outboundToken,
-                // }),
-                // takerGives: order.takerGives,
-                // takerGivesNumber: getNumber({
-                //   value: order.takerGives,
-                //   token: inboundToken,
-                // }),
                 takerGot: "100",
                 takerGotNumber: 100,
                 takerGave: "50",
@@ -277,71 +270,53 @@ describe("Order Operations Integration test Suite", () => {
                 totalFee: "1",
                 totalFeeNumber: 1,
               };
-            const offerId2 = new OfferId(mangroveId, offerListKey, 2);
-            await offerOperations.addVersionedOffer( offerId2, "txId", (o) => {}, { makerId: makerId})
-            const offerId3 = new OfferId(mangroveId, offerListKey, 3);
-            await offerOperations.addVersionedOffer( offerId3, "txId", (o) => {}, { makerId: makerId})
             
-            const takenOffers:Omit<TakenOffer, "orderId">[] =[{
+            const takenOffer0 = {
                 id: new TakenOfferId(newOrderId, offerId0.offerNumber).value,
-                offerVersionId: new OfferVersionId(offerId2, 0).value,
+                offerVersionId: new OfferVersionId(offerId0, 1).value,
                 takerGot: "50",
                 takerGotNumber: 50,
                 takerGave: "25",
                 takerGaveNumber: 25,
                 takerPaidPrice: 0.5,
                 makerPaidPrice: 2,
-                failReason: "failReasn",
-                posthookData: "posthookData" ,
-                posthookFailed: true,
-              },
+                failReason: "",
+                posthookData: "" ,
+                posthookFailed: false,
+              }
+
+            const takenOffers:Omit<TakenOffer, "orderId">[] =[ takenOffer0,
               {
                 id: new TakenOfferId(newOrderId, offerId1.offerNumber).value,
-                offerVersionId: new OfferVersionId( offerId3, 0).value, 
+                offerVersionId: new OfferVersionId( offerId1, 1).value, 
                 takerGot: "50",
                 takerGotNumber: 50,
                 takerGave: "25",
                 takerGaveNumber: 25,
                 takerPaidPrice: 0.5,
                 makerPaidPrice: 2,
-                failReason: "failReasn",
+                failReason: "failReason",
                 posthookData: "posthookData" ,
                 posthookFailed: true,
               }
             ]
             
-            await mangroveOrderOperations.addMangroveOrderVersion( new MangroveOrderId(mangroveId, offerListKey, "2"), "txId", (m) => m , {
-                stratId: new StratId(chainId, "mangroveOrder").value,
-                orderId: new OrderId(mangroveId, offerListKey, "proximaId").value,
-                takerId: takerId.value,
-                restingOrderId: offerId2.value,
-                restingOrder: true,
-                fillOrKill: false,
-                fillWants: true,
-                takerWants: "100",
-                takerWantsNumber: 100,
-                takerGives: "50",
-                takerGivesNumber: 50,
-                bounty: "0",
-                bountyNumber:0,
-                totalFee: "1",
-                totalFeeNumber: 1
-            });
+
             assert.strictEqual( await prisma.order.count(), 1)
             assert.strictEqual( await prisma.account.count(), 0)
             assert.strictEqual( await prisma.takenOffer.count(), 2)
-            assert.strictEqual( await prisma.mangroveOrder.count(), 2)
-            assert.strictEqual( await prisma.mangroveOrderVersion.count(), 2)
-            assert.strictEqual( await prisma.offer.count(), 4)
-            assert.strictEqual( await prisma.offerVersion.count(), 6)
+            assert.strictEqual( await prisma.mangroveOrder.count(), 1)
+            assert.strictEqual( await prisma.mangroveOrderVersion.count(), 1)
+            assert.strictEqual( await prisma.offer.count(), 2)
+            assert.strictEqual( await prisma.offerVersion.count(), 4)
             await orderOperations.createOrder( newOrderId, newOrder, takenOffers);
             assert.strictEqual( await prisma.order.count(), 2)
             assert.strictEqual( await prisma.takenOffer.count(), 4)
-            assert.strictEqual( await prisma.mangroveOrder.count(), 2)
-            assert.strictEqual( await prisma.mangroveOrderVersion.count(), 3)
-            assert.strictEqual( await prisma.offer.count(), 4)
-            assert.strictEqual( await prisma.offerVersion.count(), 8)
-    
+            assert.strictEqual( await prisma.mangroveOrder.count(), 1)
+            assert.strictEqual( await prisma.mangroveOrderVersion.count(), 2)
+            assert.strictEqual( await prisma.offer.count(), 2)
+            assert.strictEqual( await prisma.offerVersion.count(), 6)
+
         })
 
         it("OfferVersion doesnt exist", async () => {
@@ -354,16 +329,6 @@ describe("Order Operations Integration test Suite", () => {
                 offerListingId: offerListingId.value,
                 mangroveId: mangroveId.value,
                 takerId: takerId.value,
-                // takerWants: order.takerWants,
-                // takerWantsNumber: getNumber({
-                //   value: order.takerWants,
-                //   token: outboundToken,
-                // }),
-                // takerGives: order.takerGives,
-                // takerGivesNumber: getNumber({
-                //   value: order.takerGives,
-                //   token: inboundToken,
-                // }),
                 takerGot: "100",
                 takerGotNumber: 100,
                 takerGave: "50",
@@ -406,16 +371,6 @@ describe("Order Operations Integration test Suite", () => {
                 offerListingId: offerListingId.value,
                 mangroveId: mangroveId.value,
                 takerId: takerId.value,
-                // takerWants: order.takerWants,
-                // takerWantsNumber: getNumber({
-                //   value: order.takerWants,
-                //   token: outboundToken,
-                // }),
-                // takerGives: order.takerGives,
-                // takerGivesNumber: getNumber({
-                //   value: order.takerGives,
-                //   token: inboundToken,
-                // }),
                 takerGot: "100",
                 takerGotNumber: 100,
                 takerGave: "50",
@@ -458,16 +413,6 @@ describe("Order Operations Integration test Suite", () => {
                 offerListingId: offerListingId.value,
                 mangroveId: mangroveId.value,
                 takerId: takerId.value,
-                // takerWants: order.takerWants,
-                // takerWantsNumber: getNumber({
-                //   value: order.takerWants,
-                //   token: outboundToken,
-                // }),
-                // takerGives: order.takerGives,
-                // takerGivesNumber: getNumber({
-                //   value: order.takerGives,
-                //   token: inboundToken,
-                // }),
                 takerGot: "100",
                 takerGotNumber: 100,
                 takerGave: "50",
@@ -480,7 +425,7 @@ describe("Order Operations Integration test Suite", () => {
                 totalFeeNumber: 1,
               };
             const offerId2 = new OfferId(mangroveId, offerListKey, 2);
-            await offerOperations.addVersionedOffer( offerId2, "txId", (o) => {}, { makerId: makerId})
+            await offerOperations.addVersionedOffer( offerId2, "txId", () => {}, { makerId: makerId})
             await offerOperations.addVersionedOffer( offerId2, "txId", (o) => o.deleted=true, { makerId: makerId}) // creates new version,
             
             const takenOffers:Omit<TakenOffer, "orderId">[] =[{

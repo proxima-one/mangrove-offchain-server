@@ -5,7 +5,7 @@ import {
   TakerApprovalId,
   TakerApprovalVersionId,
 } from "src/state/model";
-import { DbOperations, toUpsert } from "./dbOperations";
+import { DbOperations, toNewVersionUpsert } from "./dbOperations";
 import * as _ from "lodash";
 import * as prisma from "@prisma/client";
 
@@ -65,11 +65,7 @@ export class TakerApprovalOperations extends DbOperations {
     updateFunc(newVersion);
 
     await this.tx.takerApproval.upsert(
-      toUpsert(
-        _.merge(takerApproval, {
-          currentVersionId: newVersion.id,
-        })
-      )
+      toNewVersionUpsert( takerApproval,  newVersion.id )
     );
 
     await this.tx.takerApprovalVersion.create({ data: newVersion });

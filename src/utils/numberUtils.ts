@@ -1,6 +1,6 @@
 import BigNumber from "bignumber.js";
 
-export function getBigNumber(
+export function getFromBigNumber(
   params: { value: string } & (
     | { token: { decimals: number } }
     | { decimals: number }
@@ -11,13 +11,31 @@ export function getBigNumber(
   );
 }
 
-export function getNumber(
+export function getToBigNumber(
   params: { value: string } & (
     | { token: { decimals: number } }
     | { decimals: number }
   )
 ) {
-  return getBigNumber(params).toNumber();
+  return new BigNumber(params.value).shiftedBy(
+    "token" in params ? params.token.decimals : params.decimals
+  );
+}
+
+export function toBigNumber(  params: { value: string } & (
+  | { token: { decimals: number } }
+  | { decimals: number }
+)) {
+  return getToBigNumber(params).toNumber();
+}
+
+export function fromBigNumber(
+  params: { value: string } & (
+    | { token: { decimals: number } }
+    | { decimals: number }
+  )
+) {
+  return getFromBigNumber(params).toNumber();
 }
 export function getPrice(params:{over: number, under: number} | { over:BigNumber, under: BigNumber}) {
   if( typeof params.under === "number" && typeof params.over === "number" ) {
@@ -38,12 +56,12 @@ export function addNumberStrings(
   )
 ) {
   if ("token" in params) {
-    return getBigNumber({ value: params.value1, token: params.token })
-      .plus(getBigNumber({ value: params.value2, token: params.token }))
+    return getFromBigNumber({ value: params.value1, token: params.token })
+      .plus(getFromBigNumber({ value: params.value2, token: params.token }))
       .toFixed();
   }
-  return getBigNumber({ value: params.value1, decimals: params.decimals })
-    .plus(getBigNumber({ value: params.value2, decimals: params.decimals }))
+  return getFromBigNumber({ value: params.value1, decimals: params.decimals })
+    .plus(getFromBigNumber({ value: params.value2, decimals: params.decimals }))
     .toFixed();
 }
 
@@ -54,11 +72,11 @@ export function subtractNumberStrings(
   )
 ) {
   if ("token" in params) {
-    return getBigNumber({ value: params.value1, token: params.token })
-      .minus(getBigNumber({ value: params.value2, token: params.token }))
+    return getFromBigNumber({ value: params.value1, token: params.token })
+      .minus(getFromBigNumber({ value: params.value2, token: params.token }))
       .toFixed();
   }
-  return getBigNumber({ value: params.value1, decimals: params.decimals })
-    .minus(getBigNumber({ value: params.value2, decimals: params.decimals }))
+  return getFromBigNumber({ value: params.value1, decimals: params.decimals })
+    .minus(getFromBigNumber({ value: params.value2, decimals: params.decimals }))
     .toFixed();
 }

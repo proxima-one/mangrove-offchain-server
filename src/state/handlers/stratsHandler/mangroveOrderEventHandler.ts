@@ -6,7 +6,7 @@ import {
   PrismaStreamEventHandler,
   PrismaTransaction,
   TypedEvent,
-} from "src/common";
+} from "src/utils/common";
 import {
   ChainId,
   TransactionId
@@ -51,10 +51,10 @@ export class IOrderLogicEventHandler extends PrismaStreamEventHandler<mangroveSc
         LogIncident: async (e) => {},
         NewOwnedOffer: async (e) => {},
         OrderSummary: async (e) => {
-          await this.mangroveOrderEventsLogic.handleOrderSummary(allDbOperation, chainId, e, undo, transaction)
+            await this.mangroveOrderEventsLogic.handleOrderSummary(allDbOperation, chainId, e, undo, transaction)
         },
         SetExpiry: async (e) => {
-          await this.mangroveOrderEventsLogic.handleSetExpiry(allDbOperation, chainId, transaction.id, e )
+            await this.mangroveOrderEventsLogic.handleSetExpiry(allDbOperation, chainId, transaction.id, e )
         }
       })(payload);
     }

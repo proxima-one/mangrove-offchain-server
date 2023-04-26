@@ -13,7 +13,6 @@ import {
   OfferListKey,
   OfferListingVersionId,
   OrderId,
-  StratId,
   TokenId
 } from "src/state/model";
 import { prisma } from "utils/test/mochaHooks";
@@ -40,7 +39,7 @@ describe("Mangrove Order Operations Integration test suite", () => {
     offerListKey,
     "mangroveOrderId",
   );
-  const stratId = new StratId(chainId, "stratId");
+  const stratId = new AccountId(chainId, "stratId");
   const mangroveOrderVersionId = new MangroveOrderVersionId({
     mangroveOrderId: mangroveOrderId,
     versionNumber: 0,
@@ -284,7 +283,8 @@ describe("Mangrove Order Operations Integration test suite", () => {
       const mangroveOrderId2 = new MangroveOrderId(mangroveId, offerListKey, "mangroveOrder2");
       assert.strictEqual(await prisma.mangroveOrder.count(), 1);
       assert.strictEqual(await prisma.mangroveOrderVersion.count(), 1);
-      await mangroveOrderOperations.addMangroveOrderVersion(mangroveOrderId2, "txId", (m) => m, mangroveOrder);
+      const orderId2 = new OrderId(mangroveId, offerListKey, "order2");
+      await mangroveOrderOperations.addMangroveOrderVersion(mangroveOrderId2, "txId", (m) => m, {...mangroveOrder, orderId: orderId2.value });
       const newMangroveOrder = await prisma.mangroveOrder.findUnique({
         where: { id: mangroveOrderId2.value },
       });
@@ -297,6 +297,7 @@ describe("Mangrove Order Operations Integration test suite", () => {
       assert.deepStrictEqual(newMangroveOrder, {
         ...mangroveOrder,
         id: mangroveOrderId2.value, 
+        orderId: orderId2.value,
         mangroveId: mangroveOrderId2.mangroveId.value, 
         currentVersionId: newVersionId.value, 
         proximaId: mangroveOrderId2.proximaId, 
@@ -479,7 +480,7 @@ describe("Mangrove Order Operations Integration test suite", () => {
       assert.strictEqual((await mangroveOrderOperations.getMangroveIdByStratId(stratId))?.value, mangroveId.value);
     })
     it("does not find MangroveOrder", async () => {
-      assert.strictEqual(await mangroveOrderOperations.getMangroveIdByStratId(new StratId(chainId, "noMatch")), null);
+      assert.strictEqual(await mangroveOrderOperations.getMangroveIdByStratId(new AccountId(chainId, "noMatch")), null);
     })
   })
 

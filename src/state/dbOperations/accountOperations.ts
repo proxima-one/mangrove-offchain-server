@@ -11,8 +11,17 @@ export class AccountOperations extends DbOperations {
         chainId: id.chainId.value,
         address: id.address,
       };
-      await this.tx.account.create({ data: account });
+      return await this.tx.account.create({ data: account });
     }
     return account;
   }
+
+  async deleteAccount(id:AccountId){
+    await this.tx.account.delete({where: {id: id.value}});
+  }
+
+  async getAccount(id:AccountId|string){
+    return this.tx.account.findUnique({ where:{ id: typeof id === "string" ? id : id.value}})
+  }
+
 }
