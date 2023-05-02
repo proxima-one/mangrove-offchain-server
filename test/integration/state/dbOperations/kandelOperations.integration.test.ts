@@ -215,7 +215,7 @@ describe("Kandel Operations Integration test suite", () => {
     } )
 
     it("Brand new Kandel, but no Reserve Id when creating an AaveKandel", async () => {
-      await assert.rejects( kandelOperations.addVersionedKandel( { id: new KandelId(chainId, "newKandel"), txId: "txId2", constParams: { mangroveId: mangroveId, base: baseId, quote: quoteId, type: "AaveKandel" }}) )
+      await assert.rejects( kandelOperations.addVersionedKandel( { id: new KandelId(chainId, "newKandel"), txId: "txId2", constParams: { mangroveId: mangroveId, base: baseId, quote: quoteId, type: "NewAaveKandel" }}) )
     })
 
     it("Brand new Kandel, no Reserve Id when creating an normal Kandel", async () => {
@@ -224,7 +224,7 @@ describe("Kandel Operations Integration test suite", () => {
       assert.strictEqual(await prisma.account.count(), 2);
       const newKandelId = new KandelId(chainId, "newKandel");
       const newKandelVersionId = new KandelVersionId({kandelId:newKandelId, versionNumber: 0});
-      const {kandelVersion:newVersion} =  await kandelOperations.addVersionedKandel( { id: newKandelId, txId: "txId2", constParams: { mangroveId: mangroveId, base: baseId, quote: quoteId, type: "Kandel" }});
+      const {kandelVersion:newVersion} =  await kandelOperations.addVersionedKandel( { id: newKandelId, txId: "txId2", constParams: { mangroveId: mangroveId, base: baseId, quote: quoteId, type: "NewKandel" }});
       assert.strictEqual(await prisma.kandel.count(), 2);
       assert.strictEqual(await prisma.kandelVersion.count(), 2);
       assert.strictEqual(await prisma.account.count(), 3);
@@ -248,7 +248,7 @@ describe("Kandel Operations Integration test suite", () => {
           quoteId: quoteId.value,
           reserveId: new AccountId(mangroveId.chainId, newKandelId.address).value,
           currentVersionId: newKandelVersionId.value,
-          type: "Kandel"
+          type: "NewKandel"
         } )
       const newAccount = await prisma.account.findUnique( {where: {id: newKandelId.value}})
       assert.deepStrictEqual(newAccount, {
@@ -263,7 +263,7 @@ describe("Kandel Operations Integration test suite", () => {
       assert.strictEqual(await prisma.account.count(), 2);
       const newKandelId = new KandelId(chainId, "newKandel");
       const newKandelVersionId = new KandelVersionId({kandelId:newKandelId, versionNumber: 0});
-      const {kandelVersion:newVersion} =  await kandelOperations.addVersionedKandel( { id: newKandelId, txId: "txId2", constParams: { reserveId: reserveId, mangroveId: mangroveId, base: baseId, quote: quoteId, type: "AaveKandel" }});
+      const {kandelVersion:newVersion} =  await kandelOperations.addVersionedKandel( { id: newKandelId, txId: "txId2", constParams: { reserveId: reserveId, mangroveId: mangroveId, base: baseId, quote: quoteId, type: "NewAaveKandel" }});
       assert.strictEqual(await prisma.kandel.count(), 2);
       assert.strictEqual(await prisma.kandelVersion.count(), 2);
       assert.strictEqual(await prisma.account.count(), 3);
@@ -287,7 +287,7 @@ describe("Kandel Operations Integration test suite", () => {
           quoteId: quoteId.value,
           reserveId: reserveId.value,
           currentVersionId: newKandelVersionId.value,
-          type: "AaveKandel"
+          type: "NewAaveKandel"
         } )
       const newAccount = await prisma.account.findUnique( {where: {id: newKandelId.value}})
       assert.deepStrictEqual(newAccount, {
@@ -303,7 +303,7 @@ describe("Kandel Operations Integration test suite", () => {
       const newKandelId = new KandelId(chainId, "newKandel");
       const newKandelVersionId = new KandelVersionId({kandelId:newKandelId, versionNumber: 0});
       const newReserveId = new AccountId(chainId, "newReserve")
-      const {kandelVersion:newVersion} =   await kandelOperations.addVersionedKandel( { id: newKandelId, txId: "txId2", constParams: { reserveId: newReserveId, mangroveId: mangroveId, base: baseId, quote: quoteId, type: "AaveKandel" }});
+      const {kandelVersion:newVersion} =   await kandelOperations.addVersionedKandel( { id: newKandelId, txId: "txId2", constParams: { reserveId: newReserveId, mangroveId: mangroveId, base: baseId, quote: quoteId, type: "NewAaveKandel" }});
       assert.strictEqual(await prisma.kandel.count(), 2);
       assert.strictEqual(await prisma.kandelVersion.count(), 2);
       assert.strictEqual(await prisma.account.count(), 4);
@@ -327,7 +327,7 @@ describe("Kandel Operations Integration test suite", () => {
           quoteId: quoteId.value,
           reserveId: newReserveId.value,
           currentVersionId: newKandelVersionId.value,
-          type: "AaveKandel"
+          type: "NewAaveKandel"
         } )
       const newAccount = await prisma.account.findUnique( {where: {id: newKandelId.value}})
       assert.deepStrictEqual(newAccount, {
@@ -365,7 +365,7 @@ describe("Kandel Operations Integration test suite", () => {
   describe(KandelOperations.prototype.getCurrentKandelConfigration.name,  () => {
     it("cannot find config for kandel", async () => {
       const newKandelId = new KandelId(chainId, "newKandel");
-      const {kandel: k, kandelVersion: newKandelVersion} = await kandelOperations.addVersionedKandel({ id: newKandelId, txId: "txId2", constParams: { mangroveId, base:baseId, quote:quoteId, type:"Kandel" }})
+      const {kandel: k, kandelVersion: newKandelVersion} = await kandelOperations.addVersionedKandel({ id: newKandelId, txId: "txId2", constParams: { mangroveId, base:baseId, quote:quoteId, type:"NewKandel" }})
       await assert.rejects( kandelOperations.getCurrentKandelConfigration(newKandelId), new Error(`Cannot find kandel config for kandelId: ${newKandelId.value}, currentVersion: ${newKandelVersion.id} and configId: ${newKandelVersion.congigurationId}` ))
 
     })   
@@ -453,7 +453,7 @@ describe("Kandel Operations Integration test suite", () => {
   describe(KandelOperations.prototype.getToken.name,  () => {
     it("cannot find base", async () => {
       const newKandelId = new KandelId(chainId, "newKandel")
-      await kandelOperations.addVersionedKandel({ id: newKandelId, txId: "txId2", constParams:{ base: new TokenId(chainId, "noMatch"), quote: quoteId, mangroveId, type:"Kandel"} })
+      await kandelOperations.addVersionedKandel({ id: newKandelId, txId: "txId2", constParams:{ base: new TokenId(chainId, "noMatch"), quote: quoteId, mangroveId, type:"NewKandel"} })
       await assert.rejects( kandelOperations.getToken(newKandelId, "baseId") )
     })
     it("can find base", async () => {
@@ -462,7 +462,7 @@ describe("Kandel Operations Integration test suite", () => {
     })
     it("cannot find quote", async () => {
       const newKandelId = new KandelId(chainId, "newKandel")
-      await kandelOperations.addVersionedKandel({ id: newKandelId, txId: "txId2", constParams:{ base: baseId, quote: new TokenId(chainId, "noMatch"), mangroveId, type:"Kandel"} })
+      await kandelOperations.addVersionedKandel({ id: newKandelId, txId: "txId2", constParams:{ base: baseId, quote: new TokenId(chainId, "noMatch"), mangroveId, type:"NewKandel"} })
       await assert.rejects( kandelOperations.getToken(newKandelId, "quoteId") )
     })
     it("can find quote", async () => {

@@ -3,9 +3,12 @@ export type ChainConfig = {
   streams: {
     mangrove?: string[],
     strats?: string[],
+    kandel?: string[],
     tokens?: string[],
   }
+  mangroveOrderInclude?: string[]
   };
+
 
 
   

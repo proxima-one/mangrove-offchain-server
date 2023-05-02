@@ -19,7 +19,7 @@ export class KandelOperations extends DbOperations {
       mangroveId: MangroveId,
       base: TokenId,
       quote: TokenId,
-      type: "Kandel" | "AaveKandel"
+      type: "NewKandel" | "NewAaveKandel"
     }
   }) {
     let kandel: prisma.Kandel | null = await this.tx.kandel.findUnique({
@@ -36,7 +36,7 @@ export class KandelOperations extends DbOperations {
       if (!params.constParams?.type) {
         throw new Error(`Can't create Kandel without a type, id:${params.id.value}`);
       }
-      if (params.constParams?.type == "AaveKandel" && !params.constParams?.reserveId?.value) {
+      if (params.constParams?.type == "NewAaveKandel" && !params.constParams?.reserveId?.value) {
         throw new Error(`Can't create Kandel without an reserveId, id:${params.id.value}`);
       }
       const newVersionId = new KandelVersionId({ kandelId: params.id, versionNumber: 0 });
@@ -255,7 +255,7 @@ export class KandelOperations extends DbOperations {
       data: {
         txId: txId,
         kandelId: "id" in kandelId ? kandelId.id : kandelId.value,
-        kandelVersionId: kandelVersionId ? (  "id" in kandelVersionId ? kandelVersionId.id : kandelVersionId.value ) : "",
+        kandelVersionId: kandelVersionId ? (  "id" in kandelVersionId ? kandelVersionId.id : kandelVersionId.value ) : null,
       }
     })
   }

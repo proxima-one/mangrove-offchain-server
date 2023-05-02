@@ -13,6 +13,10 @@ import {
 } from "src/state/model";
 import { createPatternMatcher } from "src/utils/discriminatedUnion";
 import { MangroveOrderEventsLogic } from "./mangroveOrderEventsLogic";
+import { getChainConfigsOrThrow } from "src/utils/config/configUtils";
+import { ChainConfig } from "src/utils/config/ChainConfig";
+import config from "src/utils/config/config";
+
 
 export class IOrderLogicEventHandler extends PrismaStreamEventHandler<mangroveSchema.strategyEvents.StrategyEvent> {
   public constructor(
@@ -22,6 +26,7 @@ export class IOrderLogicEventHandler extends PrismaStreamEventHandler<mangroveSc
   ) {
     super(prisma, stream);
   }
+  chainConfigs = getChainConfigsOrThrow<ChainConfig>(config);
 
   mangroveOrderEventsLogic = new MangroveOrderEventsLogic();
 
@@ -33,7 +38,7 @@ export class IOrderLogicEventHandler extends PrismaStreamEventHandler<mangroveSc
     for (const event of events) {
       const { payload, undo, timestamp } = event;
       const chainId = new ChainId(payload.chainId);
-      
+      const chainConfig = this.chainConfigs.find( v => v.id == chainId.value.toString() )
 
       const txRef = payload.tx;
       const txId = new TransactionId(chainId, txRef.txHash);
@@ -51,9 +56,11 @@ export class IOrderLogicEventHandler extends PrismaStreamEventHandler<mangroveSc
         LogIncident: async (e) => {},
         NewOwnedOffer: async (e) => {},
         OrderSummary: async (e) => {
+          if( !chainConfig?.mangroveOrderInclude ||  (chainConfig?.mangroveOrderInclude?.includes(e.address)))
             await this.mangroveOrderEventsLogic.handleOrderSummary(allDbOperation, chainId, e, undo, transaction)
         },
         SetExpiry: async (e) => {
+          if( !chainConfig?.mangroveOrderInclude ||  (chainConfig?.mangroveOrderInclude?.includes(e.address)))
             await this.mangroveOrderEventsLogic.handleSetExpiry(allDbOperation, chainId, transaction.id, e )
         }
       })(payload);

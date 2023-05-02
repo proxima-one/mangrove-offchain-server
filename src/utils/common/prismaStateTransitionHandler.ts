@@ -56,14 +56,14 @@ export class PrismaStreamEventHandler<TEventPayload>
   }
 
   protected deserialize(payload: Buffer): TEventPayload {
-    throw new Error("not implemented");
+    throw new Error("deserialize not implemented");
   }
 
   protected async handleParsedEvents(
     events: TypedEvent<TEventPayload>[],
     tx: PrismaTransaction
   ): Promise<void> {
-    throw new Error("not implemented");
+    throw new Error("handleParsedEvents not implemented");
   }
 }
 

@@ -4,7 +4,8 @@ import _ from "lodash";
 import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
 
 import { AccountId, ChainId, KandelId, KandelVersionId, MangroveId, OfferId, OfferListingId, TokenBalanceId, TokenId } from "src/state/model";
-import { SetIndexMapping, Populate, Retract, SetAdmin, SetRouter, Credit, Debit, NewKandel, SetParams  } from "src/temp/kandelEvents";
+import {kandel} from "@proximaone/stream-schema-mangrove";
+
 // import { Credit, Debit, NewKandel, NewAaveKandel, SetParams } from "@proximaone/stream-schema-mangrove/dist/kandel"
 import { OfferEventsLogic } from "../mangroveHandler/offerEventsLogic";
 export class KandelEventsLogic {
@@ -17,18 +18,18 @@ export class KandelEventsLogic {
     async handleKandelCreated(
         undo: boolean,
         chainId: ChainId,
-        event: NewKandel,
+        event: kandel.NewKandel,
         transaction: prisma.Transaction | undefined) {
         const mangroveId = new MangroveId(chainId, event.mangroveId);
-        const kandelId = new KandelId(chainId, event.address);
+        const kandelId = new KandelId(chainId, event.kandel);
         if (undo) {
             await this.db.kandelOperations.deleteLatestKandelVersion(kandelId);
             await this.db.accountOperations.deleteAccount(kandelId);
             return;
         }
-        const reserveId = new AccountId(mangroveId.chainId,  event.reserve === "" ? event.address : event.reserve);
+        const reserveId = new AccountId(mangroveId.chainId,  event.reserveId == "" || !event.reserveId ? event.kandel : event.reserveId);
         await this.db.accountOperations.ensureAccount(reserveId);
-        const newConfiguration = await this.db.kandelOperations.createNewKandelConfiguration(this.mapSetParamsToKandelConfiguration(event));
+        const newConfiguration = await this.db.kandelOperations.createNewKandelConfiguration(this.mapSetParamsToKandelConfiguration(event.params));
         const adminId = new AccountId(mangroveId.chainId, event.owner).value;
         const baseToken = new TokenId(mangroveId.chainId, event.base);
         const quoteToken = new TokenId(mangroveId.chainId, event.quote);
@@ -39,7 +40,7 @@ export class KandelEventsLogic {
             updateFunc: (model) => {
                 _.merge(model, {
                     adminId: adminId,
-                    routerAddress: event.router,
+                    routerAddress: event.params.router,
                     congigurationId: newConfiguration.id,
                 });
             },
@@ -48,19 +49,19 @@ export class KandelEventsLogic {
                 mangroveId: mangroveId,
                 base: baseToken,
                 quote: quoteToken,
-                type: event.kandelType
+                type: event.type
 
             }
         })
 
     }
 
-    mapSetParamsToKandelConfiguration(setParams: NewKandel) {
+    mapSetParamsToKandelConfiguration(setParams: kandel.SetParams):  Omit<prisma.KandelConfiguration, "id"> {
         return {
-            compoundRateBase: setParams.compoundRates.base,
-            compoundRateQuote: setParams.compoundRates.quote,
-            gasPrice: setParams.gasPrice,
-            gasReq: setParams.gasReq,
+            compoundRateBase: setParams.compoundRates?.base ?? 0,
+            compoundRateQuote: setParams.compoundRates?.quote ?? 0,
+            gasPrice: setParams.gasPrice ?? "0",
+            gasReq: setParams.gasReq ?? "0",
             ratio: 0,
             spread: 0,
             length: 0
@@ -70,7 +71,7 @@ export class KandelEventsLogic {
     async handleKandelParamsUpdated(
         undo: boolean,
         kandelId: KandelId,
-        event: SetParams,
+        event: kandel.SetParams,
         transaction: prisma.Transaction | undefined
     ) {
 
@@ -96,7 +97,7 @@ export class KandelEventsLogic {
 
     }
 
-    getKandelConfigWithOverrides(currentConfig: Omit< prisma.KandelConfiguration, "id">, overrides: SetParams): Omit<prisma.KandelConfiguration, "id"> {
+    getKandelConfigWithOverrides(currentConfig: Omit< prisma.KandelConfiguration, "id">, overrides: kandel.SetParams): Omit<prisma.KandelConfiguration, "id"> {
         return {
             compoundRateBase: overrides.compoundRates ? overrides.compoundRates.base : currentConfig.compoundRateBase,
             compoundRateQuote: overrides.compoundRates ? overrides.compoundRates.quote : currentConfig.compoundRateQuote,
@@ -108,7 +109,7 @@ export class KandelEventsLogic {
         }
     };
 
-    async createKandelParamsEvent(kandelId: KandelId, kandelVersion: prisma.KandelVersion | KandelVersionId, event: SetParams, txId: string) {
+    async createKandelParamsEvent(kandelId: KandelId, kandelVersion: prisma.KandelVersion | KandelVersionId, event: kandel.SetParams, txId: string) {
         const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, txId, kandelVersion);
         if (event.gasReq) {
             return await this.db.kandelOperations.createKandelGasReqEvent(kandelEvent, event.gasReq);
@@ -120,6 +121,10 @@ export class KandelEventsLogic {
             return await this.db.kandelOperations.createKandelCompoundRateEvent(kandelEvent, event.compoundRates.base, event.compoundRates.quote);
         } else if (event.geometric) {
             return await this.db.kandelOperations.createKandelGeometricParamsEvent(kandelEvent, event.geometric.ratio, event.geometric.spread);
+        } else if (event.router) {
+            return await this.db.kandelOperations.createKandelRouterEvent(kandelEvent, event.router);
+        } else if (event.admin) {
+            return await this.db.kandelOperations.createKandelAdminEvent(kandelEvent, event.admin);
         }
         throw new Error(`Could not find correct kandel event: ${ JSON.stringify( event )}`);
     }
@@ -127,7 +132,7 @@ export class KandelEventsLogic {
     async handleDepositWithdrawal(
         undo: boolean,
         kandelId: KandelId,
-        event: Debit | Credit,
+        event: kandel.Debit | kandel.Credit,
         transaction: prisma.Transaction | undefined) {
 
         const reserveAddress = await this.db.kandelOperations.getReserveAddress({ kandelId });
@@ -169,7 +174,7 @@ export class KandelEventsLogic {
     async handelRetractOffers(
         undo: boolean,
         kandelId: KandelId,
-        event: Retract,
+        event: kandel.Retract,
         transaction: prisma.Transaction | undefined
     ) {
         const kandel = await this.db.kandelOperations.getKandel(kandelId);
@@ -191,7 +196,7 @@ export class KandelEventsLogic {
     async handlePopulate(
         undo: boolean,
         kandelId: KandelId,
-        event: Populate,
+        event: kandel.Populate,
         transaction: prisma.Transaction | undefined
     ) {
         const kandel = await this.db.kandelOperations.getKandel(kandelId);
@@ -206,7 +211,7 @@ export class KandelEventsLogic {
         await this.handlePopulateOfferIndexes(kandelId, event, mangroveId, transaction);
     }
 
-    async handlePopulateOfferWrittenEvents(kandelId: KandelId, event: Populate, mangroveId: MangroveId, transaction: prisma.Transaction | undefined) {
+    async handlePopulateOfferWrittenEvents(kandelId: KandelId, event: kandel.Populate, mangroveId: MangroveId, transaction: prisma.Transaction | undefined) {
         const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, transaction!.id );
          
         const kandelPopulateEvent = await this.db.kandelOperations.createKandelPopulateEvent(kandelEvent);
@@ -217,7 +222,7 @@ export class KandelEventsLogic {
         }
     }
 
-    async handlePopulateOfferIndexes(kandelId: KandelId, event: Populate, mangroveId: MangroveId, transaction: prisma.Transaction | undefined) {
+    async handlePopulateOfferIndexes(kandelId: KandelId, event: kandel.Populate, mangroveId: MangroveId, transaction: prisma.Transaction | undefined) {
         const base = await this.db.kandelOperations.getToken(kandelId, "baseId");
         const quote = await this.db.kandelOperations.getToken(kandelId, "quoteId");
 
@@ -233,7 +238,7 @@ export class KandelEventsLogic {
     async handleOfferIndex(
         undo: boolean,
         kandelId: KandelId,
-        event: SetIndexMapping,
+        event: kandel.SetIndexMapping,
         transaction: prisma.Transaction | undefined
     ) {
         const kandel = await this.db.kandelOperations.getKandel(kandelId);
@@ -251,60 +256,60 @@ export class KandelEventsLogic {
         await this.db.kandelOperations.createOfferIndex(kandelId, transaction!.id, offerId, event.index, event.ba === 1 ? "ask" : "bid");
     }
 
-    async handleSetAdmin(
-        undo: boolean,
-        kandelId: KandelId,
-        event: SetAdmin,
-        transaction: prisma.Transaction | undefined
-    ) {
+    // async handleSetAdmin(
+    //     undo: boolean,
+    //     kandelId: KandelId,
+    //     event: kandel.SetAdmin,
+    //     transaction: prisma.Transaction | undefined
+    // ) {
 
-        if (undo) {
-            await this.db.kandelOperations.deleteLatestKandelVersion(kandelId);
-            return;
-        }
-        const adminId = new AccountId(kandelId.chainId, event.admin);
-        await this.db.accountOperations.ensureAccount(adminId);
+    //     if (undo) {
+    //         await this.db.kandelOperations.deleteLatestKandelVersion(kandelId);
+    //         return;
+    //     }
+    //     const adminId = new AccountId(kandelId.chainId, event.admin);
+    //     await this.db.accountOperations.ensureAccount(adminId);
 
-        const newVersions = await this.db.kandelOperations.addVersionedKandel({
-            id: kandelId,
-            txId: transaction!.id,
-            updateFunc: (model) => {
-                _.merge(model, {
-                    adminId: adminId.value,
-                });
-            },
-        })
+    //     const newVersions = await this.db.kandelOperations.addVersionedKandel({
+    //         id: kandelId,
+    //         txId: transaction!.id,
+    //         updateFunc: (model) => {
+    //             _.merge(model, {
+    //                 adminId: adminId.value,
+    //             });
+    //         },
+    //     })
 
-        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, transaction!.id, newVersions.kandelVersion);
-        await this.db.kandelOperations.createKandelAdminEvent(kandelEvent, event.admin);
-    }
+    //     const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, transaction!.id, newVersions.kandelVersion);
+    //     await this.db.kandelOperations.createKandelAdminEvent(kandelEvent, event.admin);
+    // }
 
-    async handelSetRouter(
-        undo: boolean,
-        kandelId: KandelId,
-        event: SetRouter,
-        transaction: prisma.Transaction | undefined
-    ) {
+    // async handelSetRouter(
+    //     undo: boolean,
+    //     kandelId: KandelId,
+    //     event: SetRouter,
+    //     transaction: prisma.Transaction | undefined
+    // ) {
 
-        if (undo) {
-            await this.db.kandelOperations.deleteLatestKandelVersion(kandelId);
-            return;
-        }
+    //     if (undo) {
+    //         await this.db.kandelOperations.deleteLatestKandelVersion(kandelId);
+    //         return;
+    //     }
 
-        const newVersions = await this.db.kandelOperations.addVersionedKandel({
-            id: kandelId,
-            txId: transaction!.id,
-            updateFunc: (model) => {
-                _.merge(model, {
-                    routerAddress: event.router,
-                });
-            },
-        })
+    //     const newVersions = await this.db.kandelOperations.addVersionedKandel({
+    //         id: kandelId,
+    //         txId: transaction!.id,
+    //         updateFunc: (model) => {
+    //             _.merge(model, {
+    //                 routerAddress: event.router,
+    //             });
+    //         },
+    //     })
 
-        const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, transaction!.id, newVersions.kandelVersion);
-        await this.db.kandelOperations.createKandelRouterEvent(kandelEvent, event.router);
+    //     const kandelEvent = await this.db.kandelOperations.createKandelEvent(kandelId, transaction!.id, newVersions.kandelVersion);
+    //     await this.db.kandelOperations.createKandelRouterEvent(kandelEvent, event.router);
 
-    }
+    // }
 
 
 

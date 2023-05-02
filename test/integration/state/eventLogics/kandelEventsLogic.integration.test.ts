@@ -5,7 +5,7 @@ import { before, describe } from "mocha";
 import { allDbOperations } from "src/state/dbOperations/allDbOperations";
 import { KandelEventsLogic } from "src/state/handlers/stratsHandler/kandelEventsLogic";
 import { AccountId, ChainId, KandelId, KandelVersionId, MangroveId, MangroveVersionId, OfferId, OfferListKey, OfferListingId, OfferListingVersionId, OfferVersionId, TokenBalanceId, TokenBalanceVersionId, TokenId } from "src/state/model";
-import { Credit, Debit, NewKandel, Populate, Retract, SetAdmin, SetIndexMapping, SetParams, SetRouter } from "src/temp/kandelEvents";
+import { Credit, Debit, KandelEvent, NewKandel, Populate, Retract, SetIndexMapping, SetParams } from "@proximaone/stream-schema-mangrove/dist/kandel";
 import { prisma } from "utils/test/mochaHooks";
 
 
@@ -234,20 +234,22 @@ describe("Kandel Events Logic Integration test suite", () => {
                 const hasReserve = reserveToUse != "";
                 const event: NewKandel = {
                     type: "NewKandel",
-                    kandelType: "Kandel",
                     mangroveId: mangroveId.value,
                     base: tokenAId.tokenAddress,
                     quote: tokenBId.tokenAddress,
                     owner: ownerAddress,
-                    reserve: reserveToUse,
-                    router: router,
-                    address: kandelAddress,
-                    compoundRates: {
-                        base: 1,
-                        quote: 2
-                    },
-                    gasPrice: "100",
-                    gasReq: "65000"
+                    reserveId: reserveToUse,
+                    kandel: kandelAddress,
+                    params: {
+                        type: "SetParams",
+                        router: router,
+                        compoundRates: {
+                            base: 1,
+                            quote: 2
+                        },
+                        gasPrice: "100",
+                        gasReq: "65000"
+                    }
                 }
                 const accountCount = await prisma.account.count()
                 const kandelCount = await prisma.kandel.count()
@@ -263,8 +265,8 @@ describe("Kandel Events Logic Integration test suite", () => {
                 assert.strictEqual(await prisma.kandelEvent.count() - kandelEventCount, 1)
                 assert.strictEqual(await prisma.newKandelEvent.count() - newKandelEventCount, 1)
 
-                const kandelId = new KandelId(chainId, event.address);
-                const reserveId = hasReserve ? new AccountId(chainId, event.reserve) : kandelId;
+                const kandelId = new KandelId(chainId, event.kandel);
+                const reserveId = hasReserve ? new AccountId(chainId, event.reserveId) : kandelId;
                 const adminId = new AccountId(chainId, event.owner);
                 const kandel = await prisma.kandel.findUnique({ where: { id: kandelId.value } });
                 const kandelVersion = await prisma.kandelVersion.findUnique({ where: { id: kandel?.currentVersionId } });
@@ -277,7 +279,7 @@ describe("Kandel Events Logic Integration test suite", () => {
                     mangroveId: mangroveId.value,
                     baseId: tokenAId.value,
                     quoteId: tokenBId.value,
-                    type: event.kandelType,
+                    type: event.type,
                     currentVersionId: kandel?.currentVersionId
                 })
                 assert.deepStrictEqual(kandelVersion, {
@@ -286,16 +288,16 @@ describe("Kandel Events Logic Integration test suite", () => {
                     kandelId: kandelId.value,
                     congigurationId: config?.id,
                     adminId: adminId.value,
-                    routerAddress: event.router,
+                    routerAddress: event.params.router,
                     prevVersionId: null,
                     versionNumber: 0
                 })
                 assert.deepStrictEqual(config, {
                     id: config?.id,
-                    compoundRateBase: event.compoundRates?.base,
-                    compoundRateQuote: event.compoundRates?.quote,
-                    gasPrice: event.gasPrice,
-                    gasReq: event.gasReq,
+                    compoundRateBase: event.params.compoundRates?.base,
+                    compoundRateQuote: event.params.compoundRates?.quote,
+                    gasPrice: event.params.gasPrice,
+                    gasReq: event.params.gasReq,
                     spread: 0,
                     ratio: 0,
                     length: 0
@@ -315,20 +317,22 @@ describe("Kandel Events Logic Integration test suite", () => {
         it(`Undo created kandel`, async () => {
             const event: NewKandel = {
                 type: "NewKandel",
-                kandelType: "Kandel",
                 mangroveId: mangroveId.value,
                 base: tokenAId.tokenAddress,
                 quote: tokenBId.tokenAddress,
                 owner: ownerAddress,
-                reserve: reserve,
-                router: router,
-                address: kandelAddress,
-                compoundRates: {
-                    base: 1,
-                    quote: 2
-                },
-                gasPrice: "100",
-                gasReq: "65000"
+                reserveId: reserve,
+                kandel: kandelAddress,
+                params: {
+                    type: "SetParams",
+                    router: router,
+                    compoundRates: {
+                        base: 1,
+                        quote: 2
+                    },
+                    gasPrice: "100",
+                    gasReq: "65000"
+                }
             }
             await kandelEventsLogic.handleKandelCreated(false, chainId, event, tx);
 
@@ -352,27 +356,29 @@ describe("Kandel Events Logic Integration test suite", () => {
     it(KandelEventsLogic.prototype.mapSetParamsToKandelConfiguration.name, () => {
         const event: NewKandel = {
             type: "NewKandel",
-            kandelType: "Kandel",
             mangroveId: mangroveId.value,
             base: tokenAId.tokenAddress,
             quote: tokenBId.tokenAddress,
             owner: ownerAddress,
-            reserve: reserve,
-            router: router,
-            address: kandelAddress,
-            compoundRates: {
-                base: 1,
-                quote: 2
-            },
-            gasPrice: "100",
-            gasReq: "65000"
+            reserveId: reserve,
+            kandel: kandelAddress,
+            params: {
+                type: "SetParams",
+                router: router,
+                compoundRates: {
+                    base: 1,
+                    quote: 2
+                },
+                gasPrice: "100",
+                gasReq: "65000"
+            }
         }
-        const config = kandelEventsLogic.mapSetParamsToKandelConfiguration(event);
+        const config = kandelEventsLogic.mapSetParamsToKandelConfiguration(event.params);
         assert.deepStrictEqual(config, {
-            compoundRateBase: event.compoundRates?.base,
-            compoundRateQuote: event.compoundRates?.quote,
-            gasPrice: event.gasPrice,
-            gasReq: event.gasReq,
+            compoundRateBase: event.params.compoundRates?.base,
+            compoundRateQuote: event.params.compoundRates?.quote,
+            gasPrice: event.params.gasPrice,
+            gasReq: event.params.gasReq,
             ratio: 0,
             spread: 0,
             length: 0
@@ -383,20 +389,22 @@ describe("Kandel Events Logic Integration test suite", () => {
         it("new config ", async () => {
             const newKandelEvent: NewKandel = {
                 type: "NewKandel",
-                kandelType: "Kandel",
                 mangroveId: mangroveId.value,
                 base: tokenAId.tokenAddress,
                 quote: tokenBId.tokenAddress,
                 owner: ownerAddress,
-                reserve: reserve,
-                router: router,
-                address: kandelAddress,
-                compoundRates: {
-                    base: 1,
-                    quote: 2
-                },
-                gasPrice: "100",
-                gasReq: "65000"
+                reserveId: reserve,
+                kandel: kandelAddress,
+                params: {
+                    type: "SetParams",
+                    router: router,
+                    compoundRates: {
+                        base: 1,
+                        quote: 2
+                    },
+                    gasPrice: "100",
+                    gasReq: "65000"
+            }
             }
             await kandelEventsLogic.handleKandelCreated(false, chainId, newKandelEvent, tx);
             const params: SetParams = {
@@ -448,20 +456,22 @@ describe("Kandel Events Logic Integration test suite", () => {
         it("undo config ", async () => {
             const newKandelEvent: NewKandel = {
                 type: "NewKandel",
-                kandelType: "Kandel",
                 mangroveId: mangroveId.value,
                 base: tokenAId.tokenAddress,
                 quote: tokenBId.tokenAddress,
                 owner: ownerAddress,
-                reserve: reserve,
-                router: router,
-                address: kandelAddress,
-                compoundRates: {
-                    base: 1,
-                    quote: 2
-                },
-                gasPrice: "100",
-                gasReq: "65000"
+                reserveId: reserve,
+                kandel: kandelAddress,
+                params: {
+                    type: "SetParams",
+                    router: router,
+                    compoundRates: {
+                        base: 1,
+                        quote: 2
+                    },
+                    gasPrice: "100",
+                    gasReq: "65000"
+                }
             }
             await kandelEventsLogic.handleKandelCreated(false, chainId, newKandelEvent, tx);
             const params: SetParams = {
@@ -738,8 +748,9 @@ describe("Kandel Events Logic Integration test suite", () => {
     describe( KandelEventsLogic.prototype.handelRetractOffers.name, () => {
         it( "retract", async () => {
             const event: Retract = {
+                
                 type: "Retract",
-                kandelAddress: kandelId.address,
+                // address: kandelId.address,
                 offers: [
                     {
                         type: "OfferRetracted",
@@ -791,7 +802,7 @@ describe("Kandel Events Logic Integration test suite", () => {
         it( "undo retract", async () => {
             const event: Retract = {
                 type: "Retract",
-                kandelAddress: kandelId.address,
+                // kandelAddress: kandelId.address,
                 offers: [
                     {
                         type: "OfferRetracted",
@@ -827,7 +838,7 @@ describe("Kandel Events Logic Integration test suite", () => {
         it( "populate", async () => {
             const event: Populate = {
                 type: "Populate",
-                kandelAddress: kandelId.address,
+                // kandelAddress: kandelId.address,
                 offers: [
                     {
                         type: "OfferWritten",
@@ -923,7 +934,7 @@ describe("Kandel Events Logic Integration test suite", () => {
         it( "undo populate", async () => {
             const event: Populate = {
                 type: "Populate",
-                kandelAddress: kandelId.address,
+                // kandelAddress: kandelId.address,
                 offers: [
                     {
                         type: "OfferWritten",
@@ -1059,109 +1070,109 @@ describe("Kandel Events Logic Integration test suite", () => {
         } )
     })
 
-    describe( KandelEventsLogic.prototype.handleSetAdmin.name, () => {
-        it("Set admin", async () => {
-            const event: SetAdmin = {
-                type: "SetAdmin",
-                admin: "admin"
-            }
+    // describe( KandelEventsLogic.prototype.handleSetAdmin.name, () => {
+    //     it("Set admin", async () => {
+    //         const event: SetAdmin = {
+    //             type: "SetAdmin",
+    //             admin: "admin"
+    //         }
 
-            const kandelCount = await prisma.kandel.count();
-            const kandelVersionCount = await prisma.kandelVersion.count();
-            const kandelEventCount = await prisma.kandelEvent.count();
-            const kandelAdminEventCount = await prisma.kandelAdminEvent.count();
+    //         const kandelCount = await prisma.kandel.count();
+    //         const kandelVersionCount = await prisma.kandelVersion.count();
+    //         const kandelEventCount = await prisma.kandelEvent.count();
+    //         const kandelAdminEventCount = await prisma.kandelAdminEvent.count();
 
-            await kandelEventsLogic.handleSetAdmin(false, kandelId, event, tx);
+    //         await kandelEventsLogic.handleSetAdmin(false, kandelId, event, tx);
 
-            assert.strictEqual( await prisma.kandel.count() - kandelCount, 0 )
-            assert.strictEqual( await prisma.kandelVersion.count() - kandelVersionCount, 1 )
-            assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, 1 )
-            assert.strictEqual( await prisma.kandelAdminEvent.count() - kandelAdminEventCount, 1 )
+    //         assert.strictEqual( await prisma.kandel.count() - kandelCount, 0 )
+    //         assert.strictEqual( await prisma.kandelVersion.count() - kandelVersionCount, 1 )
+    //         assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, 1 )
+    //         assert.strictEqual( await prisma.kandelAdminEvent.count() - kandelAdminEventCount, 1 )
 
-            const newVersion = await prisma.kandelVersion.findUnique({where: { id: new KandelVersionId({kandelId, versionNumber:1}).value}})
-            assert.deepStrictEqual( newVersion, { ...kandelVersion,
-            id: newVersion?.id,
-            adminId: new AccountId(chainId, event.admin).value,
-            versionNumber: 1,
-            prevVersionId: kandeVersionId.value 
-            } )
-            const kandelEvent = await prisma.kandelEvent.findFirst({where: { kandelVersionId: newVersion.id}}).KandelAdminEvent()
-            assert.strictEqual( kandelEvent?.admin, event.admin)
+    //         const newVersion = await prisma.kandelVersion.findUnique({where: { id: new KandelVersionId({kandelId, versionNumber:1}).value}})
+    //         assert.deepStrictEqual( newVersion, { ...kandelVersion,
+    //         id: newVersion?.id,
+    //         adminId: new AccountId(chainId, event.admin).value,
+    //         versionNumber: 1,
+    //         prevVersionId: kandeVersionId.value 
+    //         } )
+    //         const kandelEvent = await prisma.kandelEvent.findFirst({where: { kandelVersionId: newVersion.id}}).KandelAdminEvent()
+    //         assert.strictEqual( kandelEvent?.admin, event.admin)
 
-        })
+    //     })
 
-        it("undo Set admin", async () => {
-            const event: SetAdmin = {
-                type: "SetAdmin",
-                admin: "admin"
-            }
-            await kandelEventsLogic.handleSetAdmin(false, kandelId, event, tx);
-
-
-            const kandelCount = await prisma.kandel.count();
-            const kandelVersionCount = await prisma.kandelVersion.count();
-            const kandelEventCount = await prisma.kandelEvent.count();
-            const kandelAdminEventCount = await prisma.kandelAdminEvent.count();
-
-            await kandelEventsLogic.handleSetAdmin(true, kandelId, event, tx);
-
-            assert.strictEqual( await prisma.kandel.count() - kandelCount, 0 )
-            assert.strictEqual( await prisma.kandelVersion.count() - kandelVersionCount, -1 )
-            assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, -1 )
-            assert.strictEqual( await prisma.kandelAdminEvent.count() - kandelAdminEventCount, -1 )
-        })
-    } )
-
-    describe( KandelEventsLogic.prototype.handelSetRouter.name, () => {
-        it("Set router", async () => {
-            const event: SetRouter = {
-                type: "SetRouter",
-                router: "router"
-            }
-
-            const kandelCount = await prisma.kandel.count();
-            const kandelVersionCount = await prisma.kandelVersion.count();
-            const kandelEventCount = await prisma.kandelEvent.count();
-            const kandelRouterEventCount = await prisma.kandelRouterEvent.count();
-
-            await kandelEventsLogic.handelSetRouter(false, kandelId, event, tx);
-
-            assert.strictEqual( await prisma.kandel.count() - kandelCount, 0 )
-            assert.strictEqual( await prisma.kandelVersion.count() - kandelVersionCount, 1 )
-            assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, 1 )
-            assert.strictEqual( await prisma.kandelRouterEvent.count() - kandelRouterEventCount, 1 )
-
-            const newVersion = await prisma.kandelVersion.findUnique({where: { id: new KandelVersionId({kandelId, versionNumber:1}).value}})
-            assert.deepStrictEqual( newVersion, { ...kandelVersion,
-            id: newVersion?.id,
-            routerAddress: event.router,
-            versionNumber: 1,
-            prevVersionId: kandeVersionId.value 
-            } )
-            const kandelEvent = await prisma.kandelEvent.findFirst({where: { kandelVersionId: newVersion.id}}).KandelRouterEvent()
-            assert.strictEqual( kandelEvent?.router, event.router)
-
-        })
-
-        it("undo Set router", async () => {
-            const event: SetRouter = {
-                type: "SetRouter",
-                router: "router"
-            }
-            await kandelEventsLogic.handelSetRouter(false, kandelId, event, tx);
+    //     it("undo Set admin", async () => {
+    //         const event: SetAdmin = {
+    //             type: "SetAdmin",
+    //             admin: "admin"
+    //         }
+    //         await kandelEventsLogic.handleSetAdmin(false, kandelId, event, tx);
 
 
-            const kandelCount = await prisma.kandel.count();
-            const kandelVersionCount = await prisma.kandelVersion.count();
-            const kandelEventCount = await prisma.kandelEvent.count();
-            const kandelRouterEventCount = await prisma.kandelRouterEvent.count();
+    //         const kandelCount = await prisma.kandel.count();
+    //         const kandelVersionCount = await prisma.kandelVersion.count();
+    //         const kandelEventCount = await prisma.kandelEvent.count();
+    //         const kandelAdminEventCount = await prisma.kandelAdminEvent.count();
 
-            await kandelEventsLogic.handelSetRouter(true, kandelId, event, tx);
+    //         await kandelEventsLogic.handleSetAdmin(true, kandelId, event, tx);
 
-            assert.strictEqual( await prisma.kandel.count() - kandelCount, 0 )
-            assert.strictEqual( await prisma.kandelVersion.count() - kandelVersionCount, -1 )
-            assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, -1 )
-            assert.strictEqual( await prisma.kandelRouterEvent.count() - kandelRouterEventCount, -1 )
-        })
-    } )
+    //         assert.strictEqual( await prisma.kandel.count() - kandelCount, 0 )
+    //         assert.strictEqual( await prisma.kandelVersion.count() - kandelVersionCount, -1 )
+    //         assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, -1 )
+    //         assert.strictEqual( await prisma.kandelAdminEvent.count() - kandelAdminEventCount, -1 )
+    //     })
+    // } )
+
+    // describe( KandelEventsLogic.prototype.handelSetRouter.name, () => {
+    //     it("Set router", async () => {
+    //         const event: SetRouter = {
+    //             type: "SetRouter",
+    //             router: "router"
+    //         }
+
+    //         const kandelCount = await prisma.kandel.count();
+    //         const kandelVersionCount = await prisma.kandelVersion.count();
+    //         const kandelEventCount = await prisma.kandelEvent.count();
+    //         const kandelRouterEventCount = await prisma.kandelRouterEvent.count();
+
+    //         await kandelEventsLogic.handelSetRouter(false, kandelId, event, tx);
+
+    //         assert.strictEqual( await prisma.kandel.count() - kandelCount, 0 )
+    //         assert.strictEqual( await prisma.kandelVersion.count() - kandelVersionCount, 1 )
+    //         assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, 1 )
+    //         assert.strictEqual( await prisma.kandelRouterEvent.count() - kandelRouterEventCount, 1 )
+
+    //         const newVersion = await prisma.kandelVersion.findUnique({where: { id: new KandelVersionId({kandelId, versionNumber:1}).value}})
+    //         assert.deepStrictEqual( newVersion, { ...kandelVersion,
+    //         id: newVersion?.id,
+    //         routerAddress: event.router,
+    //         versionNumber: 1,
+    //         prevVersionId: kandeVersionId.value 
+    //         } )
+    //         const kandelEvent = await prisma.kandelEvent.findFirst({where: { kandelVersionId: newVersion.id}}).KandelRouterEvent()
+    //         assert.strictEqual( kandelEvent?.router, event.router)
+
+    //     })
+
+    //     it("undo Set router", async () => {
+    //         const event: SetRouter = {
+    //             type: "SetRouter",
+    //             router: "router"
+    //         }
+    //         await kandelEventsLogic.handelSetRouter(false, kandelId, event, tx);
+
+
+    //         const kandelCount = await prisma.kandel.count();
+    //         const kandelVersionCount = await prisma.kandelVersion.count();
+    //         const kandelEventCount = await prisma.kandelEvent.count();
+    //         const kandelRouterEventCount = await prisma.kandelRouterEvent.count();
+
+    //         await kandelEventsLogic.handelSetRouter(true, kandelId, event, tx);
+
+    //         assert.strictEqual( await prisma.kandel.count() - kandelCount, 0 )
+    //         assert.strictEqual( await prisma.kandelVersion.count() - kandelVersionCount, -1 )
+    //         assert.strictEqual( await prisma.kandelEvent.count() - kandelEventCount, -1 )
+    //         assert.strictEqual( await prisma.kandelRouterEvent.count() - kandelRouterEventCount, -1 )
+    //     })
+    // } )
 });

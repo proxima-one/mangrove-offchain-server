@@ -10,12 +10,13 @@ import {
   KandelId,
   TransactionId
 } from "src/state/model";
-import { KandelEvent } from "src/temp/kandelEvents";
 // import {KandelEvent, SeederEvent} from "@proximaone/stream-schema-mangrove/dist/kandel"
 import { createPatternMatcher } from "src/utils/discriminatedUnion";
 import { KandelEventsLogic } from "./kandelEventsLogic";
+import * as kandel from "@proximaone/stream-schema-mangrove/dist/kandel";
+import * as mangroveSchema from "@proximaone/stream-schema-mangrove";
 
-export class IKandelLogicEventHandler extends PrismaStreamEventHandler<KandelEvent > {
+export class IKandelLogicEventHandler extends PrismaStreamEventHandler<kandel.KandelEvent | kandel.SeederEvent > {
   public constructor(
     prisma: PrismaClient,
     stream: string,
@@ -25,7 +26,7 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<KandelEve
   }
 
   protected async handleParsedEvents(
-    events: TypedEvent<KandelEvent >[],
+    events: TypedEvent<kandel.KandelEvent | kandel.SeederEvent >[],
     tx: PrismaTransaction
   ): Promise<void> {
     const allDbOperation = allDbOperations(tx);
@@ -49,6 +50,9 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<KandelEve
         NewKandel: async (e) => {
           await kandelEventsLogic.handleKandelCreated(undo, chainId, e, transaction)
         },
+        NewAaveKandel: async (e) => {
+          await kandelEventsLogic.handleKandelCreated(undo, chainId, e, transaction)
+        },
         SetParams: async (e) => {
           await kandelEventsLogic.handleKandelParamsUpdated(undo, new KandelId(chainId, payload.address), e, transaction);
         },
@@ -63,26 +67,17 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<KandelEve
         },
         Retract: async (e) => {
           await kandelEventsLogic.handelRetractOffers(undo, new KandelId(chainId, payload.address), e, transaction);
-        },
-        SetIndexMapping: async (e) => {
-          await kandelEventsLogic.handleOfferIndex(undo, new KandelId(chainId, payload.address), e, transaction);
-        },
-        SetAdmin: async (e) => {
-          await kandelEventsLogic.handleSetAdmin(undo, new KandelId(chainId, payload.address), e, transaction);
-        },
-        SetRouter: async (e) => {
-          await kandelEventsLogic.handelSetRouter(undo, new KandelId(chainId, payload.address), e, transaction);
-        },
+        }
       })(payload);
     }
   }
 //TODO: when proxima comes with stream
-  // protected deserialize( 
-  //   payload: Buffer
-  // ): KandelEvent {
-  //   return mangroveSchema.streams.kandels.serdes.deserialize(payload);
-  // }
+  protected deserialize( 
+    payload: Buffer
+  ): kandel.KandelEvent | kandel.SeederEvent {
+    return mangroveSchema.streams.kandel.serdes.deserialize(payload);
+  }
 }
 
 const eventMatcher =
-  createPatternMatcher<KandelEvent >();
+  createPatternMatcher<kandel.KandelEvent | kandel.SeederEvent >();
