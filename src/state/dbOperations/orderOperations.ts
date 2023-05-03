@@ -4,14 +4,12 @@ import { MangroveId, OfferId, OrderId } from "src/state/model";
 import { DbOperations, PrismaTx } from "./dbOperations";
 import { MangroveOrderOperations } from "./mangroveOrderOperations";
 import { OfferOperations } from "./offerOperations";
-import { MangroveOrderEventsLogic } from "src/state/handlers/stratsHandler/mangroveOrderEventsLogic";
-import BigNumber from "bignumber.js";
 
 export class OrderOperations extends DbOperations {
 
   private offerOperations: OfferOperations;
   private mangroveOrderOperations: MangroveOrderOperations;
-  private mangroveOrderEventsLogic: MangroveOrderEventsLogic = new MangroveOrderEventsLogic();
+  // private mangroveOrderEventsLogic: MangroveOrderEventsLogic = new MangroveOrderEventsLogic();
   public constructor(public readonly tx: PrismaTx) {
     super(tx);
     this.offerOperations = new OfferOperations(tx);
@@ -58,17 +56,17 @@ export class OrderOperations extends DbOperations {
           throw new Error(`Cannot take version of offer that is not the current version of the offer. currentOfferVersionId: ${currentVersionId.id} & takenOffer.offerVersionId: ${takenOffer.offerVersionId}`)
         }
         await this.offerOperations.addVersionedOffer(new OfferId(orderId.mangroveId, orderId.offerListKey, offer.offerNumber), order.txId, (m) => m.deleted = true); 
-        const updateFunc = ( 
-          tokens: {
-             outboundToken: prismaModel.Token; 
-             inboundToken: prismaModel.Token; }, 
-          mangroveOrder: prismaModel.MangroveOrder, 
-          newVersion: Omit<prismaModel.MangroveOrderVersion, "id" | "mangroveOrderId" | "versionNumber" | "prevVersionId">) =>
-           this.mangroveOrderEventsLogic.newVersionOfMangroveOrderFromTakenOffer( takenOffer, tokens, mangroveOrder, newVersion);
-        await this.mangroveOrderOperations.updateMangroveOrderFromTakenOffer(
-          new OfferId(orderId.mangroveId, orderId.offerListKey, offer.offerNumber),
-          updateFunc
-          );
+        // const updateFunc = ( 
+        //   tokens: {
+        //      outboundToken: prismaModel.Token; 
+        //      inboundToken: prismaModel.Token; }, 
+        //   mangroveOrder: prismaModel.MangroveOrder, 
+        //   newVersion: Omit<prismaModel.MangroveOrderVersion, "id" | "mangroveOrderId" | "versionNumber" | "prevVersionId">) =>
+        //    this.mangroveOrderEventsLogic.newVersionOfMangroveOrderFromTakenOffer( takenOffer, tokens, mangroveOrder, newVersion);
+        // await this.mangroveOrderOperations.updateMangroveOrderFromTakenOffer(
+        //   new OfferId(orderId.mangroveId, orderId.offerListKey, offer.offerNumber),
+        //   updateFunc
+        //   );
       };
   }
 

@@ -13,10 +13,11 @@ import {
   TokenId
 } from "src/state/model";
 import logger from "src/utils/logger";
+import { EventsLogic } from "../eventsLogic";
 
 
 
-export class MangroveOrderEventsLogic {
+export class MangroveOrderEventsLogic extends EventsLogic {
 
 
   async handleSetExpiry(

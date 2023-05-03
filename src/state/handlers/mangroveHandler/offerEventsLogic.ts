@@ -14,8 +14,10 @@ import {
   OrderId,
 } from "src/state/model";
 import { getFromBigNumber, getPrice } from "src/utils/numberUtils";
+import { EventsLogic } from "../eventsLogic";
 
-export class OfferEventsLogic {
+export class OfferEventsLogic extends EventsLogic {
+
   async handleOfferRetracted(
     mangroveId: MangroveId,
     undo: boolean,

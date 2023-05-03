@@ -16,11 +16,13 @@ import {
 import { getFromBigNumber, fromBigNumber, getPrice } from "src/utils/numberUtils";
 import { AllDbOperations } from "src/state/dbOperations/allDbOperations";
 import BigNumber from "bignumber.js";
+import { EventsLogic } from "../eventsLogic";
 
-export class OrderEventLogic {
+export class OrderEventLogic extends EventsLogic {
   db: AllDbOperations;
   orderEventsLogicHelper = new OrderEventLogicHelper();
-  constructor(db: AllDbOperations) {
+  constructor(db: AllDbOperations, stream:string) {
+      super(stream);
       this.db = db;
   }
 
@@ -79,8 +81,6 @@ export class OrderEventLogic {
       await this.addNewInboundBalanceWithEvent(chainId, reserveId, inboundToken, transaction!.id, takenOfferId, takenOffer)
       await this.addNewOutboundBalanceWithEvent(chainId, reserveId, outboundToken, transaction!.id, takenOfferId, takenOffer)
       
-
-
     }
 
   }

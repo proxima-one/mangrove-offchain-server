@@ -28,8 +28,8 @@ export class MangroveEventHandler extends PrismaStreamEventHandler<mangroveSchem
   ) {
     super(prisma, stream);
   }
-  mangroveEventsLogic = new MangroveEventsLogic();
-  offerEventsLogic = new OfferEventsLogic();
+  mangroveEventsLogic = new MangroveEventsLogic(this.stream);
+  offerEventsLogic = new OfferEventsLogic(this.stream);
   
   
   protected async handleParsedEvents(
@@ -37,7 +37,7 @@ export class MangroveEventHandler extends PrismaStreamEventHandler<mangroveSchem
     tx: PrismaTransaction
   ): Promise<void> {
     const allDbOperation = allDbOperations(tx);
-    const orderEventLogic = new OrderEventLogic(allDbOperation);
+    const orderEventLogic = new OrderEventLogic(allDbOperation, this.stream);
     for (const event of events) {
       try {
 

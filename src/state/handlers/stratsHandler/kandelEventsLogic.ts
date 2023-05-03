@@ -8,10 +8,12 @@ import {kandel} from "@proximaone/stream-schema-mangrove";
 
 // import { Credit, Debit, NewKandel, NewAaveKandel, SetParams } from "@proximaone/stream-schema-mangrove/dist/kandel"
 import { OfferEventsLogic } from "../mangroveHandler/offerEventsLogic";
-export class KandelEventsLogic {
+import { EventsLogic } from "../eventsLogic";
+export class KandelEventsLogic extends EventsLogic {
 
     db: AllDbOperations;
-    constructor(db: AllDbOperations) {
+    constructor(db: AllDbOperations, stream: string) {
+        super(stream);
         this.db = db;
     }
 

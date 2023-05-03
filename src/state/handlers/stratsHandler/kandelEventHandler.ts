@@ -30,7 +30,7 @@ export class IKandelLogicEventHandler extends PrismaStreamEventHandler<kandel.Ka
     tx: PrismaTransaction
   ): Promise<void> {
     const allDbOperation = allDbOperations(tx);
-    const kandelEventsLogic = new KandelEventsLogic(allDbOperation);
+    const kandelEventsLogic = new KandelEventsLogic(allDbOperation, this.stream);
     for (const event of events) {
       const { payload, undo, timestamp } = event;
       const chainId = new ChainId(payload.chainId);
