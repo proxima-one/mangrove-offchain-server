@@ -19,7 +19,7 @@
         "strats": [
            "proxima.mangrove.polygon-mumbai.strategies.0_5"
         ],
-        "kandel": ["proxima.mangrove.polygon-mumbai.0xad90.kandel.0_6" ],
+        "kandel": ["proxima.mangrove.polygon-mumbai.0xad90.kandel.0_1" ],
         "tokens": [
 "proxima.mangrove.polygon-mumbai.0xad90.tokens.0_1"
         ]
