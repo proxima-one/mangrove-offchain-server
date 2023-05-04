@@ -137,47 +137,115 @@ export class MangroveOrderResolver {
       },
       include: {
         currentVersion: true,
-        order: { select: { tx: true } },
+        offer: { include: { currentVersion: { include: { takenOffer: true, OfferRetractEvent: true} }, offerVersions: { include: { takenOffer: true } } } },
+        order: { include: { tx: true } },
         taker: true,
         offerListing: { include: { inboundToken: true, outboundToken: true } }
       }, orderBy: [
-        { currentVersion: { cancelled: 'asc' } },
-        { currentVersion: { filled: 'asc' } },
-        { currentVersion: { expiryDate: 'desc' } }]
+        { 
+          offer: { 
+            currentVersion: { 
+              deleted: "asc", 
+              takenOffer: { 
+                failReason: "asc", 
+                partialFill: "asc"
+              }, 
+              OfferRetractEvent: { 
+                id: "asc"
+              }, 
+              tx: { 
+                time: "desc"
+              } 
+            } 
+          }, 
+          currentVersion: { 
+            expiryDate: "desc"
+          } 
+        },
+        {
+          order: {
+            tx:{
+              time: "desc"
+            }
+          }
+        }
+      ]
     })
-    return mangroveOrders.map(m => new MangroveOrderOpenOrder({
-      mangroveOrderId: m.id,
-      isBuy: m.fillWants ? true : false,
-      isOpen: m.currentVersion ? this.getStatus(m.currentVersion, m.restingOrderId) == "Open" : true,
-      offerId: m.restingOrderId ?? undefined,
-      taker: m.taker.address,
-      inboundToken: m.offerListing.inboundToken,
-      outboundToken: m.offerListing.outboundToken,
-      price: m.currentVersion?.price ?? undefined,
-      status: m.currentVersion ? this.getStatus(m.currentVersion, m.restingOrderId) : "Open",
-      isFailed: m.currentVersion?.failed ?? false,
-      isFilled: m.currentVersion?.filled ?? false,
-      failedReason: m.currentVersion?.failedReason ?? undefined,
-      expiryDate: m.currentVersion?.expiryDate.getTime() == new Date(0).getTime() ? undefined : m.currentVersion?.expiryDate,
-      takerGot: m.currentVersion?.takerGotNumber,
-      date: m.order.tx.time,
-      takerWants: m.takerWantsNumber,
-    }));
+    
+    return mangroveOrders.map(m => {
+      const takerGot= this.getTakerGot( m.offer?.offerVersions.map(v => v.takenOffer), m.order.takerGotNumber );
+      const takerGave= this.getTakerGave( m.offer?.offerVersions.map(v => v.takenOffer), m.order.takerGaveNumber );
+      const expiryDate = m.currentVersion?.expiryDate.getTime() == new Date(0).getTime() ? undefined : m.currentVersion?.expiryDate;
+      const status = this.getStatus(expiryDate, m.offer?.currentVersion, m.takerWantsNumber, takerGot);
+      return new MangroveOrderOpenOrder({
+        mangroveOrderId: m.id,
+        isBuy: m.fillWants ? true : false,
+        isOpen: m.currentVersion ? status == "Open" : true,
+        offerId: m.restingOrderId ?? undefined,
+        taker: m.taker.address,
+        inboundToken: m.offerListing.inboundToken,
+        outboundToken: m.offerListing.outboundToken,
+        price: takerGave/takerGot,
+        status: status,
+        isFailed: this.getIsFailed(m.offer?.currentVersion?.takenOffer?.failReason),
+        isFilled: m.takerWantsNumber == takerGot,
+        failedReason: m.offer?.currentVersion?.takenOffer?.failReason ?? undefined,
+        expiryDate: expiryDate,
+        takerGot: takerGot,
+        date: m.order.tx.time,
+        takerWants: m.takerWantsNumber,
+      })
+    } 
+    );
   }
 
 
-  private getStatus(currentVersion: MangroveOrderVersion, restingOrderId: string | null): "Cancelled" | "Failed" | "Filled" | "Partial Fill" | "Open" | undefined {
-    if (currentVersion.cancelled) {
-      return "Cancelled";
-    } else if (currentVersion.failed) {
-      return "Failed"
-    } else if (currentVersion.filled) {
-      return "Filled"
-    } else if (currentVersion.expiryDate.getTime() != new Date(0).getTime() && currentVersion.expiryDate.getTime() < new Date().getTime()) {
-      return "Cancelled"
-    } else if (restingOrderId) {
-      return "Open"
+
+  private getTakerGave(takenOffers: (TakenOffer|null)[] | undefined, gaveFromOrder: number ): number  {
+    if( takenOffers == undefined) {
+      return 0
     }
+    return takenOffers.reduce( (prev, current) => current == null ? prev : prev+current.takerGotNumber , 0) + gaveFromOrder;
+  }
+
+  private getTakerGot(takenOffers: (TakenOffer|null)[] | undefined, gotFromOrder: number ): number  {
+    if( takenOffers == undefined) {
+      return 0
+    }
+    return takenOffers.reduce( (prev, current) => current == null ? prev : prev+current.takerGaveNumber , 0) + gotFromOrder;
+  }
+
+  private getIsFailed(failReason: string | null | undefined): boolean {
+    if(failReason == undefined || failReason == null) {
+      return false;
+    }
+    return failReason != "";
+  }
+
+
+  private getStatus(expiryDate: Date |  undefined,  currentVersion: OfferVersion | null | undefined, takerWants:number, takerGot:number): "Cancelled" | "Failed" | "Filled" | "Partial Fill" | "Open" | undefined {
+    if(currentVersion == undefined || currentVersion == null) {
+      return takerGot == takerWants ? "Filled" : "Partial Fill";
+    }
+    const failReason =currentVersion.takenOffer?.failReason ?? undefined;
+    const isFilled = takerGot == takerWants;
+    const isFailed = this.getIsFailed(failReason);
+    
+    if( 
+      !currentVersion.OfferRetractEvent && 
+      !currentVersion.deleted && 
+      !isFailed && 
+      !isFilled && 
+      ( expiryDate == undefined || expiryDate.getTime() >= new Date().getTime() ) ) {
+      return "Open";
+    }
+    if (currentVersion.OfferRetractEvent || ( expiryDate && expiryDate.getTime() < new Date().getTime() ) ) {
+      return "Cancelled";
+    } else if (isFailed) {
+      return "Failed"
+    } else if (isFilled) {
+      return "Filled"
+    } 
     return "Partial Fill";
   }
 
@@ -668,26 +736,3 @@ export class KandelHistoryResolver {
 }
 
 
-
-@Resolver((of) => OfferListing)
-export class CustomOfferListingFieldsResolver {
-
-  @FieldResolver((type) => [OfferVersion], { nullable: true })
-  async offersAtTime(
-    @Arg("time") time: number,
-    @Root() offerListing: OfferListing,
-    @Ctx() ctx: Context
-  ): Promise<OfferVersion[] | null> {
-    const mangrove = await ctx.prisma.mangrove.findUnique({ where: { id: offerListing.mangroveId } })
-    const inboundToken = await ctx.prisma.token.findUnique({ where: { id: offerListing.inboundTokenId } })
-    const outboundToken = await ctx.prisma.token.findUnique({ where: { id: offerListing.outboundTokenId } })
-    if (!mangrove || !inboundToken || !outboundToken) {
-      return null;
-    }
-    const chainId = new ChainId(mangrove.chainId);
-    const mangroveId = new MangroveId(chainId, offerListing.mangroveId);
-    const offerListingId = new OfferListingId(mangroveId, { inboundToken: inboundToken.address, outboundToken: outboundToken.address })
-    return await new OfferListingUtils(ctx.prisma).getMatchingOfferFromOfferListingId(offerListingId, time);
-
-  }
-}

@@ -1,5 +1,5 @@
 import "reflect-metadata";
-// import * as graphql from "@generated/type-graphql";
+import * as graphql from "@generated/type-graphql";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
@@ -33,7 +33,7 @@ async function main() {
     KandelHomePageResolver,
     KandelManageStrategyPageResolver,
     MangroveOrderResolver,
-    // ...(WITH_RESOLVERS ? Array.from( graphql.resolvers.values() ) : [])
+    ...(WITH_RESOLVERS ? Array.from( graphql.resolvers.values() ) : [])
    ];
   
 

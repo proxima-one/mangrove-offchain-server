@@ -8,6 +8,7 @@ import {
   MangroveId,
   OfferId,
   OfferListingId,
+  OfferVersionId,
   OrderId,
   TakenOfferId,
   TokenBalanceId,
@@ -55,10 +56,10 @@ export class OrderEventLogic extends EventsLogic {
       id: offerListingId,
     });
     const prismaOrder = this.orderEventsLogicHelper.createOrder(mangroveId, offerListingId, tokens, order, takerAccountId, orderId, transaction!.id, parentOrderId);
-    const takenOffersWithEvents = await Promise.all(order.takenOffers.map((value) => this.orderEventsLogicHelper.mapTakenOffer(orderId, value, tokens, (o) => this.db.offerOperations.getOffer(o))));
+    const takenOffersWithEvents = await Promise.all(order.takenOffers.map((value) => this.orderEventsLogicHelper.mapTakenOffer(orderId, value, tokens, (o) => this.db.offerOperations.getOfferWithCurrentVersion(o))));
     const takenOffers: Omit<prisma.TakenOffer, "orderId">[] = takenOffersWithEvents.map(value => value.takenOffer);
 
-    await this.db.orderOperations.createOrder(orderId, prismaOrder, takenOffers);
+    await this.db.orderOperations.createOrder(orderId, prismaOrder, takenOffersWithEvents);
 
     for (let i = 0; i < takenOffersWithEvents.length; i++) {
       const { takenOffer, takenOfferEvent } = takenOffersWithEvents[i];
@@ -175,18 +176,22 @@ export class OrderEventLogicHelper {
     orderId: OrderId,
     takenOfferEvent: mangroveSchema.core.TakenOffer,
     tokens: { inboundToken: { decimals: number }, outboundToken: { decimals: number } },
-    getOffer: (offerId: OfferId) => Promise<{ currentVersionId: string } | null>,
+    getOffer: (offerId: OfferId) => Promise<( {
+      currentVersion: {versionNumber: number, wants: string} | null;
+  }) | null>,
   ) {
     const takerGotBigNumber = getFromBigNumber({ value: takenOfferEvent.takerWants, token: tokens.outboundToken });
     const takerGaveBigNumber = getFromBigNumber({ value: takenOfferEvent.takerGives, token: tokens.inboundToken });
     const offerId = new OfferId(orderId.mangroveId, orderId.offerListKey, takenOfferEvent.id);
     const offer = await getOffer(offerId);
-
+    const currentVersion = offer?.currentVersion;
     assert(offer);
-
+    assert(currentVersion);
+    
+    
     const takenOffer: Omit<prisma.TakenOffer, "orderId"> = {
       id: new TakenOfferId(orderId, takenOfferEvent.id).value,
-      offerVersionId: offer.currentVersionId,
+      offerVersionId: new OfferVersionId(offerId, currentVersion.versionNumber +1).value,
       takerGot: takenOfferEvent.takerWants,
       takerGotNumber: takerGotBigNumber.toNumber(),
       takerGave: takenOfferEvent.takerGives,
@@ -196,6 +201,7 @@ export class OrderEventLogicHelper {
       failReason: takenOfferEvent.failReason ?? null,
       posthookData: takenOfferEvent.posthookData ?? null,
       posthookFailed: takenOfferEvent.posthookFailed ?? false,
+      partialFill: currentVersion.wants == takenOfferEvent.takerGives,
     };
 
     return { takenOffer, takenOfferEvent };

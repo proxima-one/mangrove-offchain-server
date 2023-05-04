@@ -14,7 +14,7 @@ describe("Kandel Events Logic Integration test suite", () => {
     let kandelEventsLogic: KandelEventsLogic;
 
     before(() => {
-        kandelEventsLogic = new KandelEventsLogic(allDbOperations(prisma));
+        kandelEventsLogic = new KandelEventsLogic(allDbOperations(prisma), "stream");
     });
     const chainId = new ChainId(10);
     const mangroveId = new MangroveId(chainId, "mangroveid");

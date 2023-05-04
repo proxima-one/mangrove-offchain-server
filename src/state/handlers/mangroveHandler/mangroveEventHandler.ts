@@ -91,15 +91,13 @@ export class MangroveEventHandler extends PrismaStreamEventHandler<mangroveSchem
           },
           OfferRetracted: async (e) =>
             this.offerEventsLogic.handleOfferRetracted(mangroveId, undo, e, allDbOperation, transaction!.id),
-          OfferWritten: async ({ offer, maker, offerList }) =>
+          OfferWritten: async (e) =>
             await this.offerEventsLogic.handleOfferWritten(
               txRef,
               undo,
               this.chainId,
               mangroveId,
-              offerList,
-              maker,
-              offer,
+              e,
               transaction,
               allDbOperation,
               parentOrderId
