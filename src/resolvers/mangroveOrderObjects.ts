@@ -78,7 +78,7 @@ export class MangroveOrderOpenOrder {
         isBuy: boolean,
         isFailed: boolean,
         isFilled: boolean,
-        offerId?: string
+        offerId?: number
         taker: string,
         inboundToken?: Token,
         outboundToken?: Token,
@@ -89,7 +89,8 @@ export class MangroveOrderOpenOrder {
         expiryDate?: Date
         date: Date,
         takerGot?: number,
-        takerWants: number
+        takerWants: number,
+        txHash: string
     }) {
         this.mangroveOrderId = params.mangroveOrderId
         this.isBuy = params.isBuy;
@@ -107,11 +108,15 @@ export class MangroveOrderOpenOrder {
         this.date = params.date;
         this.takerGot = params.takerGot;
         this.takerWants = params.takerWants;
+        this.txHash = params.txHash;
 
     }
 
     @Field( )
     mangroveOrderId!: string;
+
+    @Field( )
+    txHash!: string;
 
     @Field( )
     isBuy!: boolean;
@@ -123,7 +128,7 @@ export class MangroveOrderOpenOrder {
     isFilled!: boolean;
 
     @Field( { nullable: true} )
-    offerId?: string;
+    offerId?: number;
 
     @Field( )
     taker!: string;

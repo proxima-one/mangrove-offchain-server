@@ -123,6 +123,7 @@ export class MangroveOrderResolver {
       },
       include: {
         currentVersion: true,
+        offer: true,
         order: { select: { tx: true } },
         taker: true,
         offerListing: { include: { inboundToken: true, outboundToken: true } }
@@ -135,7 +136,7 @@ export class MangroveOrderResolver {
       mangroveOrderId: m.id,
       isBuy: m.fillWants ? true : false,
       isOpen: m.currentVersion ? this.getStatus(m.currentVersion, m.restingOrderId) == "Open" : true,
-      offerId: m.restingOrderId ?? undefined,
+      offerId: m.offer?.offerNumber ?? undefined,
       taker: m.taker.address,
       inboundToken: m.offerListing.inboundToken,
       outboundToken: m.offerListing.outboundToken,
@@ -148,6 +149,7 @@ export class MangroveOrderResolver {
       takerGot: m.currentVersion?.takerGotNumber,
       date: m.order.tx.time,
       takerWants: m.takerWantsNumber,
+      txHash: m.order.tx.txHash,
     }));
   }
 
@@ -461,29 +463,4 @@ export class KandelHistoryResolver {
     return retractsAndPopulates.filter(v => v == undefined ? false : true) as KandelPopulateRetract[];
   }
 
-}
-
-
-
-@Resolver((of) => OfferListing)
-export class CustomOfferListingFieldsResolver {
-
-  @FieldResolver((type) => [OfferVersion], { nullable: true })
-  async offersAtTime(
-    @Arg("time") time: number,
-    @Root() offerListing: OfferListing,
-    @Ctx() ctx: Context
-  ): Promise<OfferVersion[] | null> {
-    const mangrove = await ctx.prisma.mangrove.findUnique({ where: { id: offerListing.mangroveId } })
-    const inboundToken = await ctx.prisma.token.findUnique({ where: { id: offerListing.inboundTokenId } })
-    const outboundToken = await ctx.prisma.token.findUnique({ where: { id: offerListing.outboundTokenId } })
-    if (!mangrove || !inboundToken || !outboundToken) {
-      return null;
-    }
-    const chainId = new ChainId(mangrove.chainId);
-    const mangroveId = new MangroveId(chainId, offerListing.mangroveId);
-    const offerListingId = new OfferListingId(mangroveId, { inboundToken: inboundToken.address, outboundToken: outboundToken.address })
-    return await new OfferListingUtils(ctx.prisma).getMatchingOfferFromOfferListingId(offerListingId, time);
-
-  }
 }
