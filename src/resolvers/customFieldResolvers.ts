@@ -137,6 +137,7 @@ export class MangroveOrderResolver {
       },
       include: {
         currentVersion: true,
+        offer: true,
         offer: { include: { currentVersion: { include: { takenOffer: true, OfferRetractEvent: true} }, offerVersions: { include: { takenOffer: true } } } },
         order: { include: { tx: true } },
         taker: true,
@@ -194,6 +195,7 @@ export class MangroveOrderResolver {
         takerGot: takerGot,
         date: m.order.tx.time,
         takerWants: m.takerWantsNumber,
+	txHash: m.order.txHash
       })
     } 
     );
@@ -734,5 +736,3 @@ export class KandelHistoryResolver {
   }
 
 }
-
-
