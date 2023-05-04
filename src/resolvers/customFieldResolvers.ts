@@ -182,7 +182,7 @@ export class MangroveOrderResolver {
         mangroveOrderId: m.id,
         isBuy: m.fillWants ? true : false,
         isOpen: m.currentVersion ? status == "Open" : true,
-        offerId: m.restingOrderId ?? undefined,
+        offerId: m.offer?.offerNumber,
         taker: m.taker.address,
         inboundToken: m.offerListing.inboundToken,
         outboundToken: m.offerListing.outboundToken,
@@ -195,7 +195,7 @@ export class MangroveOrderResolver {
         takerGot: takerGot,
         date: m.order.tx.time,
         takerWants: m.takerWantsNumber,
-	txHash: m.order.txHash
+	      txHash: m.order.tx.txHash
       })
     } 
     );
